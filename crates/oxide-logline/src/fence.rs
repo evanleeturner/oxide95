@@ -5,11 +5,18 @@
 //! a level that differs from the entry's, an undeclared field, or a template
 //! naming a field the entry does not declare.
 //!
-//! One function, so that every workspace holding a logbook calls the same
-//! walk: a workspace's test is one line, `check(root).enforce()`.
+//! One walk, so that every workspace holding a logbook calls the same one: a
+//! workspace's test is one line, `check(root).enforce()`. A workspace that takes
+//! these crates and shares log rows with them calls
+//! `check_sharing(root, &[names]).enforce()` instead.
 
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
+
+/// The logbook of this crate's own workspace: what a shared row must equal.
+/// A file outside the crate, so `cargo package` would refuse it; this crate
+/// does not publish.
+const HOME_BOOK: &str = include_str!("../../../logbook.json");
 
 /// One log call found in a source file.
 struct Site {
@@ -184,6 +191,8 @@ pub struct Report {
     pub sites: usize,
     /// The events the logbook declares.
     pub events: usize,
+    /// The rows the caller named as shared, which skip the two orphan rules.
+    pub shared: usize,
     /// Each rule broken, one line each; empty when the workspace holds.
     pub problems: Vec<String>,
 }
@@ -193,8 +202,8 @@ impl Report {
     /// log call, which would mean the walk had looked in the wrong place.
     pub fn enforce(&self) {
         eprintln!(
-            "fence: {} files, {} log calls, {} events",
-            self.files, self.sites, self.events
+            "fence: {} files, {} log calls, {} events, {} shared",
+            self.files, self.sites, self.events, self.shared
         );
         assert!(self.sites > 0, "the logbook fence found no log call");
         assert!(
@@ -205,15 +214,62 @@ impl Report {
     }
 }
 
+/// The row `id` of a parsed logbook.
+fn row<'book>(book: &'book serde_json::Value, id: &str) -> Option<&'book serde_json::Value> {
+    book["events"]
+        .as_array()?
+        .iter()
+        .find(|entry| entry["id"] == id)
+}
+
+/// Each named row must be in both logbooks and equal between them, as JSON
+/// values: key order and white space do not count.
+fn shared_problems(book: &serde_json::Value, shared: &[&str], problems: &mut Vec<String>) {
+    if shared.is_empty() {
+        return;
+    }
+    let home: serde_json::Value =
+        serde_json::from_str(HOME_BOOK).expect("invariant: this crate's logbook is JSON");
+    for &id in shared {
+        match (row(book, id), row(&home, id)) {
+            (None, _) => problems.push(format!(
+                "logbook {id}: named as shared, absent from this workspace's logbook"
+            )),
+            (_, None) => problems.push(format!(
+                "logbook {id}: named as shared, absent from the dependency's logbook"
+            )),
+            (Some(here), Some(there)) if here != there => problems.push(format!(
+                "logbook {id}: named as shared, unequal to the dependency's row"
+            )),
+            _ => {}
+        }
+    }
+}
+
 /// Walks `root`'s `crates/` against `root`'s `logbook.json`.
 #[must_use]
 pub fn check(root: &Path) -> Report {
+    check_sharing(root, &[])
+}
+
+/// [`check`] for a workspace logging the rows in `shared` partly through crates
+/// it takes from here, whose files its own walk cannot see.
+///
+/// For those rows alone the orphan-entry and logged-nowhere-field rules are off;
+/// every other rule stays on. The exemption is earned: a named row absent from
+/// either logbook, or unequal between them, is a problem, so the fence of this
+/// crate's own workspace, which keeps every rule on that same row, answers for
+/// its fields. A field only the caller logs therefore has no place in a shared
+/// row: this crate's own fence would fail it.
+#[must_use]
+pub fn check_sharing(root: &Path, shared: &[&str]) -> Report {
     let book: serde_json::Value = serde_json::from_str(
         &std::fs::read_to_string(root.join("logbook.json"))
             .expect("invariant: logbook.json is at the workspace root"),
     )
     .expect("invariant: logbook.json is JSON");
     let mut problems = Vec::new();
+    shared_problems(&book, shared, &mut problems);
     let mut entries: BTreeMap<String, (char, BTreeSet<String>)> = BTreeMap::new();
     for entry in book["events"]
         .as_array()
@@ -281,6 +337,9 @@ pub fn check(root: &Path) -> Report {
         }
     }
     for (id, (_, fields)) in &entries {
+        if shared.contains(&id.as_str()) {
+            continue;
+        }
         match used.get(id.as_str()) {
             None => problems.push(format!("logbook {id}: an orphan entry, logged nowhere")),
             Some(keys) => {
@@ -296,6 +355,7 @@ pub fn check(root: &Path) -> Report {
         files: files.len(),
         sites: sites.len(),
         events: entries.len(),
+        shared: shared.len(),
         problems,
     }
 }
