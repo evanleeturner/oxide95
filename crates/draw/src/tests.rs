@@ -187,7 +187,7 @@ fn section_blit_replays_d1_and_shows_its_table() {
     let section = front.create_dib_section(window_dc, 0, 0, 0, HEADER, &table, &mut bits);
     assert_ne!(section, 0);
     assert_ne!(bits, 0);
-    front.select_object(memory, section);
+    let _ = front.select_object(memory, section);
     easel.with_buffer(section, |buffer| buffer.pixels[0x280 * 0x1ba + 0x1d] = 7);
     let lines = debug_lines(|| {
         let answer = front.bit_blt(
@@ -246,7 +246,8 @@ fn unreached_answers_read_from_the_callers() {
 }
 
 /// Paint names: the record's 6 words, the window's whole rectangle; no such
-/// window answers 0 and leaves the record.
+/// window answers 0 and leaves the record. A real run reached none of the 4, so
+/// this holds a reading of the code, not a measurement.
 #[test]
 fn paint_calls_answer_the_window() {
     let (easel, desk) = rig();
@@ -268,6 +269,29 @@ fn paint_calls_answer_the_window() {
     assert_eq!(front.update_window(WINDOW), 1);
 }
 
+/// Unreached by a run, and by any row yet, the reading of the callers' code: the
+/// shell asks only when `BITSPIXEL` is 8, and a row answering 32 never gets here.
+/// No value is harvested. The count is what fits: the buffer, the count asked
+/// and the 256 entries each bound it, and one call writes one `imp.call` line.
+#[test]
+fn system_palette_entries_write_what_fits() {
+    let (easel, desk) = rig();
+    let front = Front::new(&ROW, &easel, &desk);
+    let dc = front.get_dc(WINDOW);
+    let mut into = [9; 4];
+    assert_eq!(front.get_system_palette_entries(dc, 0, 2, &mut into), 2);
+    assert_eq!(into[2..], [9, 9]);
+    assert_eq!(front.get_system_palette_entries(dc, 0, 256, &mut into), 4);
+    assert_eq!(front.get_system_palette_entries(dc, 254, 4, &mut into), 2);
+    assert_eq!(front.get_system_palette_entries(dc, 256, 4, &mut into), 0);
+    assert_eq!(front.get_system_palette_entries(dc, 0, 4, &mut []), 0);
+    let lines = debug_lines(|| {
+        assert_eq!(front.get_system_palette_entries(dc, 0, 2, &mut into), 2);
+    });
+    let want = format!("imp.call c=GDI32!GetSystemPaletteEntries a={dc:x},0,2 v=2");
+    assert!(lines.contains(&want), "{lines:?}");
+}
+
 /// The named faults: a game's wild numbers neither panic nor allocate
 /// their size, a mirror lands nothing, a window's context holds no table.
 #[test]
@@ -283,7 +307,7 @@ fn wild_numbers_answer_without_a_panic() {
         0
     );
     let section = front.create_dib_section(dc, 0, 0, 0, HEADER, &[], &mut bits);
-    front.select_object(memory, section);
+    let _ = front.select_object(memory, section);
     let big = 0x7fff_ffff;
     assert_eq!(
         front.bit_blt(dc, big, big, big, big, memory, big, big, 0xcc_0020),

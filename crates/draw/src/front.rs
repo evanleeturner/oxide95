@@ -17,7 +17,7 @@ const SRCCOPY: u32 = 0x00cc_0020;
 /// `DIB_RGB_COLORS`: a section's table holds colours.
 const DIB_RGB_COLORS: u32 = 0;
 /// A table's entries a `draw.table` line, the layer's.
-const TABLE_LINE: usize = 16;
+const TABLE_LINE: u32 = 16;
 
 /// A `BITMAPINFOHEADER`'s 10 words, as the layer logs them.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -86,8 +86,8 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// The `draw.table` lines of `entries`, numbered from `start`.
     fn table(&self, call: &str, start: u32, entries: &[u32]) {
         self.desk.screen().quiet(|| {
-            for (at, chunk) in (0_u32..).zip(entries.chunks(TABLE_LINE)) {
-                let first = start.wrapping_add(at * TABLE_LINE as u32);
+            for (at, chunk) in (0_u32..).zip(entries.chunks(TABLE_LINE as usize)) {
+                let first = start.wrapping_add(at * TABLE_LINE);
                 let first = oxide_trace::__shown!(first);
                 log::debug!(c = call, i:% = first, a:% = Numbers(chunk); "draw.table");
             }
@@ -97,6 +97,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// `CreatePalette`: a handle, kept by the caller for a later select and
     /// delete. `a` the `LOGPALETTE`'s first word; `entries` its `PALETTEENTRY`s.
     /// Callers: the shell, the game file.
+    #[must_use]
     pub fn create_palette(&self, first_word: u32, entries: &[u32]) -> u32 {
         let call = self.file.calls.create_palette;
         let handle = self.easel.create_palette(entries);
@@ -107,6 +108,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `SelectPalette`: the old palette, which the shell selects back through
     /// `SelectObject`. Callers: the shell, the game file.
+    #[must_use]
     pub fn select_palette(&self, dc: u32, palette: u32, background: u32) -> u32 {
         let old = self.easel.select_palette(dc, palette);
         let call = self.file.calls.select_palette;
@@ -116,6 +118,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `SetPaletteEntries`: the count set, `0x100` measured; the shell reads
     /// nothing of it. Callers: the shell, the game file.
+    #[must_use]
     pub fn set_palette_entries(
         &self,
         palette: u32,
@@ -134,6 +137,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// `RealizePalette`: 0, measured 35 of 35: no hardware palette to load, so
     /// `dc`'s palette becomes the colours read through. Callers: the shell,
     /// the game file.
+    #[must_use]
     pub fn realize_palette(&self, dc: u32) -> u32 {
         self.easel.realize(dc);
         self.line(self.file.calls.realize_palette, &[dc], &[], 0);
@@ -142,6 +146,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `SetDIBColorTable`: the count set, `0x100` the rebuilt line; the shell
     /// keeps it and returns 1 regardless. Callers: the shell, the game file.
+    #[must_use]
     pub fn set_dib_color_table(&self, dc: u32, start: u32, count: u32, quads: &[u32]) -> u32 {
         let call = self.file.calls.set_dib_color_table;
         let quads = upto(quads, count);
@@ -217,6 +222,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// draws nothing and answers 0. The shell compares the answer with the
     /// height and logs on 0. Callers: the shell.
     #[expect(clippy::too_many_arguments, reason = "BitBlt's own 9")]
+    #[must_use]
     pub fn bit_blt(
         &self,
         target: u32,
@@ -243,6 +249,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// from the picture's first row: `start` 0 is the one measured. Callers:
     /// the game file.
     #[expect(clippy::too_many_arguments, reason = "SetDIBitsToDevice's own 12")]
+    #[must_use]
     pub fn set_dib_bits_to_device(
         &self,
         dc: u32,
@@ -282,6 +289,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// unless 8 bits and `SRCCOPY`. No run reached it: the answer is the
     /// reading of that caller's code. Callers: the game file.
     #[expect(clippy::too_many_arguments, reason = "StretchDIBits' own 13")]
+    #[must_use]
     pub fn stretch_dib_bits(
         &self,
         dc: u32,
@@ -330,6 +338,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// `StretchBlt`: 1; 0 for a raster operation not `SRCCOPY`, which logs
     /// `DISPDIB_StretchBlit` in the game file. No run reached it. Callers:
     /// the game file; the shell imports it, 0 calls in the exports.
+    #[must_use]
     pub fn stretch_blt(
         &self,
         target: u32,
@@ -361,6 +370,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `CreateCompatibleDC`: a memory context, the handle kept. Every context
     /// being 8 bits, `dc` chooses nothing. Callers: the shell, the game file.
+    #[must_use]
     pub fn create_compatible_dc(&self, dc: u32) -> u32 {
         let handle = self.easel.memory_context();
         self.line(self.file.calls.create_compatible_dc, &[dc], &[], handle);
@@ -369,6 +379,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `DeleteDC`: 1, 0 for no such; the shell reads nothing of it. Callers:
     /// the shell, the game file.
+    #[must_use]
     pub fn delete_dc(&self, dc: u32) -> u32 {
         let answer = u32::from(self.easel.delete_context(dc));
         self.line(self.file.calls.delete_dc, &[dc], &[], answer);
@@ -377,6 +388,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `DeleteObject`: 1, 0 for no such or one still selected; the shell reads
     /// nothing of it. Callers: the shell, the game file.
+    #[must_use]
     pub fn delete_object(&self, object: u32) -> u32 {
         let answer = u32::from(self.easel.delete_object(object));
         self.line(self.file.calls.delete_object, &[object], &[], answer);
@@ -386,6 +398,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// `SelectObject`: the old object, kept and selected back; a palette goes
     /// to its own slot, since the shell selects one back this way. Callers:
     /// the shell, the game file.
+    #[must_use]
     pub fn select_object(&self, dc: u32, object: u32) -> u32 {
         let old = self.easel.select(dc, object);
         self.line(self.file.calls.select_object, &[dc, object], &[], old);
@@ -394,6 +407,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `GetDeviceCaps`: the row's answer at `index`, else 0. Callers: the
     /// shell, the game file, the launcher.
+    #[must_use]
     pub fn get_device_caps(&self, dc: u32, index: u32) -> u32 {
         let found = self.file.caps.iter().find(|(at, _)| *at == index);
         let answer = found.map_or(0, |(_, answer)| unsigned(*answer));
@@ -403,6 +417,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `GetStockObject`: the handle at `index`, 0 past the last. Callers: the
     /// launcher, index 4 for its class's background.
+    #[must_use]
     pub fn get_stock_object(&self, index: u32) -> u32 {
         let answer = Easel::<B>::stock_object(index);
         self.line(self.file.calls.get_stock_object, &[index], &[], answer);
@@ -411,6 +426,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `GetDC`: a context on `window`, 0 the whole screen, kept or handed on.
     /// Callers: the shell, the game file, the launcher (window 0).
+    #[must_use]
     pub fn get_dc(&self, window: u32) -> u32 {
         let handle = self.easel.window_context(window);
         self.line(self.file.calls.get_dc, &[window], &[], handle);
@@ -419,6 +435,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `ReleaseDC`: 1, 0 for no such; the shell reads nothing of it. Callers:
     /// the shell, the game file.
+    #[must_use]
     pub fn release_dc(&self, window: u32, dc: u32) -> u32 {
         let answer = u32::from(self.easel.delete_context(dc));
         self.line(self.file.calls.release_dc, &[window, dc], &[], answer);
@@ -427,6 +444,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `UpdateWindow`: 1 and a present, 0 for no such window; the shell reads
     /// nothing of it. Callers: the shell, the game file, the launcher.
+    #[must_use]
     pub fn update_window(&self, window: u32) -> u32 {
         let known = self.desk.state().window(window).is_some();
         if known {
@@ -458,6 +476,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
 
     /// `EndPaint`: 1, 0 for no such context; `a` the window and the record's
     /// first 6 words. Callers: the shell.
+    #[must_use]
     pub fn end_paint(&self, window: u32, paint: &[u32; 6]) -> u32 {
         let answer = u32::from(self.easel.delete_context(paint[0]));
         let p = paint;
@@ -469,6 +488,7 @@ impl<'e, B: Back, S: Screen> Front<'e, B, S> {
     /// `ValidateRect`: 1, 0 for no such window; `a` the window and the
     /// rectangle's 4, a null rectangle none. Nothing here repaints, so nothing
     /// is marked. Callers: the game file, window and null.
+    #[must_use]
     pub fn validate_rect(&self, window: u32, rectangle: Option<[u32; 4]>) -> u32 {
         let answer = u32::from(self.desk.state().window(window).is_some());
         let call = self.file.calls.validate_rect;
