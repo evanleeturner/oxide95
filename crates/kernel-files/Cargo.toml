@@ -1,0 +1,33 @@
+# A program's file calls: open, read, write, seek, the file's type,
+# close, delete, move and find, written once over a seam, `Folder`, that says
+# where a file's bytes live. Each call writes one DEBUG line, `imp.call`. No
+# target's own names: it builds for any target, the browser's included; the
+# Windows folder is a game's own backend. The in-memory folder, `memory`,
+# needs an allocator, so it is a feature the swap never turns on.
+[package]
+name = "kernel_files"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[features]
+memory = []
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[dependencies]
+oxide_trace = { path = "../oxide-trace" }
+log = { version = "0.4", features = ["kv"] }

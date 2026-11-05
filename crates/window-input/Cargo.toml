@@ -1,0 +1,41 @@
+# The window stand-in's input: the USER32 names a
+# program asks of its keyboard and its pointer, over the `window` crate's desk. The keys
+# down, the pointer's point, its clip and its lock are every target's; a back
+# hands in what its host's keyboard and pointer did. It builds for any
+# target, the browser's included.
+[package]
+name = "window-input"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[features]
+# The fronts, `front::Front`: they answer over `window::desk::Desk`,
+# which allocates, so they stay off where no allocator is: the swap under Wine
+# is `no_std` with none, and links `window-input` through a game's rows crate
+# for the keys and the rows alone.
+desk = ["window/desk"]
+
+[dependencies]
+window = { path = "../window" }
+oxide_trace = { path = "../oxide-trace" }
+log = { version = "0.4", features = ["kv"] }
+
+[dev-dependencies]
+window = { path = "../window", features = ["desk", "page"] }
+oxide_logline = { path = "../oxide-logline" }

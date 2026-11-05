@@ -1,0 +1,33 @@
+# The Kernel's time: one game clock behind
+# every name that measures an interval, handed in and moved only by its
+# owner. No target's own names: it builds for any target, the browser's
+# included.
+[package]
+name = "kernel_time"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[features]
+# The host back, `host::Host`: any target `std` serves, Linux, macOS and
+# Windows, through `std` alone.
+std = []
+
+[dependencies]
+oxide_trace = { path = "../oxide-trace" }
+log = { version = "0.4", features = ["kv"] }

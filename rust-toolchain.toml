@@ -1,0 +1,4 @@
+# The toolchain the tree is developed against.
+[toolchain]
+channel = "stable"
+components = ["rustfmt", "clippy"]

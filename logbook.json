@@ -1,0 +1,109 @@
+{
+  "program": "oxide95",
+  "grammar": 1,
+  "about": "The workspace's event catalog: every log line is one of these events, its id and values only; the sentence is the template here. Addresses are those of the traced program's file, in hex; values print in hex, floats in decimal, a value of no printable type as ?.",
+  "events": [
+    {
+      "id": "fn.in",
+      "level": "D",
+      "fields": { "f": "the function's address", "a": "its arguments, in order (absent when it takes none)" },
+      "template": "{f} entered, arguments {a}"
+    },
+    {
+      "id": "fn.ret",
+      "level": "D",
+      "fields": { "f": "the function's address", "v": "the value it returns" },
+      "template": "{f} returns {v}"
+    },
+    {
+      "id": "mem.rd",
+      "level": "D",
+      "fields": { "f": "the function's address", "a": "the address read", "v": "the value read" },
+      "template": "{f} read {v} at {a}"
+    },
+    {
+      "id": "mem.wr",
+      "level": "D",
+      "fields": { "f": "the function's address", "a": "the address written", "v": "the value written" },
+      "template": "{f} wrote {v} at {a}"
+    },
+    {
+      "id": "mem.upd",
+      "level": "D",
+      "fields": { "f": "the function's address", "a": "the address updated", "op": "the compound operator", "v": "its right-hand value" },
+      "template": "{f} updated {a}: {op} {v}"
+    },
+    {
+      "id": "glob.rd",
+      "level": "D",
+      "fields": { "f": "the function's address", "g": "the global's address", "v": "the value read" },
+      "template": "{f} read global {g}: {v}"
+    },
+    {
+      "id": "glob.wr",
+      "level": "D",
+      "fields": { "f": "the function's address", "g": "the global's address", "v": "the value written" },
+      "template": "{f} wrote {v} to global {g}"
+    },
+    {
+      "id": "glob.upd",
+      "level": "D",
+      "fields": { "f": "the function's address", "g": "the global's address", "op": "the compound operator", "v": "its right-hand value" },
+      "template": "{f} updated global {g}: {op} {v}"
+    },
+    {
+      "id": "call.ret",
+      "level": "D",
+      "fields": { "f": "the caller's address", "c": "the callee, by address or import name", "v": "the value the call returned" },
+      "template": "{f}'s call to {c} returned {v}"
+    },
+    {
+      "id": "imp.call",
+      "level": "D",
+      "fields": { "c": "the import, as DLL!NAME", "a": "its arguments, in order (absent when it takes none); the file and registry calls' seams log their numbers alone, never a pointer; a window, input or drawing call's numbers alone too, a record it is handed (a message, a rectangle, a point, a class) as its fields comma-joined, never its address, a null rectangle none", "h": "the heap the block came from or goes to: the C library's memory helpers alone", "v": "the value it returned (absent when void); a key-state input call's low 16 bits, the SHORT the caller reads", "p": "the file name the call was given, as text: the file calls' seam alone", "m": "the module name a process call was given or wrote, as text: the process calls' seam alone", "q": "the entry name GetProcAddress was asked, as text", "s": "other text a process or text call was given: an environment block or variable, a command line, a debug string, the bytes or units to convert, map or compare; the key path or value name a registry call was given; the class, icon or cursor name a window or input call was given, # and the number for an atom or a resource id below 0x10000, empty for null; a byte past printable ASCII as \\xNN, a unit as \\uNNNN", "with": "the second text a compare call was given, shown as s shows the first; the default character WideCharToMultiByte was given, empty for null; the title or menu name a window call was given, shown as s shows the class", "o": "what a drawing call wrote, as numbers (a bits pointer, a paint record), empty on a 0 answer; what a text call wrote into its buffer, shown as s shows its text, its length the smaller of the value and the buffer: GetStringType's classes as hex words, comma-joined; GetCPInfo's 18-byte record as bytes; empty for no buffer or a 0 answer; what a registry call wrote or kept, its numbers comma-joined: the handle an open wrote, the handle and disposition a create wrote, the type, size and value a query wrote (the value only with a buffer), the value a set kept; empty for a refusal that writes nothing; the record a window or input call wrote, its numbers comma-joined (a message's 7, a rectangle's 4, a point's 2), empty on a 0 answer","r": "the start-up record GetStartupInfoA wrote: its flags, show-window, reserved count and reserved address; the used-default flag WideCharToMultiByte wrote, empty for null", "to": "the new name a move was given, as text", "n": "the bytes a read or write moved, read from its out-pointer after the call", "found": "the file name a find call found, empty when it found none", "e": "the thread's last error as the file, process or text call left it, the value the file would read", "t": "the instant a time call read: the wall clock's file-time ticks, or the game clock's microseconds", "w": "the 8 date words a time call wrote: year, month, weekday, day, hour, minute, second, millisecond", "f": "the file time a time call wrote", "from": "the address the call returns to in the file that made it: the drawing, thread, process, text, registry, window and input calls' seams alone; 0 where a target has none" },
+      "template": "the layer's call to {c} with {a} returned {v}"
+    },
+    {
+      "id": "mem.copy",
+      "level": "D",
+      "fields": { "f": "the function's address", "s": "the source address", "d": "the destination address", "n": "the count passed" },
+      "template": "{f} copies count {n} from {s} to {d}"
+    },
+    {
+      "id": "mem.fill",
+      "level": "D",
+      "fields": { "f": "the function's address", "d": "the destination address", "b": "the fill byte", "n": "the count passed" },
+      "template": "{f} fills count {n} at {d} with {b}"
+    },
+    {
+      "id": "disc.call",
+      "level": "D",
+      "fields": { "c": "the folder call or track read the logical disc answered, by its method's name", "a": "the handle or find it was given, or the track's number; 0 when it takes a name", "p": "the name or pattern it was given, as text (a move's first); empty when it takes a handle", "v": "its answer: the handle, find, count or position; 0 for a yes and on a failure", "n": "the bytes a read moved off the disc; 0 for every other call", "e": "the failure, by its name; ok on success" },
+      "template": "the disc's {c} of {a} {p} answered {v}, {n} bytes moved: {e}"
+    },
+    {
+      "id": "draw.table",
+      "level": "D",
+      "fields": { "c": "the drawing call the entries belong to, as DLL!NAME", "i": "the first entry's number", "a": "up to 16 entries, each 32 bits as the caller's memory holds them" },
+      "template": "{c}'s entries from {i}: {a}"
+    },
+    {
+      "id": "draw.drop",
+      "level": "D",
+      "fields": { "n": "how many presents the page has dropped so far, this one counted" },
+      "template": "the page replaced a present it had not read, {n} so far"
+    },
+    {
+      "id": "draw.present",
+      "level": "D",
+      "fields": { "w": "the window's width the picture was painted into", "h": "its height" },
+      "template": "a host's paint at {w} by {h}"
+    },
+    {
+      "id": "draw.refused",
+      "level": "W",
+      "fields": { "refused": "softbuffer's refusal, in place of a paint" },
+      "template": "a host's paint refused: {refused}"
+    }
+  ]
+}

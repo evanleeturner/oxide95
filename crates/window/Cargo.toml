@@ -1,0 +1,61 @@
+# The window stand-in: the USER32 names a
+# program asks of its windows and its messages, behind one seam. The window
+# table, the class table and the message queue are every target's; a back
+# hands in what its host's window did. It builds for any target, the
+# browser's included.
+[package]
+name = "window"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[features]
+# The portable part and the fronts, `desk::Desk` and `front::Front`: the
+# tables and the queue allocate, so they stay off where no allocator is: the
+# swap under Wine is `no_std` with none, and links `window` through
+# a game's rows crate.
+desk = []
+# The page's back, `page::Page`: the canvas's events and time handed in by
+# the page's script, each window's place read back.
+page = ["desk"]
+# A host's back, `native::Native`, through winit: Linux's X11 and Wayland,
+# and Windows. No target but a host's takes winit, and no crate but this.
+native = ["desk", "dep:winit", "dep:raw-window-handle"]
+
+[dependencies]
+oxide_trace = { path = "../oxide-trace" }
+log = { version = "0.4", features = ["kv"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+winit = { version = "=0.30.13", optional = true }
+# The version winit 0.30.13 brings: a lent window's handle crosses in it.
+raw-window-handle = { version = "=0.6.2", optional = true }
+
+[dev-dependencies]
+oxide_logline = { path = "../oxide-logline" }
+
+# One host window opened, pumped and let go: run under a time limit.
+[[example]]
+name = "native_window"
+required-features = ["native"]
+
+# The back's keys, buttons, pointer, motion and grab, once on a host's
+# desktop: run under a time limit.
+[[example]]
+name = "native_input"
+required-features = ["native"]

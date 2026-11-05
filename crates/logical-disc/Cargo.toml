@@ -1,0 +1,36 @@
+# The player's own copy of a game's disc: a cue sheet and
+# its bins, or an iso alone, read only and by range through `ReadAt`, a trait
+# a target. No target's own names and no game's: it builds for any target,
+# the browser's included. The disc and its parsers need an allocator, so they
+# are a feature, `disc`, the swap never turns on: a game's rows crate
+# reaches the swap.
+[package]
+name = "logical_disc"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[features]
+disc = []
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[dependencies]
+kernel_files = { path = "../kernel-files" }
+log = { version = "0.4", features = ["kv"] }
+
+[dev-dependencies]
+kernel_files = { path = "../kernel-files", features = ["memory"] }

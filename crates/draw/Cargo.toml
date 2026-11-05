@@ -1,0 +1,62 @@
+# The drawing stand-in: GDI32's names a program
+# asks of its pixels and its palette, and the paint names, behind one seam.
+# The buffers, the palette, the contexts and the blits are every target's; only
+# the buffer last shown crosses to a back. It builds for any target, the
+# browser's included.
+[package]
+name = "draw"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[features]
+# The portable part and the fronts, `easel::Easel` and `front::Front`: they
+# allocate, so they stay off where no allocator is: the swap under Wine is
+# `no_std` with none, and links `draw` through a game's rows crate for the
+# rows alone.
+desk = ["window/desk"]
+# The page's back, `page::Page`: the page's script reads the buffer last shown
+# once an animation frame.
+page = ["desk"]
+# A host's back, `native::Native`, through softbuffer: a window `window` lends
+# by its handle traits, so no crate but `window` takes winit.
+native = ["desk", "window/native", "dep:softbuffer", "dep:raw-window-handle"]
+
+[dependencies]
+window = { path = "../window" }
+oxide_trace = { path = "../oxide-trace" }
+log = { version = "0.4", features = ["kv"] }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+# `kms` off: winit hands softbuffer no DRM window.
+softbuffer = { version = "=0.4.8", default-features = false, features = ["x11", "x11-dlopen", "wayland", "wayland-dlopen"], optional = true }
+raw-window-handle = { version = "=0.6.2", optional = true }
+
+[dev-dependencies]
+window = { path = "../window", features = ["desk", "page"] }
+oxide_logline = { path = "../oxide-logline" }
+
+# One host window painted through softbuffer: run under a time limit.
+[[example]]
+name = "native_draw"
+required-features = ["native"]
+
+# A dump's screen back through the fronts, for its sums against the dump's own.
+[[example]]
+name = "front_dump"
+required-features = ["page"]
