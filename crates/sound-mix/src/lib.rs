@@ -6,9 +6,10 @@
 //!
 //! [`Front`] answers the 29 names in [`table::FRONTS`], each writing one
 //! `imp.call` line where its answer is computed: `c` the call, `a` its numbers,
-//! `v` its answer, `o` what it wrote through a pointer, `by` that this crate
-//! answered. Each of the 15 in [`table::STOPS`] ends the program through
-//! [`Front::named_stop`], one `sound.named-stop` line first, never a quiet answer.
+//! `v` its answer, `o` what it wrote through a pointer, `p` the file name it was
+//! given, `by` that this crate answered. Each of the 15 in [`table::STOPS`] ends
+//! the program through [`Front::named_stop`], one `sound.named.stop` line first,
+//! never a quiet answer.
 //! What no row covers stops the same way: a file not PCM, a double buffer's third
 //! slot, a sample format mss.h does not name.
 //!
@@ -292,14 +293,14 @@ impl<H: Host, O: Output> Front<H, O> {
         self.host.quiet(|| line(&answer));
         if let Some(took) = pass.refused {
             self.host.quiet(|| {
-                log::warn!(took:% = oxide_trace::__shown!(took), by = "sound-mix"; "sound.output-refused");
+                log::warn!(took:% = oxide_trace::__shown!(took), by = "sound-mix"; "sound.output.refused");
             });
         }
         if pass.dropped > 0 {
             self.host.quiet(|| {
                 log::debug!(
                     frames:% = oxide_trace::__shown!(pass.dropped),
-                    by = "sound-mix"; "sound.frames-dropped"
+                    by = "sound-mix"; "sound.frames.dropped"
                 );
             });
         }
@@ -315,13 +316,13 @@ impl<H: Host, O: Output> Front<H, O> {
 
     /// The call's line, then the end of the program.
     fn stop_because(&self, name: &str, why: &str) -> ! {
-        log::error!(c:% = self.called(name), why = why, by = "sound-mix"; "sound.named-stop");
+        log::error!(c:% = self.called(name), why = why, by = "sound-mix"; "sound.named.stop");
         log::logger().flush();
         panic!("sound-mix: {name}: {why}");
     }
 
     fn not_live(&self, name: &str, number: u32) -> ! {
-        log::error!(c:% = self.called(name), a:% = numbers!(number), by = "sound-mix"; "sound.not-live");
+        log::error!(c:% = self.called(name), a:% = numbers!(number), by = "sound-mix"; "sound.not.live");
         log::logger().flush();
         panic!("sound-mix: {name}: {number:x} is not live");
     }
@@ -825,7 +826,7 @@ impl<H: Host, O: Output> Front<H, O> {
                     c:% = self.called("FILE_read"),
                     a:% = numbers!(address, destination),
                     v:% = oxide_trace::__shown!(*answer),
-                    name = name,
+                    p = name,
                     by = "sound-mix"; "imp.call"
                 );
             },
@@ -855,7 +856,7 @@ impl<H: Host, O: Output> Front<H, O> {
                     log::error!(
                         c:% = self.called("MEM_free_lock"),
                         a:% = numbers!(block),
-                        by = "sound-mix"; "sound.free-unknown"
+                        by = "sound-mix"; "sound.free.unknown"
                     );
                 }
             },
@@ -900,7 +901,7 @@ impl<H: Host, O: Output> Front<H, O> {
                 log::debug!(
                     a:% = numbers!(rate_hz, channels),
                     v:% = oxide_trace::__shown!(*answer),
-                    by = "sound-mix"; "sound.door-open"
+                    by = "sound-mix"; "sound.door.open"
                 );
             },
         )
@@ -917,7 +918,7 @@ impl<H: Host, O: Output> Front<H, O> {
             |()| {
                 log::debug!(
                     a:% = numbers!(id, count),
-                    by = "sound-mix"; "sound.door-push"
+                    by = "sound-mix"; "sound.door.push"
                 );
             },
         );
@@ -936,7 +937,7 @@ impl<H: Host, O: Output> Front<H, O> {
                     state.close_output();
                 }
             },
-            |()| log::debug!(a:% = numbers!(id), by = "sound-mix"; "sound.door-close"),
+            |()| log::debug!(a:% = numbers!(id), by = "sound-mix"; "sound.door.close"),
         );
     }
 }

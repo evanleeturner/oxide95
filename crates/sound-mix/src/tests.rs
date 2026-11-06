@@ -241,7 +241,7 @@ fn each_stop_panics_after_one_line_naming_it() {
         let lines = stops(|| front.named_stop(name));
         assert_eq!(
             lines,
-            [format!("sound.named-stop c=MSS32!{name} why=unreached by=sound-mix")]
+            [format!("sound.named.stop c=MSS32!{name} why=unreached by=sound-mix")]
         );
     }
 }
@@ -252,7 +252,7 @@ fn a_handle_not_live_stops_loudly() {
     let lines = stops(|| {
         front.sample_status(0x1234);
     });
-    assert_eq!(lines, ["sound.not-live c=MSS32!AIL_sample_status a=1234 by=sound-mix"]);
+    assert_eq!(lines, ["sound.not.live c=MSS32!AIL_sample_status a=1234 by=sound-mix"]);
 }
 
 #[test]
@@ -294,7 +294,7 @@ fn old_values_come_back_and_user_words_hold() {
     let lines = stops(|| {
         front.sample_user_data(handle, 8);
     });
-    assert_eq!(lines, ["sound.named-stop c=MSS32!AIL_sample_user_data why=user-word-past-8 by=sound-mix"]);
+    assert_eq!(lines, ["sound.named.stop c=MSS32!AIL_sample_user_data why=user-word-past-8 by=sound-mix"]);
 }
 
 // 3: Harvested. A logged run's calls in logged order, its driver and handles mapped.
@@ -356,8 +356,8 @@ fn the_logged_calls_replay_in_their_order_with_their_answers() {
         call("AIL_init_sample", format!("a={third:x}")),
         call("AIL_set_sample_file", format!("a={third:x},170d180,ffffffff v=1")),
         call("AIL_set_sample_volume", format!("a={third:x},32")),
-        call("FILE_read", "a=31f048,0 v=8bc2f0 name=a-sound".to_owned()),
-        call("FILE_read", "a=31ed38,0 v=0 name=no-such-sound".to_owned()),
+        call("FILE_read", "a=31f048,0 v=8bc2f0 p=a-sound".to_owned()),
+        call("FILE_read", "a=31ed38,0 v=0 p=no-such-sound".to_owned()),
         call("AIL_set_sample_loop_count", format!("a={third:x},1")),
         call("AIL_set_sample_volume", format!("a={third:x},32")),
         call("AIL_start_sample", format!("a={third:x}")),
@@ -420,7 +420,7 @@ fn a_refusing_back_changes_no_status_and_each_refused_frame_is_reported() {
     assert!(back.frames().is_empty());
     let dropped: Vec<u64> = lines
         .iter()
-        .filter_map(|line| line.strip_prefix("sound.frames-dropped frames="))
+        .filter_map(|line| line.strip_prefix("sound.frames.dropped frames="))
         .map(|rest| {
             let number = rest.split(' ').next().expect("a line has a number");
             u64::from_str_radix(number, 16).expect("frames are hex")
@@ -438,7 +438,7 @@ fn a_full_back_takes_its_room_and_the_rest_is_reported() {
     seat.at(1_000);
     let lines = debug_lines(|| front.pump());
     assert_eq!(back.frames().len(), 20, "10 frames, 2 numbers each");
-    assert_eq!(lines, ["sound.frames-dropped frames=22 by=sound-mix"], "44 less the 10");
+    assert_eq!(lines, ["sound.frames.dropped frames=22 by=sound-mix"], "44 less the 10");
 }
 
 #[test]
@@ -480,7 +480,7 @@ fn a_refused_open_warns_once_and_the_program_goes_on() {
         let mut opened = 0;
         let lines = debug_lines(|| opened = front.wave_out_open(0, 11_025, 1, 8).1);
         assert_eq!(lines.len(), 2, "{lines:?}");
-        assert_eq!(lines[1], format!("sound.output-refused took={took:x} by=sound-mix"));
+        assert_eq!(lines[1], format!("sound.output.refused took={took:x} by=sound-mix"));
         let handle = front.allocate_file_sample(opened, 0x10, &pcm(1, 11_025, 8, &[128; 11]), 0);
         front.start_sample(handle);
         seat.at(1_000);
@@ -536,7 +536,7 @@ fn a_file_the_mix_could_not_play_is_a_named_stop() {
         });
         assert_eq!(
             lines,
-            ["sound.named-stop c=MSS32!AIL_set_sample_file why=not-pcm-wave by=sound-mix"]
+            ["sound.named.stop c=MSS32!AIL_set_sample_file why=not-pcm-wave by=sound-mix"]
         );
     }
     assert_eq!(wave::parse(b"RIFFxxxxWAVE").err(), Some(WaveError::NoFormat));
@@ -978,7 +978,7 @@ fn shutdown_clears_the_door_and_a_closed_door_is_not_live() {
     front.shutdown();
     assert_eq!(back.closes(), 1);
     let lines = stops(|| front.stream_push(door, &[1]));
-    assert_eq!(lines, [format!("sound.not-live c=MSS32!stream_push a={door:x} by=sound-mix")]);
+    assert_eq!(lines, [format!("sound.not.live c=MSS32!stream_push a={door:x} by=sound-mix")]);
 }
 
 #[test]
@@ -988,7 +988,7 @@ fn a_door_of_no_rate_or_six_channels_stops() {
         let lines = stops(|| {
             front.stream_open(rate_hz, channels);
         });
-        assert_eq!(lines, ["sound.named-stop c=MSS32!stream_open why=door-shape by=sound-mix"]);
+        assert_eq!(lines, ["sound.named.stop c=MSS32!stream_open why=door-shape by=sound-mix"]);
     }
 }
 
@@ -1009,7 +1009,7 @@ fn the_pair_frees_what_it_handed_out() {
 fn a_block_not_handed_out_stops() {
     let (seat, front, _driver) = rig(NullBack);
     let lines = stops(|| front.mem_free_lock(0x1234));
-    assert_eq!(lines, ["sound.free-unknown c=MSS32!MEM_free_lock a=1234 by=sound-mix"]);
+    assert_eq!(lines, ["sound.free.unknown c=MSS32!MEM_free_lock a=1234 by=sound-mix"]);
     assert!(seat.freed.lock().expect("no test panics holding this").is_empty());
 }
 
@@ -1020,7 +1020,7 @@ fn a_second_free_stops() {
     let block = front.file_read(0x10, "a name", 0);
     front.mem_free_lock(block);
     let lines = stops(|| front.mem_free_lock(block));
-    assert_eq!(lines, ["sound.free-unknown c=MSS32!MEM_free_lock a=40 by=sound-mix"]);
+    assert_eq!(lines, ["sound.free.unknown c=MSS32!MEM_free_lock a=40 by=sound-mix"]);
     assert_eq!(seat.freed.lock().expect("no test panics holding this").len(), 1);
 }
 
@@ -1030,7 +1030,7 @@ fn a_destination_of_the_callers_own_stops() {
     let lines = stops(|| {
         front.file_read(0x10, "a name", 0x20);
     });
-    assert_eq!(lines, ["sound.named-stop c=MSS32!FILE_read why=destination-not-0 by=sound-mix"]);
+    assert_eq!(lines, ["sound.named.stop c=MSS32!FILE_read why=destination-not-0 by=sound-mix"]);
 }
 
 // Stops beside the formats.
@@ -1041,7 +1041,7 @@ fn a_sample_type_mss_does_not_name_stops() {
         let (_seat, front, driver) = rig(NullBack);
         let handle = front.allocate_sample_handle(driver);
         let lines = stops(|| front.set_sample_type(handle, format, flags));
-        assert_eq!(lines, ["sound.named-stop c=MSS32!AIL_set_sample_type why=format-unnamed by=sound-mix"]);
+        assert_eq!(lines, ["sound.named.stop c=MSS32!AIL_set_sample_type why=format-unnamed by=sound-mix"]);
     }
 }
 
@@ -1050,5 +1050,5 @@ fn a_third_slot_stops() {
     let (_seat, front, driver) = rig(NullBack);
     let handle = front.allocate_sample_handle(driver);
     let lines = stops(|| front.load_sample_buffer(handle, 2, 0x10, &[1]));
-    assert_eq!(lines, ["sound.named-stop c=MSS32!AIL_load_sample_buffer why=slot-past-2 by=sound-mix"]);
+    assert_eq!(lines, ["sound.named.stop c=MSS32!AIL_load_sample_buffer why=slot-past-2 by=sound-mix"]);
 }
