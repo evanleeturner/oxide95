@@ -1556,6 +1556,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "sound-buffers"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oxide_logline",
+ "oxide_trace",
+ "sound-mix",
+]
+
+[[package]]
 name = "sound-mix"
 version = "0.1.0"
 dependencies = [
