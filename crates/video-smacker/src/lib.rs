@@ -26,8 +26,8 @@ use alloc::vec::Vec;
 use core::fmt;
 
 use bits::Bits;
-pub use refused::{Part, Refused};
 use refused::logged;
+pub use refused::{Part, Refused};
 use tree::WordTree;
 use video::Trees;
 

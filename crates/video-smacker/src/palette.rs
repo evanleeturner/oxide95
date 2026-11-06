@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 //! A frame's palette chunk: 256 entries of red, green and blue, rewritten
-//! from the first entry on by three kinds of run. An entry no run reaches
-//! keeps its old colour.
+//! from the first entry on by three kinds of run, which read the palette as
+//! it stood before the chunk. The runs must reach the last entry: a chunk
+//! ending sooner is refused, since no clip on hand holds one and the
+//! description and the decoder compared against answer it differently.
 use crate::{Part, Refused};
 
 /// A palette's bytes, red, green and blue an entry.
@@ -21,9 +23,7 @@ pub(crate) fn apply(chunk: &[u8], palette: &mut [u8; BYTES]) -> Result<(), Refus
     let mut entry = 0;
     let mut at = 1;
     while entry < 256 {
-        let Some(&first) = chunk.get(at) else {
-            break;
-        };
+        let first = *chunk.get(at).ok_or(cut)?;
         if first & 0x80 != 0 {
             entry += usize::from(first & 0x7f) + 1;
             at += 1;

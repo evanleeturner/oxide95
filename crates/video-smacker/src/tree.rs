@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: MIT
 //! The decoding trees. Video reads 16-bit values through a word tree, whose
 //! leaves were themselves packed through two byte trees; sound reads bytes
-//! through byte trees. Three leaves of a word tree stand for the three most
-//! recent distinct values rather than for a value of their own, so a repeat
-//! costs the shortest codes; a frame starts with all three at 0.
+//! through byte trees. Three leaves of a word tree stand for the last three
+//! values read rather than for a value of their own, so a repeat costs the
+//! shortest codes. A read of the newest changes nothing and any other shifts
+//! the three along, so two slots can hold one value; a frame starts with all
+//! three at 0.
 use alloc::vec::Vec;
 
 use crate::Refused;

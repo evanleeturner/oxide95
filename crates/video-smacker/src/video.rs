@@ -27,7 +27,11 @@ pub(crate) struct Blocks {
 /// chain of 59, then 128, 256, 512, 1024 and 2048.
 fn chain(code: u8) -> usize {
     let code = usize::from(code & 0x3f);
-    if code < 59 { code + 1 } else { 128 << (code - 59) }
+    if code < 59 {
+        code + 1
+    } else {
+        128 << (code - 59)
+    }
 }
 
 /// A mono block: two colours and one bit a pixel, from the top-left pixel
@@ -44,7 +48,11 @@ fn mono(
     let map = trees.map.decode(bits)?;
     for y in 0..4 {
         for x in 0..4 {
-            let colour = if (map >> (y * 4 + x)) & 1 == 1 { set } else { clear };
+            let colour = if (map >> (y * 4 + x)) & 1 == 1 {
+                set
+            } else {
+                clear
+            };
             pixels[at + y * width + x] = colour;
         }
     }
