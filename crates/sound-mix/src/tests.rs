@@ -716,6 +716,9 @@ fn sha256(message: &[u8]) -> [u8; 32] {
 
 /// Finds every WAVE in the archives named by `SOUND_MIX_ARCHIVES`, colon-separated,
 /// and tallies the parse. No archive enters the repo, so this runs by hand.
+///
+/// The walk steps over a find's header, not its declared size: a size can run past the
+/// next WAVE and would hide it. Each size that does is printed with its overrun.
 #[test]
 #[ignore = "needs a program's archives, named by SOUND_MIX_ARCHIVES"]
 fn every_wave_in_the_named_archives_parses_as_a_row_of_the_table() {
@@ -723,6 +726,8 @@ fn every_wave_in_the_named_archives_parses_as_a_row_of_the_table() {
     let mut tally = std::collections::BTreeMap::new();
     for path in paths.split(':') {
         let bytes = std::fs::read(path).expect("each named archive reads");
+        let mut archive_tally = std::collections::BTreeMap::new();
+        let mut finds: Vec<(usize, usize)> = Vec::new();
         let mut at = 0;
         while at + 12 <= bytes.len() {
             if &bytes[at..at + 4] == b"RIFF" && &bytes[at + 8..at + 12] == b"WAVE" {
@@ -731,12 +736,28 @@ fn every_wave_in_the_named_archives_parses_as_a_row_of_the_table() {
                 let sound = wave::parse(&bytes[at..end]).expect("each WAVE found parses");
                 let row = (sound.format, sound.channels, sound.rate_hz, sound.bits);
                 *tally.entry(row).or_insert(0u32) += 1;
-                at = end;
+                *archive_tally.entry(row).or_insert(0u32) += 1;
+                finds.push((at, end));
+                at += 12;
             } else {
                 at += 1;
             }
         }
+        println!("{path}: {} WAVEs", finds.len());
+        for (row, count) in &archive_tally {
+            println!("  {row:?} {count}");
+        }
+        for pair in finds.windows(2) {
+            let ((start, end), (next, _)) = (pair[0], pair[1]);
+            if end > next {
+                println!(
+                    "  size runs over: at {start:#x} declared end {end:#x} next {next:#x} over by {}",
+                    end - next
+                );
+            }
+        }
     }
+    println!("both:");
     for (row, count) in &tally {
         println!("{row:?} {count}");
     }

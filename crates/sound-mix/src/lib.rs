@@ -316,11 +316,13 @@ impl<H: Host, O: Output> Front<H, O> {
     /// The call's line, then the end of the program.
     fn stop_because(&self, name: &str, why: &str) -> ! {
         log::error!(c:% = self.called(name), why = why, by = "sound-mix"; "sound.named-stop");
+        log::logger().flush();
         panic!("sound-mix: {name}: {why}");
     }
 
     fn not_live(&self, name: &str, number: u32) -> ! {
         log::error!(c:% = self.called(name), a:% = numbers!(number), by = "sound-mix"; "sound.not-live");
+        log::logger().flush();
         panic!("sound-mix: {name}: {number:x} is not live");
     }
 
