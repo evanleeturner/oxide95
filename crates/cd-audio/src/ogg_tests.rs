@@ -668,6 +668,45 @@ fn a_file_going_bad_mid_play_is_one_line_and_silence_and_the_door_stays_open() {
     assert_eq!(doors.live.get(), None);
 }
 
+/// The names of the features whose rows hold `dep`.
+fn features_naming<'m>(manifest: &'m str, dep: &str) -> Vec<&'m str> {
+    manifest
+        .lines()
+        .filter(|line| line.contains(dep))
+        .filter_map(|line| line.split(' ').next())
+        .collect()
+}
+
+#[test]
+fn lewton_stands_pinned_behind_its_feature_and_off_the_browsers_target() {
+    let manifest = include_str!("../Cargo.toml");
+    let mut section = "";
+    let mut rows = Vec::new();
+    for line in manifest.lines() {
+        if line.starts_with('[') {
+            section = line;
+        } else if line.starts_with("lewton") {
+            rows.push((section, line));
+        }
+    }
+    assert_eq!(
+        rows,
+        [
+            (
+                r#"[target.'cfg(not(target_arch = "wasm32"))'.dependencies]"#,
+                r#"lewton = { version = "=0.10.2", optional = true }"#,
+            ),
+            (
+                r#"[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]"#,
+                r#"lewton = "=0.10.2""#,
+            ),
+        ]
+    );
+    assert_eq!(features_naming(manifest, "dep:lewton"), ["ogg"]);
+    assert_eq!(features_naming(manifest, "dep:sound-mix"), ["door"]);
+    assert!(manifest.contains(r#"disc = ["dep:logical_disc", "logical_disc/disc"]"#));
+}
+
 #[test]
 fn the_samples_can_move_to_another_thread() {
     fn moves<T: Send>() {}
