@@ -103,8 +103,9 @@ fn ends_exactly(page: &[u8]) -> bool {
     })
 }
 
-/// The granule of the page that ends `tail`, if it is of the stream `serial` names. Another
-/// stream's last page means a chained file, whose length this is not.
+/// The granule of the page that ends `tail`, if it is of the stream `serial` names. Should
+/// two fit the end, the nearer it wins. Another stream's last page means a chained file,
+/// whose length this is not.
 pub(crate) fn last_granule(tail: &[u8], serial: &[u8]) -> Option<u64> {
     let page = (0..tail.len())
         .rev()

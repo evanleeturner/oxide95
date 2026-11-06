@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! A store's Ogg through the door, over a stand-in file made by `ffmpeg` and kept as text in
 //! `test_ogg.b64`: 8 pages of 440 Hz on the left and 880 Hz on the right, 44,100 pairs. It
-//! came from no game. A real store's file is not tested here, and nothing reaches a speaker.
+//! came from no game, as `test_ogg_mono.b64`, a second one on one channel, did not. A real
+//! store's file is not tested here, and nothing reaches a speaker.
 
 use std::cell::{Cell, RefCell};
 use std::ffi::CStr;
@@ -25,16 +26,24 @@ const PAIRS: usize = 44_100;
 const FRAMES: u32 = 75;
 const NAME: &str = "TWO.OGG";
 const TRACK: u8 = 2;
-/// Where two of its pages start: an early one holding sound, and the last.
+/// Where three of its pages start: an early one holding sound, and the last two.
 const EARLY_PAGE: usize = 4385;
+const SECOND_LAST_PAGE: usize = 6465;
 const LAST_PAGE: usize = 6882;
-/// In its first page: the channel count, and the rate.
-const CHANNELS_AT: usize = 39;
+/// In its first page: the rate.
 const RATE_AT: usize = 40;
 
 fn standin() -> Vec<u8> {
+    from_base64(include_str!("test_ogg.b64"))
+}
+
+fn mono() -> Vec<u8> {
+    from_base64(include_str!("test_ogg_mono.b64"))
+}
+
+fn from_base64(kept: &str) -> Vec<u8> {
     const LETTERS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-    let text: Vec<u8> = include_str!("test_ogg.b64")
+    let text: Vec<u8> = kept
         .lines()
         .filter(|line| !line.starts_with('#'))
         .flat_map(str::bytes)
@@ -80,10 +89,31 @@ fn with_page(at: usize, change: impl FnOnce(&mut [u8])) -> Vec<u8> {
         .sum();
     let page = &mut bytes[at..at + 27 + segments + body];
     change(page);
+    seal(page);
+    bytes
+}
+
+fn seal(page: &mut [u8]) {
     page[22..26].fill(0);
     let sum = checksum(page);
     page[22..26].copy_from_slice(&sum.to_le_bytes());
-    bytes
+}
+
+/// The stand-in with its last two pages made one, so a seek can land on the last page, where
+/// the decoder leaves the last packet uncut.
+fn with_a_long_last_page() -> Vec<u8> {
+    let bytes = standin();
+    let (second_last, last) = (&bytes[SECOND_LAST_PAGE..LAST_PAGE], &bytes[LAST_PAGE..]);
+    let (second_count, last_count) = (usize::from(second_last[26]), usize::from(last[26]));
+    let mut page = last[..26].to_vec();
+    page[18..22].copy_from_slice(&second_last[18..22]);
+    page.push(u8::try_from(second_count + last_count).expect("few segments"));
+    page.extend_from_slice(&second_last[27..27 + second_count]);
+    page.extend_from_slice(&last[27..27 + last_count]);
+    page.extend_from_slice(&second_last[27 + second_count..]);
+    page.extend_from_slice(&last[27 + last_count..]);
+    seal(&mut page);
+    [&bytes[..SECOND_LAST_PAGE], &page].concat()
 }
 
 /// The stand-in with a byte of an early page's sound changed and its checksum left, so a
@@ -122,6 +152,7 @@ struct Files {
     handles: RefCell<Vec<Option<(usize, usize)>>>,
     opens: Cell<u32>,
     closes: Cell<u32>,
+    bytes_read: Cell<usize>,
 }
 
 impl Files {
@@ -161,6 +192,7 @@ impl Folder for Files {
         let moved = into.len().min(bytes.len().saturating_sub(*at));
         into[..moved].copy_from_slice(&bytes[*at..*at + moved]);
         *at += moved;
+        self.bytes_read.set(self.bytes_read.get() + moved);
         Ok(u32::try_from(moved).expect("a small read"))
     }
 
@@ -348,6 +380,86 @@ fn a_resume_past_a_bad_page_reads_so_it_sought_and_did_not_decode_from_the_start
 }
 
 #[test]
+fn a_seek_that_lands_on_the_last_page_looks_further_back() {
+    let straight = plain_decode();
+    let files = Files::one(with_a_long_last_page());
+    let tracks = store_tracks();
+    // That page holds frames 62 to 75; each of these aims a seek inside it.
+    for frame in 66..FRAMES {
+        let mut samples = OggSamples::new(&files, &tracks);
+        let at = frame as usize * FRAME_SAMPLES;
+        let want = &straight[at..straight.len().min(at + 3 * FRAME_SAMPLES)];
+        let mut into = vec![0; 3 * FRAME_SAMPLES];
+        let moved = samples.read(place(frame), &mut into).expect("it reads");
+        assert_eq!(&into[..moved], want, "frame {frame}");
+    }
+}
+
+#[test]
+fn a_seek_that_lands_past_its_place_looks_further_back() {
+    // The page a seek for this frame lands on claims more than it holds, so it reckons it
+    // stands past the place. Trusted, the read would hand over the wrong sound.
+    let files = Files::one(with_page(EARLY_PAGE, |page| {
+        page[6..14].copy_from_slice(&15_000u64.to_le_bytes());
+    }));
+    let tracks = store_tracks();
+    let mut samples = OggSamples::new(&files, &tracks);
+    let mut into = vec![0; 3 * FRAME_SAMPLES];
+    let moved = samples.read(place(14), &mut into).expect("it reads");
+    let at = 14 * FRAME_SAMPLES;
+    assert_eq!(&into[..moved], &plain_decode()[at..at + moved]);
+    assert_eq!(moved, 3 * FRAME_SAMPLES);
+}
+
+#[test]
+fn a_read_of_another_track_at_the_same_place_does_not_go_on() {
+    let files = Files::one(standin());
+    let tracks = store_tracks();
+    let mut samples = OggSamples::new(&files, &tracks);
+    samples
+        .read(place(0), &mut vec![0; 7 * FRAME_SAMPLES])
+        .expect("it reads");
+    assert_eq!(
+        samples.read(Place { track: 9, frame: 7 }, &mut [0; FRAME_SAMPLES]),
+        None
+    );
+}
+
+#[test]
+fn a_read_after_one_that_failed_starts_again() {
+    let files = Files::one(with_a_refused_early_packet());
+    let tracks = store_tracks();
+    let mut samples = OggSamples::new(&files, &tracks);
+    assert_eq!(samples.read(place(0), &mut vec![0; PAIRS * 2]), None);
+    assert_eq!(files.opens.get(), 1);
+    let mut into = [0; FRAME_SAMPLES];
+    let moved = samples
+        .read(place(0), &mut into)
+        .expect("its head is sound");
+    assert_eq!(files.opens.get(), 2, "the failed run is gone");
+    assert_eq!(&into[..moved], &plain_decode()[..moved]);
+}
+
+#[test]
+fn a_long_files_length_reads_only_its_tail() {
+    const PADDING: usize = 200_000;
+    let mut bytes = standin();
+    bytes.splice(LAST_PAGE..LAST_PAGE, vec![0; PADDING]);
+    let files = Files::one(bytes);
+    let tracks = store_tracks();
+    let samples = OggSamples::new(&files, &tracks);
+    let Audio::Encoded(file) = &tracks[0].audio else {
+        unreachable!("the store's track")
+    };
+    assert_eq!(samples.measure(file), Some(FRAMES));
+    let read = files.bytes_read.get();
+    assert!(
+        read < PADDING / 2,
+        "read {read} bytes of a file past {PADDING}"
+    );
+}
+
+#[test]
 fn a_broken_checksum_refuses_a_seek_as_well() {
     let files = Files::one(with_a_bad_early_page());
     let tracks = store_tracks();
@@ -384,7 +496,7 @@ fn bad_files() -> Vec<(&'static str, Vec<u8>)> {
                 page[RATE_AT..RATE_AT + 4].copy_from_slice(&22_050u32.to_le_bytes());
             }),
         ),
-        ("one channel", with_page(0, |page| page[CHANNELS_AT] = 1)),
+        ("one channel", mono()),
         (
             "another stream's last page",
             with_page(LAST_PAGE, |page| page[14] ^= 0xff),
@@ -464,6 +576,9 @@ fn the_last_page_is_the_one_that_fits_the_end_not_any_capture_pattern() {
     assert_eq!(last_granule(&page_of(200, 8, b"x"), &SERIAL), None);
     assert_eq!(last_granule(&page_of(u64::MAX, 7, b"x"), &SERIAL), None);
     assert_eq!(last_granule(&[], &SERIAL), None);
+    // Two that fit: the nearer the end, which is the scan's own order.
+    let nested = page_of(100, 7, &page_of(200, 7, b"x"));
+    assert_eq!(last_granule(&nested, &SERIAL), Some(200));
 }
 
 #[test]
