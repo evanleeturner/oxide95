@@ -23,11 +23,22 @@
 //! builds for `wasm32-unknown-unknown` and runs where no heap exists yet.
 #![cfg_attr(not(test), no_std)]
 
+#[cfg(any(test, feature = "disc"))]
+extern crate alloc;
+
+#[cfg(any(test, feature = "disc"))]
+pub mod disc;
+#[cfg(any(test, feature = "door"))]
+pub mod door;
+#[cfg(test)]
+mod door_tests;
 pub mod page;
 pub mod play;
 #[cfg(test)]
 mod play_tests;
 pub mod table;
+#[cfg(test)]
+mod test_disc;
 #[cfg(test)]
 mod test_log;
 #[cfg(test)]

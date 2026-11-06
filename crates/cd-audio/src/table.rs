@@ -97,6 +97,19 @@ impl Tracks<'_> {
         None
     }
 
+    /// Where the track holding `count` ends, as one count; past the disc, the disc's end.
+    #[must_use]
+    pub fn track_end(&self, count: u32) -> u32 {
+        let mut end = 0;
+        for span in self.0 {
+            end += span.frames;
+            if count < end {
+                return end;
+            }
+        }
+        end
+    }
+
     /// The place `count` frames into the disc; past the end, the last track's end.
     #[must_use]
     pub fn place(&self, count: u32) -> Place {

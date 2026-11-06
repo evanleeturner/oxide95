@@ -64,6 +64,12 @@
       "template": "{c} with {a} has no row: the program stops here"
     },
     {
+      "id": "cd.track.unread",
+      "level": "W",
+      "fields": { "a": "the track's number, whose sound would not read or could not be sized", "by": "the crate that read it" },
+      "template": "track {a} would not read: it is silent, and the disc's clock runs on"
+    },
+    {
       "id": "joy.stop",
       "level": "E",
       "fields": { "c": "the joystick call no answer is written for, as DLL!NAME", "a": "its numbers, in order", "by": "the crate that stopped it" },

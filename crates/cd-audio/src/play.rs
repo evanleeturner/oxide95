@@ -402,7 +402,7 @@ fn place_of(word: u32) -> Place {
 }
 
 /// The disc's frames between two readings of the clock, which may have wrapped between.
-fn frames_since(now_ms: u32, since_ms: u32) -> u32 {
+pub(crate) fn frames_since(now_ms: u32, since_ms: u32) -> u32 {
     let elapsed = u64::from(now_ms.wrapping_sub(since_ms));
     u32::try_from(elapsed * u64::from(FRAMES_A_SECOND) / 1000).unwrap_or(u32::MAX)
 }
