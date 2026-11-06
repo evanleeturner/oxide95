@@ -405,6 +405,54 @@ impl<B: Back> Easel<B> {
         }
     }
 
+    /// The screen's buffer lent to `run`, as [`Self::with_buffer`] lends a
+    /// bitmap's. `run` must not call this easel. Presents nothing.
+    pub fn with_screen<T>(&self, run: impl FnOnce(&mut Buffer) -> T) -> T {
+        run(&mut self.state.borrow_mut().screen)
+    }
+
+    /// A new screen `width` by `height`, all index 0, as a mode's change
+    /// leaves it; `false`, the screen as it was, past `MOST_BYTES`. Presents
+    /// nothing, and contexts on the screen draw on the new one.
+    pub fn resize_screen(&self, width: u32, height: u32) -> bool {
+        let Some(screen) = Buffer::sized(width, height, false) else {
+            return false;
+        };
+        self.state.borrow_mut().screen = screen;
+        true
+    }
+
+    /// Swaps the screen's pixels with the bitmap's, no copy, so each pixels'
+    /// address moves with them; `false`, nothing moved, for no such bitmap or
+    /// one of another shape. Presents nothing; a table stays where it was.
+    pub fn swap_screen(&self, bitmap: u32) -> bool {
+        let state = &mut *self.state.borrow_mut();
+        let Some(Object::Bitmap(buffer)) = state.objects.get_mut(&bitmap) else {
+            return false;
+        };
+        let screen = &mut state.screen;
+        let same = (buffer.width, buffer.height, buffer.pitch, buffer.bottom_up)
+            == (screen.width, screen.height, screen.pitch, screen.bottom_up);
+        if same {
+            core::mem::swap(&mut buffer.pixels, &mut screen.pixels);
+        }
+        same
+    }
+
+    /// `palette` becomes the colours the screen shows and a table-less picture
+    /// reads through, as a hardware palette's load; `false` for no such
+    /// palette. Presents nothing: what the screen shows takes the new colours
+    /// at the next present.
+    pub fn show_palette(&self, palette: u32) -> bool {
+        let state = &mut *self.state.borrow_mut();
+        let Some(Object::Palette(kept)) = state.objects.get(&palette) else {
+            return false;
+        };
+        state.realized = kept.clone();
+        state.colors = kept.clone();
+        true
+    }
+
     /// What the screen shows now.
     #[must_use]
     pub fn shown(&self) -> Shown {

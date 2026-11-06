@@ -299,6 +299,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "draw-surfaces"
+version = "0.1.0"
+dependencies = [
+ "draw",
+ "log",
+ "oxide_logline",
+ "oxide_trace",
+ "window",
+]
+
+[[package]]
 name = "dtor"
 version = "0.8.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"

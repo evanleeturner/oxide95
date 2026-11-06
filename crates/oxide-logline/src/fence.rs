@@ -222,12 +222,11 @@ fn row<'book>(book: &'book serde_json::Value, id: &str) -> Option<&'book serde_j
         .find(|entry| entry["id"] == id)
 }
 
-/// Each named row must be in both logbooks and equal between them, as JSON
-/// values: key order and white space do not count.
+/// Each named row must be in both logbooks; and every row both hold, named or
+/// not, must be equal between them, as JSON values: key order and white space do
+/// not count. A row both hold is one meaning read from two places, so a drift in
+/// either is a problem whichever workspace walks it.
 fn shared_problems(book: &serde_json::Value, shared: &[&str], problems: &mut Vec<String>) {
-    if shared.is_empty() {
-        return;
-    }
     let home: serde_json::Value =
         serde_json::from_str(HOME_BOOK).expect("invariant: this crate's logbook is JSON");
     for &id in shared {
@@ -238,10 +237,15 @@ fn shared_problems(book: &serde_json::Value, shared: &[&str], problems: &mut Vec
             (_, None) => problems.push(format!(
                 "logbook {id}: named as shared, absent from the dependency's logbook"
             )),
-            (Some(here), Some(there)) if here != there => problems.push(format!(
-                "logbook {id}: named as shared, unequal to the dependency's row"
-            )),
             _ => {}
+        }
+    }
+    for here in book["events"].as_array().into_iter().flatten() {
+        let id = here["id"].as_str().unwrap_or_default();
+        if row(&home, id).is_some_and(|there| there != here) {
+            problems.push(format!(
+                "logbook {id}: held by both logbooks, unequal to the dependency's row"
+            ));
         }
     }
 }
@@ -257,10 +261,11 @@ pub fn check(root: &Path) -> Report {
 ///
 /// For those rows alone the orphan-entry and logged-nowhere-field rules are off;
 /// every other rule stays on. The exemption is earned: a named row absent from
-/// either logbook, or unequal between them, is a problem, so the fence of this
-/// crate's own workspace, which keeps every rule on that same row, answers for
-/// its fields. A field only the caller logs therefore has no place in a shared
-/// row: this crate's own fence would fail it.
+/// either logbook is a problem, and so is any row both hold, named or not, that is
+/// unequal between them, so the fence of this crate's own workspace, which keeps
+/// every rule on that same row, answers for its fields. A field only the caller
+/// logs therefore has no place in a shared row: this crate's own fence would fail
+/// it.
 #[must_use]
 pub fn check_sharing(root: &Path, shared: &[&str]) -> Report {
     let book: serde_json::Value = serde_json::from_str(

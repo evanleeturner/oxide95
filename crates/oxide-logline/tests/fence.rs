@@ -96,6 +96,20 @@ fn a_named_row_unequal_to_the_dependency_fails() {
     fails_once(&report, "unequal to the dependency's row");
 }
 
+/// The drift this closes: nobody named this row, and it is logged, so no other
+/// rule sees it differ from the row a dependency logs through.
+#[test]
+fn a_row_both_hold_unnamed_and_unequal_fails() {
+    let mut row = home_row("fn.in");
+    row["fields"]["added"] = json!("a field the dependency's row does not hold");
+    let source = logging("debug", "f = 1, a = 2, added = 3", "fn.in");
+    let report = walk("drift", &[row], &source, &[]);
+    fails_once(
+        &report,
+        "held by both logbooks, unequal to the dependency's row",
+    );
+}
+
 #[test]
 fn an_undeclared_field_on_a_shared_row_fails() {
     let source = logging("debug", "undeclared = 1", "fn.in");

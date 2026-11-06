@@ -7,7 +7,7 @@ use window::Rect;
 use window::desk::{Desk, Window};
 use window::page::Page as Host;
 
-use crate::easel::{Area, Back, Easel, Palette, Shown};
+use crate::easel::{self, Area, Back, Easel, Palette, Shown};
 use crate::front::{Front, Header};
 use crate::page::Page;
 use crate::table::{Calls, Route, Row};
@@ -416,4 +416,62 @@ fn a_narrower_shorter_window_cuts_the_picture_never_shears_it() {
     let mut narrow = [0xdead_beef_u32; 2];
     two_by_two().to_zero_rgb(&mut narrow, 1);
     assert_eq!(narrow, [0x11_0000, 0x33_0000]);
+}
+
+#[test]
+fn a_new_screen_is_all_index_0_and_a_wild_size_leaves_the_old() {
+    let (easel, _) = rig();
+    easel.with_screen(|screen| screen.pixels.fill(7));
+    assert!(easel.resize_screen(320, 200));
+    let shown = easel.shown();
+    assert_eq!((shown.width, shown.height, shown.pitch), (320, 200, 320));
+    assert!(shown.pixels.iter().all(|index| *index == 0));
+    assert!(!easel.resize_screen(0x8000_0000, 0x8000_0000));
+    assert_eq!(easel.shown().width, 320);
+}
+
+/// No copy: the pixels' address moves with them, what a flip's next `Lock` reads.
+#[test]
+fn a_swap_moves_the_pixels_and_their_address() {
+    let (easel, _) = rig();
+    assert!(easel.resize_screen(4, 2));
+    let buffer = easel::Buffer::new(4, 2, false);
+    let bitmap = easel.create_bitmap(buffer);
+    easel.with_buffer(bitmap, |buffer| buffer.pixels.fill(9));
+    let screen = easel.with_screen(|screen| screen.address());
+    let kept = easel.with_buffer(bitmap, |buffer| buffer.address());
+    assert!(easel.swap_screen(bitmap));
+    assert_eq!(easel.shown().pixels[0], 9);
+    assert_eq!(
+        easel.with_screen(|screen| screen.address()),
+        kept.expect("the bitmap")
+    );
+    assert_eq!(
+        easel.with_buffer(bitmap, |buffer| buffer.address()),
+        Some(screen)
+    );
+    let other = easel.create_bitmap(easel::Buffer::new(8, 2, false));
+    assert!(!easel.swap_screen(other), "another shape moves nothing");
+    assert!(!easel.swap_screen(0x7777), "no such bitmap");
+    assert_eq!(easel.shown().pixels[0], 9);
+}
+
+#[test]
+fn a_shown_palette_is_the_colours_and_what_a_blit_reads_through() {
+    let (easel, _) = rig();
+    let palette = easel.create_palette(&[0xff]);
+    assert!(easel.show_palette(palette));
+    assert_eq!(easel.shown().palette.zero_rgb(0), 0xff_0000);
+    assert!(!easel.show_palette(0x7777));
+    let dc = easel.window_context(0);
+    let memory = easel.memory_context();
+    let bitmap = easel.create_bitmap(easel::Buffer::new(4, 2, false));
+    easel.select(memory, bitmap);
+    let whole = Area::new(0, 0, 4, 2);
+    assert_eq!(easel.blit(dc, whole, memory, whole), Some(()));
+    assert_eq!(
+        easel.shown().palette.zero_rgb(0),
+        0xff_0000,
+        "the realized colours"
+    );
 }
