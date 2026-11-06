@@ -26,11 +26,12 @@ static ROW: Row = Row {
     file: "test",
     levels: &[0x51, 8],
     modes: &[(320, 200, 8), (64, 32, 8)],
+    refused: DDERR_INVALIDMODE,
     chain: 2,
     palette_flags: 0x44,
 };
 
-type Rig = Surfaces<'static, &'static Page, Host>;
+type Rig = Surfaces<'static, &'static Page, Desk<Host>>;
 
 struct Parts {
     page: &'static Page,
@@ -596,8 +597,8 @@ fn each_call_writes_one_line_as_interface_name() {
     assert!(lines[2].starts_with("draw.table c=IDirectDraw::CreatePalette i=10 a=1"));
 }
 
-type ComRig = Com<&'static Page, Host>;
-type This = *mut Interface<&'static Page, Host>;
+type ComRig = Com<&'static Page, Desk<Host>>;
+type This = *mut Interface<&'static Page, Desk<Host>>;
 
 #[expect(unsafe_code, reason = "the created word is this test's own")]
 fn com() -> (&'static ComRig, This) {
@@ -719,4 +720,24 @@ fn a_program_walks_the_tables() {
         assert_eq!(release(primary), 0);
     }
     assert!(com.surfaces().with_surface(1, |_| ()).is_none());
+}
+
+/// A row with no modes: the number it answers is its own, the screen stays.
+static NO_MODES: Row = Row {
+    file: "test",
+    levels: &[0x51],
+    modes: &[],
+    refused: DDERR_UNSUPPORTED,
+    chain: 2,
+    palette_flags: 0x44,
+};
+
+#[test]
+fn a_row_names_its_own_refusal() {
+    let page: &'static Page = Box::leak(Box::new(Page::new()));
+    let easel: &'static Easel<&'static Page> = Box::leak(Box::new(Easel::new(page, 64, 32)));
+    let desk: &'static Desk<Host> = Box::leak(Box::new(Desk::new(Host::new(64, 32))));
+    let surfaces = Surfaces::new(&NO_MODES, easel, desk);
+    assert_eq!(surfaces.set_display_mode(320, 200, 8), DDERR_UNSUPPORTED);
+    assert_eq!(easel.shown().width, 64, "a refused mode leaves the screen");
 }
