@@ -412,6 +412,24 @@ fn a_seek_that_lands_past_its_place_looks_further_back() {
 }
 
 #[test]
+fn a_second_seek_forgets_what_the_first_held() {
+    // Both of this frame's tries land on the one page, which claims too much. The second
+    // try, with the first's sound still held, would reckon it stands before the place and
+    // hand that old sound over.
+    const FRAME: u32 = 40;
+    let files = Files::one(with_page(EARLY_PAGE, |page| {
+        page[6..14].copy_from_slice(&31_000u64.to_le_bytes());
+    }));
+    let tracks = store_tracks();
+    let mut samples = OggSamples::new(&files, &tracks);
+    let mut into = vec![0; 3 * FRAME_SAMPLES];
+    let moved = samples.read(place(FRAME), &mut into).expect("it reads");
+    let at = FRAME as usize * FRAME_SAMPLES;
+    assert_eq!(moved, 3 * FRAME_SAMPLES);
+    assert_eq!(&into[..moved], &plain_decode()[at..at + moved]);
+}
+
+#[test]
 fn a_read_of_another_track_at_the_same_place_does_not_go_on() {
     let files = Files::one(standin());
     let tracks = store_tracks();
