@@ -1,6 +1,6 @@
-# The calls a program makes to find its CD-audio disc, answered from a row: no
-# disc read, no sound. No target's own names and no allocator: it builds for
-# any target, the browser's included.
+# The calls a program makes to its CD-audio disc, answered from a row, and a
+# disc's tracks played from a clock. With no feature: no disc read, no target's
+# own names and no allocator, so it builds for any target, the browser's included.
 [package]
 name = "cd-audio"
 version = "0.1.0"

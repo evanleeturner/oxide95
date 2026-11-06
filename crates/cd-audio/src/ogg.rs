@@ -5,7 +5,7 @@
 //!
 //! A read that follows the last goes on decoding. Any other, a resume above all, seeks. A
 //! page is a seek's grain, and a decoder that has just sought cannot say where it stands
-//! until a page ends, so [`Decoding::seek_near`] lands before the place and decodes up to
+//! until a page ends, so `Decoding::seek_near` lands before the place and decodes up to
 //! it. Close to the file's start, or where no seek lands well, the track is decoded from
 //! its start, which holds up the caller for as long as that takes.
 use alloc::ffi::CString;
