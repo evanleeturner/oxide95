@@ -23,6 +23,7 @@ source code that you compile against these libraries.
 | `kernel_text` | code pages and text conversion |
 | `kernel_threads` | thread numbers, locks, per-thread slots and counters |
 | `kernel_time` | clocks and dates |
+| `cd-audio` | the calls a program makes to find its CD-audio disc; it reads no disc and plays no sound |
 | `logical_disc` | a read-only copy of a CD: a cue sheet with its bin files, or an iso |
 | `window` | windows and their message queues |
 | `window-input` | the keyboard and the mouse |
@@ -38,7 +39,7 @@ page or a test. Every call writes one log line naming the call, its numbers
 and its answer, so a wrong answer shows up in the log.
 
 Some calls and cases are not answered yet. `kernel_registry`, `kernel_text`,
-`draw`, `draw-surfaces`, `window`, `window-dialogs` and `window-input` list
+`cd-audio`, `draw`, `draw-surfaces`, `window`, `window-dialogs` and `window-input` list
 theirs at the top of `src/lib.rs`.
 
 ## Where it has been checked
