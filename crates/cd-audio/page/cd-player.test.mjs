@@ -267,6 +267,8 @@ test("a piece ending a run stops at the run's frame, never past the track", () =
 test("a track not on the disc is silence and no fault", () => {
   const { window, logger, apply, audio } = setUp();
   apply([PLAY, 9, 0, 9, 10]);
+  apply([PLAY, 9, 0, 5, 10]);
+  apply([PLAY, 2, 0, 9, 10]);
   apply([PLAY, 5, 0, 2, 10]);
   assert.equal(audio.played, 0);
   assert.equal(window.timers.size, 0);
@@ -283,6 +285,22 @@ test("a pause and a stop end the sound and the timer", () => {
     assert.equal(window.timers.size, 0);
     assert.deepEqual(window.revoked, ["blob:1"]);
   }
+});
+
+test("a link is given back once, however many orders follow", () => {
+  const { window, apply } = setUp();
+  apply([PLAY, 2, 0, 2, 75]);
+  apply([PAUSE, 0, 0, 0, 0]);
+  apply([STOP, 0, 0, 0, 0]);
+  assert.deepEqual(window.revoked, ["blob:1"]);
+});
+
+test("a track with no frames in the run gives no piece, and the run goes on", () => {
+  const numbers = (from, to) =>
+    runPieces(disc(), from, to).map((piece) => piece.track.number);
+  assert.deepEqual(numbers({ track: 2, frame: 75 }, { track: 3, frame: 10 }), [3]);
+  assert.deepEqual(numbers({ track: 2, frame: 0 }, { track: 3, frame: 0 }), [2]);
+  assert.deepEqual(numbers({ track: 2, frame: 75 }, { track: 2, frame: 75 }), []);
 });
 
 test("a resume comes as a play from the clock's place", () => {

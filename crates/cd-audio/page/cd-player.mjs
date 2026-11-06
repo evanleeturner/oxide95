@@ -65,11 +65,12 @@ export function wavHeader(dataBytes) {
 }
 
 // A run as one piece a track, `from` and `to` each `{ track, frame }`. A run that
-// names a track the disc lacks has no pieces: silence, never a fault.
+// names a track the disc lacks has no pieces: silence, never a fault. A `to` before
+// its `from`, or not on the disc, leaves the slice empty.
 export function runPieces(tracks, from, to) {
   const first = tracks.findIndex((track) => track.number === from.track);
   const last = tracks.findIndex((track) => track.number === to.track);
-  if (first < 0 || last < first) return [];
+  if (first < 0) return [];
   return tracks
     .slice(first, last + 1)
     .map((track, at, run) => ({
