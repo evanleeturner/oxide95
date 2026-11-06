@@ -64,6 +64,12 @@
       "template": "{c} with {a} has no row: the program stops here"
     },
     {
+      "id": "joy.stop",
+      "level": "E",
+      "fields": { "c": "the joystick call no device answers, as DLL!NAME", "a": "its numbers, in order", "by": "the crate that stopped it" },
+      "template": "{c} with {a} has no device to read: the program stops here"
+    },
+    {
       "id": "sound.named.stop",
       "level": "E",
       "fields": { "c": "the sound call no answer is read for, as DLL!NAME", "why": "the reason, one word", "by": "the crate that stopped it" },

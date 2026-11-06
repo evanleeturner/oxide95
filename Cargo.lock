@@ -533,6 +533,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "joystick"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oxide_logline",
+ "oxide_trace",
+]
+
+[[package]]
 name = "js-sys"
 version = "0.3.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"

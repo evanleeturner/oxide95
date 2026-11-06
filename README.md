@@ -25,6 +25,7 @@ source code that you compile against these libraries.
 | `kernel_time` | clocks and dates |
 | `cd-audio` | the calls a program makes to find its CD-audio disc; it reads no disc and plays no sound |
 | `sound-mix` | Miles Sound System's calls, mixed in memory; a back over Windows' `waveOut` is written but has not run on real Windows yet, so nothing has reached a speaker |
+| `joystick` | the calls a program makes to a joystick; it says none is there and reads no pad |
 | `logical_disc` | a read-only copy of a CD: a cue sheet with its bin files, or an iso |
 | `window` | windows and their message queues |
 | `window-input` | the keyboard and the mouse |
@@ -42,7 +43,7 @@ page or a test. Every call writes one log line naming the call, its numbers
 and its answer, so a wrong answer shows up in the log.
 
 Some calls and cases are not answered yet. `kernel_registry`, `kernel_text`,
-`cd-audio`, `draw`, `draw-surfaces`, `sound-mix`, `video`, `video_smacker`, `window`,
+`cd-audio`, `draw`, `draw-surfaces`, `joystick`, `sound-mix`, `video`, `video_smacker`, `window`,
 `window-dialogs` and `window-input` list theirs at the top of `src/lib.rs`.
 
 ## Where it has been checked
