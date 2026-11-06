@@ -26,6 +26,7 @@ source code that you compile against these libraries.
 | `logical_disc` | a read-only copy of a CD: a cue sheet with its bin files, or an iso |
 | `window` | windows and their message queues |
 | `window-input` | the keyboard and the mouse |
+| `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
 | `draw` | pixels and palettes |
 | `draw-surfaces` | DirectDraw's surfaces and palette, painted through `draw` |
 | `oxide_trace` | macros that log the values a rewritten function reads and writes |
@@ -37,8 +38,8 @@ page or a test. Every call writes one log line naming the call, its numbers
 and its answer, so a wrong answer shows up in the log.
 
 Some calls and cases are not answered yet. `kernel_registry`, `kernel_text`,
-`draw`, `draw-surfaces`, `window` and `window-input` list theirs at the top of
-`src/lib.rs`.
+`draw`, `draw-surfaces`, `window`, `window-dialogs` and `window-input` list
+theirs at the top of `src/lib.rs`.
 
 ## Where it has been checked
 
