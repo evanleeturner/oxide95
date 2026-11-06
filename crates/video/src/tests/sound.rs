@@ -55,7 +55,11 @@ fn a_clip_with_no_track_answers_0_for_every_mask_and_takes_no_door() {
     let mut videos = holding(&bytes, 0, Choices::default());
     let handle = videos.smack_open(b"a.smk", ALL_7, 0);
     for mask in masks() {
-        assert_eq!(videos.smack_sound_in_track(handle, mask), 0, "mask {mask:x}");
+        assert_eq!(
+            videos.smack_sound_in_track(handle, mask),
+            0,
+            "mask {mask:x}"
+        );
     }
     videos.smack_do_frame(handle);
     videos.smack_close(handle);
@@ -99,7 +103,11 @@ fn a_door_that_plays_nothing_answers_0_and_takes_no_call() {
     for flags in [0, 0x200, ALL_7] {
         let handle = videos.smack_open(b"a.smk", flags, 0);
         for mask in masks() {
-            assert_eq!(videos.smack_sound_in_track(handle, mask), 0, "mask {mask:x}");
+            assert_eq!(
+                videos.smack_sound_in_track(handle, mask),
+                0,
+                "mask {mask:x}"
+            );
         }
         for _ in 0..5 {
             videos.smack_do_frame(handle);
@@ -241,9 +249,7 @@ fn a_refused_chunk_pushes_nothing_and_a_clip_not_playing_never_reads_it() {
         videos.smack_do_frame(silent);
     });
     assert!(
-        !lines
-            .iter()
-            .any(|one| one.contains("w=decoder")),
+        !lines.iter().any(|one| one.contains("w=decoder")),
         "{lines:?}"
     );
 }
@@ -251,7 +257,7 @@ fn a_refused_chunk_pushes_nothing_and_a_clip_not_playing_never_reads_it() {
 #[test]
 fn a_stereo_track_is_pushed_interleaved_and_named_so() {
     let pair = vec![1, 2, 3, 4, 7, 9];
-    let bytes = samples_clip(HZ, RATE, 2, &[pair.clone()]);
+    let bytes = samples_clip(HZ, RATE, 2, std::slice::from_ref(&pair));
     let mut videos = holding(&bytes, 0, Choices::default());
     let handle = videos.smack_open(b"a.smk", ALL_7, 0);
     videos.smack_do_frame(handle);

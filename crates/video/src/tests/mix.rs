@@ -167,10 +167,17 @@ fn miles_close_ends_its_voice_and_leaves_the_clips_sound() {
     videos.smack_do_frame(handle);
     seat.at(92);
     mix.pump();
-    assert_eq!(back.frames(), [1_100, 1_100, 1_200, 1_200, 300, 300, 400, 400]);
+    assert_eq!(
+        back.frames(),
+        [1_100, 1_100, 1_200, 1_200, 300, 300, 400, 400]
+    );
 
     videos.smack_close(handle);
-    assert_eq!(back.closes(), 1, "the clip's close takes the output with it");
+    assert_eq!(
+        back.closes(),
+        1,
+        "the clip's close takes the output with it"
+    );
 }
 
 /// The order the one caller read makes: open naming all 7 tracks, ask, close, close
@@ -223,7 +230,12 @@ fn the_sound_ends_with_the_last_frame_stepped_on_the_clock() {
     let (seat, back) = (Seat::default(), Back::default());
     let mix = Front::new(&ROW, seat.clone(), back.clone());
     let chunk: Vec<i16> = (0..441).map(|at| 100 + at % 2).collect();
-    let bytes = samples_clip(MIX_HZ, RATE, 1, &[chunk.clone(), chunk.clone(), chunk.clone()]);
+    let bytes = samples_clip(
+        MIX_HZ,
+        RATE,
+        1,
+        &[chunk.clone(), chunk.clone(), chunk.clone()],
+    );
     let mut videos = fronts(&mix, &bytes);
     let handle = videos.smack_open(b"a.smk", ALL_7, 0);
 
@@ -247,7 +259,11 @@ fn the_sound_ends_with_the_last_frame_stepped_on_the_clock() {
         .flat_map(|sample| [*sample, *sample])
         .collect();
     assert_eq!(back.frames().len(), 1_323 * 2);
-    assert_eq!(back.frames(), expected, "whole, in order, by the last frame's end");
+    assert_eq!(
+        back.frames(),
+        expected,
+        "whole, in order, by the last frame's end"
+    );
 
     seat.at(now_us + PERIOD_US);
     mix.pump();

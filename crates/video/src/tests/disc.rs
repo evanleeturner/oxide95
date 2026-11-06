@@ -119,9 +119,9 @@ fn every_listed_track_reaches_the_door() {
             .filter(|bit| *bit != 13)
             .map(|bit| videos.smack_sound_in_track(handle, 1 << bit))
             .sum();
-        let (rate, channels) = header
-            .track
-            .map_or((0, 1), |track| (u64::from(track.hz), u64::from(track.channels)));
+        let (rate, channels) = header.track.map_or((0, 1), |track| {
+            (u64::from(track.hz), u64::from(track.channels))
+        });
         let mut pushed = 0_u64;
         let mut most_ahead_us = i64::MIN;
         for frame in 0..u64::from(header.frames) {
@@ -132,11 +132,10 @@ fn every_listed_track_reaches_the_door() {
                 .iter()
                 .map(|(_, samples)| samples.len() as u64)
                 .sum::<u64>();
-            if rate != 0 {
-                let heard_us = pushed / channels * 1_000_000 / rate;
+            if let Some(heard_us) = (pushed / channels * 1_000_000).checked_div(rate) {
                 let shown_us = (frame + 1) * u64::from(header.frame_us);
-                let ahead_us = i64::try_from(heard_us).expect("fits")
-                    - i64::try_from(shown_us).expect("fits");
+                let ahead_us =
+                    i64::try_from(heard_us).expect("fits") - i64::try_from(shown_us).expect("fits");
                 most_ahead_us = most_ahead_us.max(ahead_us);
             }
         }
