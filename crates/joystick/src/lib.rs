@@ -11,15 +11,37 @@
 //! could be read from, so `joyGetPosEx` is a stop by name, never a guess: one
 //! `joy.stop` line, then [`Back::stop`].
 //!
+//! [`pads::PadFront`] answers the same calls with real pads behind them, one
+//! module a place they come from: `page`, what a page's script hands in; `winmm`,
+//! Windows' own calls, on Windows; `gilrs_back`, the `gilrs` library, on Linux and
+//! macOS behind the `gilrs` feature. No real pad has been read through any of them:
+//! `page/recorded-pad.txt` is written by hand, and neither `winmm`'s calls nor
+//! `page/gamepads.mjs` in a browser have run. macOS has never been built.
+//!
+//! Not answered with a pad: any flags but a presence test or a plain read, as a
+//! `joyGetPosEx` stops on them. `joyGetDevCapsA` gives no names, leaving those bytes
+//! 0, and no period. `dwButtonNumber` is how many buttons are down on the page and
+//! through `gilrs`, as no source read here says what else it should be.
+//!
 //! The crate names no game, nothing of any one target and no allocator, so it
 //! builds for `wasm32-unknown-unknown` and runs where no heap exists yet.
 #![cfg_attr(not(test), no_std)]
 
+#[cfg(all(feature = "gilrs", any(target_os = "linux", target_os = "macos")))]
+pub mod gilrs_back;
+pub mod pads;
+#[cfg(test)]
+mod pads_tests;
+pub mod page;
 pub mod table;
 #[cfg(test)]
 mod test_log;
 #[cfg(test)]
 mod tests;
+#[cfg(any(windows, test))]
+pub mod winmm;
+#[cfg(test)]
+mod winmm_tests;
 
 use table::Row;
 

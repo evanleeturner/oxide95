@@ -21,9 +21,16 @@ missing_panics_doc = "allow"
 unwrap_used = "deny"
 undocumented_unsafe_blocks = "deny"
 
+[features]
+# Real pads through the `gilrs` library, on Linux and macOS; elsewhere it adds nothing.
+gilrs = ["dep:gilrs"]
+
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }
+
+[target.'cfg(any(target_os = "linux", target_os = "macos"))'.dependencies]
+gilrs = { version = "=0.11.2", optional = true }
 
 [dev-dependencies]
 oxide_logline = { path = "../oxide-logline" }
