@@ -15,6 +15,8 @@ use crate::test_log::debug_lines;
 use crate::wave::{self, WaveError};
 use crate::{Front, Host, NullBack, Output, SMP_DONE, SMP_PLAYING, SMP_STOPPED};
 
+#[cfg(all(feature = "native", not(target_arch = "wasm32"), not(windows)))]
+mod native;
 mod page;
 mod waveout;
 
