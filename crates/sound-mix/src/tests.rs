@@ -15,6 +15,8 @@ use crate::test_log::debug_lines;
 use crate::wave::{self, WaveError};
 use crate::{Front, Host, NullBack, Output, SMP_DONE, SMP_PLAYING, SMP_STOPPED};
 
+mod waveout;
+
 static ROW: Row = Row { file: "a program", module: "MSS32" };
 
 /// What a test runs inside the callback, handed the sample's handle.

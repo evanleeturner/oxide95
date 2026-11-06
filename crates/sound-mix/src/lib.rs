@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
-//! The calls a program makes to the Miles sound system, answered with no device
-//! and no audio thread: voices move by the clock a [`Host`] reads, the mix goes
-//! to an [`Output`], and a sample ends on time even if that output refuses every
-//! frame.
+//! The calls a program makes to the Miles sound system, answered with no need of a
+//! device and no audio thread the crate starts: voices move by the clock a [`Host`]
+//! reads, the mix goes to an [`Output`], and a sample ends on time even if that output
+//! refuses every frame.
 //!
 //! [`Front`] answers the 29 names in [`table::FRONTS`], each writing one
 //! `imp.call` line where its answer is computed: `c` the call, `a` its numbers,
@@ -24,8 +24,9 @@
 //! values. A callback fires at the next call or [`Front::pump`] after a sample's
 //! end, so a program with no call running needs a thread or a frame to pump.
 //!
-//! The crate names no game and nothing of one target; it needs an allocator, so it
-//! builds for `wasm32-unknown-unknown` too.
+//! The crate names no game. One module is one target's: `waveout`, a back over winmm
+//! and the thread that pumps it, compiled on Windows alone. The rest needs an allocator
+//! and nothing of one target, so it builds for `wasm32-unknown-unknown` too.
 #![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
@@ -40,6 +41,8 @@ mod test_log;
 mod tests;
 mod voice;
 pub mod wave;
+#[cfg(any(windows, test))]
+pub mod waveout;
 
 use alloc::vec::Vec;
 use core::fmt;
@@ -54,6 +57,8 @@ use wave::{FORMAT_PCM, Wave};
 
 pub use output::NullBack;
 pub use voice::{SMP_DONE, SMP_FREE, SMP_PLAYING, SMP_STOPPED};
+#[cfg(windows)]
+pub use waveout::{WaveOutBack, start_pump_thread};
 
 /// Where chosen handles start: never 0, which a program reads as a failure.
 const HANDLE_BASE: u32 = 0x5300_0000;
