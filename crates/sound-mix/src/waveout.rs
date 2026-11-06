@@ -257,13 +257,9 @@ impl<W: Winmm> Back<W> {
             );
         slot.samples[..fill.len()].copy_from_slice(fill);
         let header = slot.header.get();
+        let filled = WaveHdr::new(slot.samples.as_mut_ptr(), size_of_val(fill) as u32);
         // SAFETY: not prepared, so neither winmm nor its thread holds this header.
-        unsafe {
-            header.write(WaveHdr::new(
-                slot.samples.as_mut_ptr(),
-                size_of_val(fill) as u32,
-            ))
-        };
+        unsafe { header.write(filled) };
         // SAFETY: the header and its buffer stay put until a good unprepare: the slots'
         // block is not touched until the close, and neither is `samples`' block.
         let code = unsafe { self.winmm.prepare(self.handle, header, HEADER_SIZE) };

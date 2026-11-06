@@ -601,7 +601,7 @@ impl<H: Host, O: Output> Front<H, O> {
         self.front(
             |state, now_us| {
                 self.voice(state, "AIL_resume_sample", handle)
-                    .resume(now_us)
+                    .resume(now_us);
             },
             |()| {
                 log::debug!(
