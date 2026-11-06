@@ -6,11 +6,13 @@ use super::clock::Clock;
 use super::date::{Date, UNIX_EPOCH};
 use super::page::Page;
 use super::table::{Calls, Row};
+use core::sync::atomic::{AtomicU64, Ordering};
 
 const ROW: Row = Row {
     file: "test",
     calls: Calls {
         tick_count: "KERNEL32!GetTickCount",
+        time_get_time: "WINMM!timeGetTime",
         sleep: "KERNEL32!Sleep",
         counter: "KERNEL32!QueryPerformanceCounter",
         system_time: "KERNEL32!GetSystemTime",
@@ -93,6 +95,47 @@ fn measured_frames_count_through_the_front() {
     let mut counter = 0;
     assert_eq!(times.counter(&mut counter), 1);
     assert_eq!(counter, 3_600 * 16_667);
+}
+
+/// One clock under both names: one instant, one millisecond.
+#[test]
+fn both_names_read_one_clock() {
+    let times = times(NOW);
+    times.clocks().frame(0);
+    times.clocks().frame(123_456);
+    assert_eq!(times.tick_count(), 123);
+    assert_eq!(times.time_get_time(), 123);
+}
+
+/// The count wraps at 2^32 ms, and a reader's unsigned subtraction across
+/// the wrap still reads the 3 ms that passed.
+#[test]
+fn time_get_time_wraps_at_two_to_the_32_milliseconds() {
+    const WRAP: u64 = (1 << 32) * 1000;
+    let times = Times::new(&ROW, Page::new(Clock::new(u64::MAX, WRAP - 2_000), NOW));
+    times.clocks().frame(0);
+    let before = times.time_get_time();
+    assert_eq!(before, u32::MAX - 1);
+    times.clocks().frame(3_000);
+    let after = times.time_get_time();
+    assert_eq!(after, 1);
+    assert_eq!(after.wrapping_sub(before), 3);
+}
+
+/// A wait spun on the front ends once each read moves the clock, and only
+/// then: a page nothing frames answers the same millisecond for good.
+#[test]
+fn a_spin_on_the_front_ends_only_with_a_moving_read() {
+    static HOST: AtomicU64 = AtomicU64::new(0);
+    fn read() -> u64 {
+        HOST.fetch_add(500, Ordering::Relaxed)
+    }
+    let moving = Times::new(&ROW, Page::reading(Clock::new(u64::MAX, 0), NOW, read));
+    let start = moving.time_get_time();
+    assert!((0..100).any(|_| moving.time_get_time().wrapping_sub(start) >= 10));
+    let fixed = times(NOW);
+    let start = fixed.time_get_time();
+    assert!(!(0..100).any(|_| fixed.time_get_time().wrapping_sub(start) >= 10));
 }
 
 /// The C library's `time`: the wall's whole seconds, into the timer when

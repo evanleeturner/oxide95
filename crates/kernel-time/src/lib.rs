@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! The Kernel's time: the 8 KERNEL32 time
-//! names the four files import, written once, and the C library's `time`
-//! that reads the same wall. Every name that measures an
+//! names the four files import, written once, WINMM's `timeGetTime` that
+//! reads the same game clock, and the C library's `time` that reads the
+//! same wall. Every name that measures an
 //! interval reads one game clock, [`clock::Clock`], handed in and moved
 //! only by its owner: the frame loop on a page, a back on a host, a test.
 //! The date names read a wall clock, handed in the same way. No front
@@ -92,6 +93,27 @@ impl<C: Clocks> Times<C> {
             log::debug!(
                 c = self.file.calls.tick_count, v:% = oxide_trace::__shown!(value),
                 t:% = oxide_trace::__shown!(micros); "imp.call"
+            );
+        });
+        value
+    }
+
+    /// `timeGetTime`: the game clock's whole milliseconds, wrapping at 32
+    /// bits, off the one clock `GetTickCount` reads, so the two names never
+    /// disagree. The line's `by` says who computed the answer: a front, not
+    /// WINMM.
+    #[must_use]
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "the count wraps at 32 bits, as Windows' does"
+    )]
+    pub fn time_get_time(&self) -> u32 {
+        let micros = self.clocks.micros();
+        let value = (micros / 1000) as u32;
+        self.clocks.quiet(|| {
+            log::debug!(
+                c = self.file.calls.time_get_time, v:% = oxide_trace::__shown!(value),
+                t:% = oxide_trace::__shown!(micros), by = "kernel-time"; "imp.call"
             );
         });
         value

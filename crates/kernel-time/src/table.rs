@@ -14,6 +14,8 @@ pub const ZONE_BYTES: usize = 172;
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Calls {
     pub tick_count: &'static str,
+    /// WINMM's `timeGetTime`: the same clock under a second name.
+    pub time_get_time: &'static str,
     pub sleep: &'static str,
     pub counter: &'static str,
     pub system_time: &'static str,

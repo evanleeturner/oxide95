@@ -158,6 +158,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "cd-audio"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oxide_logline",
+ "oxide_trace",
+]
+
+[[package]]
 name = "cfg-if"
 version = "1.0.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1378,6 +1387,15 @@ dependencies = [
  "web-sys",
  "windows-sys 0.61.2",
  "x11rb",
+]
+
+[[package]]
+name = "sound-mix"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oxide_logline",
+ "oxide_trace",
 ]
 
 [[package]]
