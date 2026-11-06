@@ -25,6 +25,8 @@
 
 pub mod page;
 pub mod play;
+#[cfg(test)]
+mod play_tests;
 pub mod table;
 #[cfg(test)]
 mod test_log;
