@@ -21,13 +21,7 @@ pub const fn pack(track: u8, frame: u32) -> u32 {
 /// The track and its frame count in a word [`pack`] wrote.
 #[must_use]
 pub const fn unpack(word: u32) -> (u8, u32) {
-    let seconds = byte(word, 1) * SECONDS_A_MINUTE + byte(word, 2);
-    (
-        byte(word, 0) as u8,
-        seconds * FRAMES_A_SECOND + byte(word, 3),
-    )
-}
-
-const fn byte(word: u32, at: u32) -> u32 {
-    (word >> (at * 8)) & 0xff
+    let [track, minutes, seconds, frames] = word.to_le_bytes();
+    let seconds = minutes as u32 * SECONDS_A_MINUTE + seconds as u32;
+    (track, seconds * FRAMES_A_SECOND + frames as u32)
 }

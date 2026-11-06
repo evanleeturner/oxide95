@@ -323,7 +323,10 @@ fn a_pause_closes_the_door_and_a_resume_opens_a_new_one_where_the_clock_held() {
     rig.doors.pushed.borrow_mut().clear();
     rig.ms.set(9000);
     player.pump();
-    assert_eq!(rig.doors.frames(), [], "a pump in a pause moves nothing");
+    assert!(
+        rig.doors.frames().is_empty(),
+        "a pump in a pause moves nothing"
+    );
     assert_eq!(front.send(ID, RESUME, 0, &mut Untouched), 0);
     assert_eq!(rig.doors.opened.get(), 2);
     assert_eq!(rig.doors.frames(), played(5, 75..75 + LEAD_FRAMES));
