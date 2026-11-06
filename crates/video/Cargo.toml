@@ -1,0 +1,30 @@
+# The video stand-in: the 8 names a program asks of RAD's Smacker library, over
+# `video_smacker`'s decoder, each back a trait. It names no game and no target,
+# so it builds for any target, the browser's included.
+[package]
+name = "video"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[dependencies]
+video_smacker = { path = "../video-smacker" }
+log = { version = "0.4", features = ["kv"] }
+
+[dev-dependencies]
+oxide_logline = { path = "../oxide-logline" }

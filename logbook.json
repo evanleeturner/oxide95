@@ -200,6 +200,24 @@
       "level": "D",
       "fields": { "w": "the reason, by its name" },
       "template": "a clip or frame refused: {w}"
+    },
+    {
+      "id": "video.open",
+      "level": "D",
+      "fields": { "p": "the clip's file name as the caller asked for it, as text", "n": "the bytes the back read, 0 for a file it lacks" },
+      "template": "clip {p} asked for, {n} bytes read"
+    },
+    {
+      "id": "video.wait",
+      "level": "D",
+      "fields": { "i": "the frame next due, from 0", "t": "the clock's microseconds", "d": "the instant that frame is due, in microseconds" },
+      "template": "frame {i} is due at {d}, the clock reads {t}"
+    },
+    {
+      "id": "video.refused",
+      "level": "D",
+      "fields": { "c": "the import, as DLL!NAME", "w": "the reason, by its name" },
+      "template": "{c} turned away: {w}"
     }
   ]
 }
