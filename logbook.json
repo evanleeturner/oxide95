@@ -82,6 +82,30 @@
       "template": "{c} was handed {a}, which FILE_read never handed out: the program stops here"
     },
     {
+      "id": "sound.waveout.opened",
+      "level": "D",
+      "fields": { "buffers": "how many buffers the device's queue holds", "frames": "each buffer's frames", "by": "the crate the mix belongs to" },
+      "template": "winmm opened with {buffers} buffers of {frames} frames"
+    },
+    {
+      "id": "sound.waveout.open.refused",
+      "level": "D",
+      "fields": { "code": "what waveOutOpen answered", "by": "the crate the mix belongs to" },
+      "template": "waveOutOpen answered {code}: no buffer was made"
+    },
+    {
+      "id": "sound.waveout.closed",
+      "level": "D",
+      "fields": { "by": "the crate the mix belongs to" },
+      "template": "winmm closed and its buffers freed"
+    },
+    {
+      "id": "sound.waveout.refused",
+      "level": "W",
+      "fields": { "call": "the winmm call that said no", "code": "what it answered", "by": "the crate the mix belongs to" },
+      "template": "{call} answered {code}: the back takes nothing more until it is closed"
+    },
+    {
       "id": "sound.output.refused",
       "level": "W",
       "fields": { "took": "the rate the output took, 0 for a refusal", "by": "the crate the mix belongs to" },

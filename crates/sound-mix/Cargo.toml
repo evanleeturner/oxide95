@@ -1,6 +1,7 @@
-# The mixer a program's sound calls answer from, with no device: voices move by
-# the clock, each call answered and logged here. It names no game, and needs an
-# allocator but nothing of any one target, so it builds for the browser too.
+# The mixer a program's sound calls answer from, needing no device: voices move
+# by the clock, each call answered and logged here. It names no game, and needs
+# an allocator but nothing of any one target, so it builds for the browser too;
+# one back, over Windows' winmm, is compiled on Windows alone.
 [package]
 name = "sound-mix"
 version = "0.1.0"
