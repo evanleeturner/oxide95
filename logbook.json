@@ -122,6 +122,30 @@
       "level": "D",
       "fields": { "w": "the box whose own loop now runs" },
       "template": "box {w} runs its own loop on the queue until EndDialog: it draws nothing, and sends its owner none of the messages Windows sends there"
+    },
+    {
+      "id": "smk.open",
+      "level": "D",
+      "fields": { "w": "the clip's pixels across", "h": "its pixels down", "f": "its frames", "t": "a frame's length in microseconds", "c": "its sound channels, 0 for no track" },
+      "template": "a clip opened, {w} by {h}, {f} frames of {t} microseconds, {c} channels"
+    },
+    {
+      "id": "smk.frame",
+      "level": "D",
+      "fields": { "i": "the frame, from 0", "n": "its stored bytes", "p": "1 if it carried a palette", "m": "its mono blocks", "u": "its full blocks", "s": "its solid blocks", "v": "its void blocks" },
+      "template": "frame {i} painted from {n} bytes, palette {p}: {m} mono, {u} full, {s} solid, {v} void"
+    },
+    {
+      "id": "smk.sound",
+      "level": "D",
+      "fields": { "i": "the frame, from 0", "n": "the samples it unpacked to, both channels counted" },
+      "template": "frame {i}'s sound unpacked to {n} samples"
+    },
+    {
+      "id": "smk.refused",
+      "level": "D",
+      "fields": { "w": "the reason, by its name" },
+      "template": "a clip or frame refused: {w}"
     }
   ]
 }
