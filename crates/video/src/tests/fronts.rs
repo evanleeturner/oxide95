@@ -230,7 +230,11 @@ fn a_clip_past_the_buffer_is_cut_at_its_edges() {
     let handle = videos.smack_open(b"a.smk", 0, 0);
     buffer.name_to(&mut videos, handle);
     videos.smack_do_frame(handle);
-    let painted = buffer.pixels.iter().filter(|pixel| **pixel == 3).count();
+    let painted: usize = buffer
+        .pixels
+        .iter()
+        .map(|pixel| usize::from(*pixel == 3))
+        .sum();
     assert_eq!(painted, 10 * 2, "10 columns of 2 rows");
     assert!(buffer.pixels[..80].iter().all(|pixel| *pixel == 0));
 }

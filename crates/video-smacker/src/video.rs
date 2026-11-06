@@ -98,9 +98,9 @@ pub(crate) fn paint(
     while block < total {
         let [code, extra] = trees.kinds.decode(&mut bits)?.to_le_bytes();
         let end = usize::min(block + chain(code >> 2), total);
+        painted[block..end].fill(code & 3 != 2);
         for one in block..end {
             let at = (one / across) * 4 * width + (one % across) * 4;
-            painted[one] = code & 3 != 2;
             match code & 3 {
                 0 => {
                     mono(trees, &mut bits, pixels, at, width)?;
