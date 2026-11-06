@@ -28,3 +28,93 @@ pub struct Row {
     /// The number an open hands out, and the only one a later call may name.
     pub device_id: u32,
 }
+
+/// One audio track on a disc: its number and how long it runs.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Span {
+    pub number: u8,
+    pub frames: u32,
+}
+
+/// A place on a disc: a track, and how many frames into it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Place {
+    pub track: u8,
+    pub frame: u32,
+}
+
+/// A disc's audio tracks in order, with the frames between them closed up, so a run that
+/// crosses tracks is one count of frames.
+#[derive(Clone, Copy, Debug)]
+pub struct Tracks<'t>(pub &'t [Span]);
+
+impl Tracks<'_> {
+    #[must_use]
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    /// The highest number on the disc, so a data track before the audio counts.
+    #[must_use]
+    pub fn count(&self) -> u32 {
+        self.0
+            .iter()
+            .map(|span| u32::from(span.number))
+            .max()
+            .unwrap_or(0)
+    }
+
+    /// Every frame on the disc.
+    #[must_use]
+    pub fn end(&self) -> u32 {
+        self.0.iter().map(|span| span.frames).sum()
+    }
+
+    /// `place` as one count, for a place a run can start at; `None` if it is not on the disc.
+    #[must_use]
+    pub fn start_of(&self, place: Place) -> Option<u32> {
+        self.count_to(place).filter(|_| {
+            self.0
+                .iter()
+                .any(|span| span.number == place.track && place.frame < span.frames)
+        })
+    }
+
+    /// `place` as one count, for a place a run can end at: a track's own end is on the disc.
+    #[must_use]
+    pub fn end_of(&self, place: Place) -> Option<u32> {
+        self.count_to(place)
+    }
+
+    fn count_to(&self, place: Place) -> Option<u32> {
+        let mut before = 0;
+        for span in self.0 {
+            if span.number == place.track {
+                return (place.frame <= span.frames).then_some(before + place.frame);
+            }
+            before += span.frames;
+        }
+        None
+    }
+
+    /// The place `count` frames into the disc; past the end, the last track's end.
+    #[must_use]
+    pub fn place(&self, count: u32) -> Place {
+        let mut before = 0;
+        for span in self.0 {
+            if count < before + span.frames {
+                return Place {
+                    track: span.number,
+                    frame: count - before,
+                };
+            }
+            before += span.frames;
+        }
+        self.0
+            .last()
+            .map_or(Place { track: 0, frame: 0 }, |span| Place {
+                track: span.number,
+                frame: span.frames,
+            })
+    }
+}

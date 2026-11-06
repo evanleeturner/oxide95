@@ -23,11 +23,14 @@
 //! builds for `wasm32-unknown-unknown` and runs where no heap exists yet.
 #![cfg_attr(not(test), no_std)]
 
+pub mod page;
+pub mod play;
 pub mod table;
 #[cfg(test)]
 mod test_log;
 #[cfg(test)]
 mod tests;
+pub mod tmsf;
 
 use oxide_trace::Args;
 use table::Row;
@@ -86,6 +89,7 @@ macro_rules! numbers {
         Args([$(oxide_trace::__shown!($value)),+])
     };
 }
+pub(crate) use numbers;
 
 /// What a target does for the front.
 pub trait Back {
