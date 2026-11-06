@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 //! The page's clocks: everything handed in. The frame loop moves the game
 //! clock once a frame from the browser's own instant, and sets the wall
-//! clock from `Date`; nothing here reads a clock, and nothing blocks:
-//! `Sleep` returns at once, the wait being the frame loop's yield to the
-//! browser. The host tests use it as their fixed clock.
+//! clock from `Date`. A code that spins on the clock inside one frame would
+//! never see it move, so [`Page::reading`] also takes a function to call at
+//! each read of the game clock, as a host's back frames at each read. The
+//! function is handed in: nothing here names a target's clock, and nothing
+//! blocks: `Sleep` returns at once, the wait being the frame loop's yield
+//! to the browser. [`Page::new`] reads nothing: the host tests' fixed clock.
 use crate::Clocks;
 use crate::clock::Clock;
 use core::cell::Cell;
@@ -13,6 +16,9 @@ pub struct Page {
     clock: Cell<Clock>,
     wall: Cell<u64>,
     error: Cell<u32>,
+    /// The host's instant, called at each read of the game clock; none on a
+    /// clock only the owner's frames move.
+    read: Option<fn() -> u64>,
 }
 
 impl Page {
@@ -23,6 +29,19 @@ impl Page {
             clock: Cell::new(clock),
             wall: Cell::new(wall),
             error: Cell::new(0),
+            read: None,
+        }
+    }
+
+    /// As [`Page::new`], with `read` handing in the host's instant, in
+    /// microseconds, at each read of the game clock: each read is a frame.
+    #[must_use]
+    pub const fn reading(clock: Clock, wall: u64, read: fn() -> u64) -> Self {
+        Self {
+            clock: Cell::new(clock),
+            wall: Cell::new(wall),
+            error: Cell::new(0),
+            read: Some(read),
         }
     }
 
@@ -72,6 +91,9 @@ impl Page {
 
 impl Clocks for Page {
     fn micros(&self) -> u64 {
+        if let Some(read) = self.read {
+            self.frame(read());
+        }
         self.clock.get().micros()
     }
 
