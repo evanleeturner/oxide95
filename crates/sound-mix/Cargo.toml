@@ -23,6 +23,18 @@ missing_panics_doc = "allow"
 unwrap_used = "deny"
 undocumented_unsafe_blocks = "deny"
 
+[features]
+# The ring a browser page's script reads. It needs nothing the rest does not.
+page = []
+
+# The thin export the page's proof runs: `cargo build --example page_tone --features page
+# --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_tone"
+path = "page/tone.rs"
+crate-type = ["cdylib"]
+required-features = ["page"]
+
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }

@@ -60,7 +60,7 @@ only check that it compiles and run nothing:
 ```bash
 cargo clippy --workspace --all-targets --target i686-pc-windows-gnu
 cargo check --workspace --target wasm32-unknown-unknown \
-  --features kernel_threads/page,kernel_registry/page,window/page,window-input/desk,draw/page
+  --features kernel_threads/page,kernel_registry/page,window/page,window-input/desk,draw/page,sound-mix/page
 ```
 
 macOS has never been built or tested.

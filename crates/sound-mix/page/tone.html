@@ -1,0 +1,24 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sound proof: a tone behind a gesture</title>
+    <link href="tone.css" rel="stylesheet" />
+    <script src="tone.mjs" type="module"></script>
+  </head>
+  <body>
+    <main>
+      <h1>A tone behind a gesture</h1>
+      <p>
+        The browser holds this page's sound until a key or a click. Escape does
+        not count.
+      </p>
+      <p class="js-state" role="status"></p>
+      <button class="mute js-mute" type="button" aria-pressed="false">
+        Mute
+      </button>
+    </main>
+  </body>
+</html>

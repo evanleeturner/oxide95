@@ -26,7 +26,9 @@
 //!
 //! The crate names no game. One module is one target's: `waveout`, a back over winmm
 //! and the thread that pumps it, compiled on Windows alone. The rest needs an allocator
-//! and nothing of one target, so it builds for `wasm32-unknown-unknown` too.
+//! and nothing of one target, so it builds for `wasm32-unknown-unknown` too. One more
+//! back stands behind a feature, off by default: `page`, the ring a browser page's
+//! script reads.
 #![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
@@ -34,6 +36,10 @@ extern crate alloc;
 mod door;
 mod lock;
 pub mod output;
+#[cfg(any(test, feature = "page"))]
+pub mod page;
+#[cfg(any(test, feature = "page"))]
+mod ring;
 pub mod table;
 #[cfg(test)]
 mod test_log;
@@ -56,6 +62,8 @@ use voice::{MIX_HZ, USER_WORDS, Voice};
 use wave::{FORMAT_PCM, Wave};
 
 pub use output::NullBack;
+#[cfg(any(test, feature = "page"))]
+pub use ring::RING_FRAMES;
 pub use voice::{SMP_DONE, SMP_FREE, SMP_PLAYING, SMP_STOPPED};
 #[cfg(windows)]
 pub use waveout::{WaveOutBack, start_pump_thread};
