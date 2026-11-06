@@ -62,6 +62,9 @@ pub enum Refused {
     SoundTooLarge,
     /// A palette chunk of length 0, or one running past entry 255.
     Palette,
+    /// All four trees absent: no clip on hand holds it and the decoder
+    /// compared against will not open it.
+    NoTrees,
     /// A frame number past the clip's last, or a read past its end.
     PastEnd,
     /// The named part's bytes ran out.
@@ -91,6 +94,7 @@ impl Refused {
             Self::SoundChunk => "sound-chunk",
             Self::SoundTooLarge => "sound-too-large",
             Self::Palette => "palette",
+            Self::NoTrees => "no-trees",
             Self::PastEnd => "past-end",
             Self::Truncated(Part::Header) => "truncated-header",
             Self::Truncated(Part::Tables) => "truncated-tables",

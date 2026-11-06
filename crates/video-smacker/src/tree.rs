@@ -115,6 +115,11 @@ impl WordTree {
         Ok(tree)
     }
 
+    /// Whether the clip stored nothing for this tree.
+    pub(crate) fn is_absent(&self) -> bool {
+        self.shape.is_none()
+    }
+
     /// Clears the recent-value slots: a frame's first read starts from 0s.
     pub(crate) fn forget(&mut self) {
         self.recent = [0; 3];

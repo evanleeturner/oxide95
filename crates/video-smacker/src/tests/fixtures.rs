@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! The clips the tests read, built here and nowhere else.
 use super::writer::{
-    FULL, Frame, MONO, SOLID, Trees, VOID, clip, kind, palette_chunk, sound_chunk, sound_from_bits,
+    FULL, Frame, HEADER_BYTES, MONO, SOLID, Trees, VOID, clip, kind, palette_chunk, sound_chunk,
+    sound_from_bits,
 };
 use crate::{Clip, Picture};
 
@@ -119,6 +120,76 @@ pub(super) fn absent_trees_clip() -> Vec<u8> {
 
 /// The values `blocks_clip`'s full blocks read, its escapes aside.
 pub(super) const FULL_VALUES: [u16; 5] = [0x2211, 0x4433, 0x6655, 0x8877, 0xa0a9];
+/// The words `reads_through_absent_clip`'s present trees answer.
+const COLOURS: [u16; 2] = [0x0201, 0x0403];
+const MAPS: [u16; 2] = [0x8001, 0x00ff];
+
+/// A mono block, a full block and two solid ones, reading through the map,
+/// colours and full trees only where the argument says present. The solid
+/// blocks after them come out right only if an absent tree's read took no
+/// bits from the stream.
+pub(super) fn reads_through_absent_clip(map: bool, colours: bool, full: bool) -> Vec<u8> {
+    let kinds = [kind(MONO, 0, 0), kind(FULL, 0, 0), kind(SOLID, 0, 9)];
+    let trees = Trees::new(
+        map.then_some((&MAPS[..], MARKS)),
+        colours.then_some((&COLOURS[..], MARKS)),
+        full.then_some((&FULL_VALUES[..], MARKS)),
+        Some((&kinds, KIND_MARKS)),
+    );
+    let mut video = trees.video().kind(kind(MONO, 0, 0));
+    if colours {
+        video = video.colours(COLOURS[0]);
+    }
+    if map {
+        video = video.map(MAPS[0]);
+    }
+    video = video.kind(kind(FULL, 0, 0));
+    if full {
+        let [one, two, three, four, five] = FULL_VALUES;
+        video = video.full([one, two, three, four, five, one, two, three]);
+    }
+    let frames = [Frame {
+        palette: Some(whole_palette()),
+        video: video
+            .kind(kind(SOLID, 0, 9))
+            .kind(kind(SOLID, 0, 9))
+            .bytes(),
+        ..Frame::default()
+    }];
+    clip(8, 8, &trees, &frames, None)
+}
+
+/// A clip with the kinds tree alone absent: every block a mono block of a
+/// chain of one, reading through the map and colours trees.
+pub(super) fn absent_kinds_clip() -> Vec<u8> {
+    let trees = Trees::new(
+        Some((&MAPS, MARKS)),
+        Some((&COLOURS, MARKS)),
+        Some((&FULL_VALUES, MARKS)),
+        None,
+    );
+    let frames = [Frame {
+        palette: Some(whole_palette()),
+        video: trees
+            .video()
+            .mono(COLOURS[0], MAPS[0])
+            .mono(COLOURS[1], MAPS[1])
+            .mono(COLOURS[0], MAPS[1])
+            .mono(COLOURS[1], MAPS[0])
+            .bytes(),
+        ..Frame::default()
+    }];
+    clip(8, 8, &trees, &frames, None)
+}
+
+/// `blocks_clip` with the low 2 bits of its 3 frame sizes set: 1, 2 and 3.
+pub(super) fn marked_sizes_clip() -> Vec<u8> {
+    let mut bytes = blocks_clip();
+    for (frame, mark) in [1, 2, 3].into_iter().enumerate() {
+        bytes[HEADER_BYTES + frame * 4] |= mark;
+    }
+    bytes
+}
 
 /// 8 by 4 blocks of every kind, chains running past the picture's end and
 /// recent-value escapes, over 3 frames.

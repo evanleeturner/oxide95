@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
 //! A clip's pixels: each block kind, the chains, the recent-value escapes,
 //! the frame-to-frame state, and the lines and calls around them.
-use super::fixtures::{absent_trees_clip, all_pictures, blocks_clip, long_chain_clip};
+use super::fixtures::{
+    absent_kinds_clip, all_pictures, blocks_clip, long_chain_clip, marked_sizes_clip,
+    reads_through_absent_clip,
+};
 use super::test_log::debug_lines;
 use crate::{Clip, Picture, Refused};
 
-const WIDTH: usize = 32;
+/// Block `index` of a picture `width` pixels wide, row by row.
+fn block_of(picture: &Picture, width: usize, index: usize) -> [[u8; 4]; 4] {
+    let across = width / 4;
+    let at = (index / across) * 4 * width + (index % across) * 4;
+    core::array::from_fn(|y| core::array::from_fn(|x| picture.pixels[at + y * width + x]))
+}
 
-/// Block `index` of a 32-pixel-wide picture, row by row.
+/// Block `index` of a 32-pixel-wide picture.
 fn block(picture: &Picture, index: usize) -> [[u8; 4]; 4] {
-    let at = (index / 8) * 4 * WIDTH + (index % 8) * 4;
-    core::array::from_fn(|y| core::array::from_fn(|x| picture.pixels[at + y * WIDTH + x]))
+    block_of(picture, 32, index)
 }
 
 /// Map bit 0 is the top-left pixel, bit 15 the bottom-right, along each row;
@@ -102,16 +109,67 @@ fn chain_code_59_is_128_blocks() {
     assert!(lines[1].ends_with("m=0 u=0 s=128 v=0"), "{lines:?}");
 }
 
-/// An absent tree answers 0 and reads no bits, so a kind of 0 is a chain of
-/// one mono block of colour 0.
+/// A read through an absent tree answers 0 and takes no bits. With the map
+/// absent a mono block is all its clear colour, with the colours absent all
+/// colour 0, and with the full tree absent a full block is all 0; the solid
+/// blocks after them paint 9 only because the stream stayed in step.
 #[test]
-fn an_absent_tree_answers_0_and_reads_no_bits() {
-    let bytes = absent_trees_clip();
+fn a_read_through_an_absent_tree_answers_0_and_takes_no_bits() {
+    let zeros = [[0; 4]; 4];
+    let mono = [[2, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 2]];
+    let full = [
+        [0x33, 0x44, 0x11, 0x22],
+        [0x77, 0x88, 0x55, 0x66],
+        [0x11, 0x22, 0xa9, 0xa0],
+        [0x55, 0x66, 0x33, 0x44],
+    ];
+    let cases = [
+        ((false, true, true), [[1; 4]; 4], full),
+        ((true, false, true), zeros, full),
+        ((true, true, false), mono, zeros),
+        ((false, false, false), zeros, zeros),
+    ];
+    for ((map, colours, full_tree), first, second) in cases {
+        let pictures = all_pictures(&reads_through_absent_clip(map, colours, full_tree));
+        assert_eq!(block_of(&pictures[0], 8, 0), first);
+        assert_eq!(block_of(&pictures[0], 8, 1), second);
+        assert_eq!(block_of(&pictures[0], 8, 2), [[9; 4]; 4]);
+        assert_eq!(block_of(&pictures[0], 8, 3), [[9; 4]; 4]);
+    }
+}
+
+/// With the kinds tree alone absent every kind reads 0: each block is a mono
+/// block, a chain of one.
+#[test]
+fn an_absent_kinds_tree_makes_every_block_a_mono_block() {
+    let bytes = absent_kinds_clip();
     let lines = debug_lines(|| {
         let pictures = all_pictures(&bytes);
-        assert!(pictures[0].pixels.iter().all(|&pixel| pixel == 0));
+        let blocks: [[[u8; 4]; 4]; 4] =
+            core::array::from_fn(|index| block_of(&pictures[0], 8, index));
+        assert_eq!(
+            blocks,
+            [
+                [[2, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 1], [1, 1, 1, 2]],
+                [[4, 4, 4, 4], [4, 4, 4, 4], [3, 3, 3, 3], [3, 3, 3, 3]],
+                [[2, 2, 2, 2], [2, 2, 2, 2], [1, 1, 1, 1], [1, 1, 1, 1]],
+                [[4, 3, 3, 3], [3, 3, 3, 3], [3, 3, 3, 3], [3, 3, 3, 4]],
+            ]
+        );
     });
     assert!(lines[1].ends_with("m=4 u=0 s=0 v=0"), "{lines:?}");
+}
+
+/// A frame size's low 2 bits are marks, not length: set all three ways, the
+/// clip paints what the unmarked one does.
+#[test]
+fn a_frame_sizes_low_2_bits_are_not_length() {
+    let marked = all_pictures(&marked_sizes_clip());
+    let plain = all_pictures(&blocks_clip());
+    assert_eq!(marked.len(), plain.len());
+    for (one, other) in marked.iter().zip(&plain) {
+        assert_eq!(one.pixels, other.pixels);
+    }
 }
 
 /// The lines tell what a clip said and what each frame painted.

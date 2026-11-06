@@ -201,10 +201,18 @@ impl Video<'_> {
         self
     }
 
-    pub(super) fn mono(mut self, colours: u16, map: u16) -> Self {
-        self.out.path(&self.trees.colours[&colours]);
-        self.out.path(&self.trees.map[&map]);
+    pub(super) fn colours(mut self, value: u16) -> Self {
+        self.out.path(&self.trees.colours[&value]);
         self
+    }
+
+    pub(super) fn map(mut self, value: u16) -> Self {
+        self.out.path(&self.trees.map[&value]);
+        self
+    }
+
+    pub(super) fn mono(self, colours: u16, map: u16) -> Self {
+        self.colours(colours).map(map)
     }
 
     pub(super) fn full(mut self, values: [u16; 8]) -> Self {

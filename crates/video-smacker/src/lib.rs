@@ -293,6 +293,12 @@ impl Clip {
             full: WordTree::read(&mut bits)?,
             kinds: WordTree::read(&mut bits)?,
         };
+        if [&trees.map, &trees.colours, &trees.full, &trees.kinds]
+            .into_iter()
+            .all(WordTree::is_absent)
+        {
+            return Err(Refused::NoTrees);
+        }
         let cut = Refused::Truncated(Part::Frames);
         let mut ends = Vec::with_capacity(frames);
         let mut end = 0usize;

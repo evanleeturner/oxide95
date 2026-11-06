@@ -4,7 +4,8 @@
 use std::collections::BTreeSet;
 
 use super::fixtures::{
-    SIXTEEN_PACKED, blocks_clip, long_chain_clip, palette_clip, short_palette_clip, sound_clip,
+    SIXTEEN_PACKED, absent_trees_clip, blocks_clip, long_chain_clip, palette_clip,
+    short_palette_clip, sound_clip,
 };
 use super::test_log::debug_lines;
 use super::writer::{HEADER_BYTES, LARGEST_WORD, TRACK_WORD, set_word};
@@ -74,6 +75,13 @@ fn each_form_with_no_code_is_refused_by_name() {
     for (bytes, refused) in cases {
         assert_eq!(parse_refusal(&bytes), Some(refused), "{}", refused.name());
     }
+}
+
+/// All four trees absent stops at `parse`: no clip on hand holds it and the
+/// other decoder will not open it, so a picture of 0s would be a guess.
+#[test]
+fn a_clip_of_no_trees_is_refused_by_name() {
+    assert_eq!(parse_refusal(&absent_trees_clip()), Some(Refused::NoTrees));
 }
 
 /// A size past what any clip comes near takes no memory: it stops at `parse`.

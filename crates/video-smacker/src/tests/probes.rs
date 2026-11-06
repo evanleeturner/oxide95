@@ -5,7 +5,8 @@
 use std::path::Path;
 
 use super::fixtures::{
-    absent_trees_clip, blocks_clip, long_chain_clip, palette_clip, short_palette_clip, sound_clip,
+    absent_kinds_clip, absent_trees_clip, blocks_clip, long_chain_clip, marked_sizes_clip,
+    palette_clip, reads_through_absent_clip, short_palette_clip, sound_clip,
 };
 
 #[test]
@@ -17,6 +18,18 @@ fn write_the_probes() {
         ("short", short_palette_clip(&[0x40, 9, 1, 2, 3, 0x40, 8])),
         ("padded", short_palette_clip(&[0x40, 9])),
         ("absent", absent_trees_clip()),
+        ("absent-kinds", absent_kinds_clip()),
+        ("absent-map", reads_through_absent_clip(false, true, true)),
+        (
+            "absent-colours",
+            reads_through_absent_clip(true, false, true),
+        ),
+        ("absent-full", reads_through_absent_clip(true, true, false)),
+        (
+            "absent-three",
+            reads_through_absent_clip(false, false, false),
+        ),
+        ("marked-sizes", marked_sizes_clip()),
         ("blocks", blocks_clip()),
         ("chain", long_chain_clip()),
         ("mono", sound_clip(1)),
