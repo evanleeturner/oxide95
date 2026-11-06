@@ -31,7 +31,7 @@ source code that you compile against these libraries.
 | `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
 | `draw` | pixels and palettes |
 | `draw-surfaces` | DirectDraw's surfaces and palette, painted through `draw` |
-| `video` | a program's Smacker calls, stepped on the game's clock over `video_smacker`; no sound yet, and no Windows calls of its own yet |
+| `video` | a program's Smacker calls, stepped on the game's clock over `video_smacker`, the clip's sound handed to `sound-mix`; no Windows calls of its own yet, and no clip has reached a speaker |
 | `video_smacker` | Smacker video clips, turned into pictures, palettes and sound; no Windows calls of its own yet |
 | `oxide_trace` | macros that log the values a rewritten function reads and writes |
 | `oxide_logline` | writes those logs in one line format and checks them against `logbook.json` |

@@ -6,13 +6,16 @@
 //!
 //! - **Backs:** one trait each, so no front reads the OS: [`Clock`] the
 //!   microseconds, moved by its owner; [`ClipBytes`] a clip's whole file, read at
-//!   open; [`SoundDoor`] a clip's stream.
+//!   open; [`SoundDoor`] a clip's stream, whose real back is [`MixDoor`].
 //! - **The handle:** [`Handle`], a block at fixed offsets that a caller reads
 //!   through the pointer `smack_open` gave it.
 //! - **`smack_wait` never waits:** it answers whether the next frame is due. The
 //!   word stays so a log line reads against the import it stands for.
-//! - **The sound door takes no call yet:** `smack_sound_in_track` answers 0, so a
-//!   caller that asks plays its clip silent.
+//! - **Sound:** a clip opened naming its track, over a door that plays, opens one
+//!   stream, pushes each painted frame's samples at `smack_do_frame` and closes at
+//!   `smack_close`. A frame stepped past is never heard. A door that plays nothing
+//!   takes no call and every `smack_sound_in_track` answers 0, so a caller that
+//!   asks plays its clip silent.
 //! - **Two questions stay open, each one flag in [`Choices`]:** what
 //!   `smack_goto(1)` names, and whether a void block reaches the target.
 //! - **Refused by name:** a handle no clip holds, a `smack_goto` past the clip, a
@@ -30,6 +33,7 @@ extern crate alloc;
 
 pub mod front;
 mod handle;
+mod mix_door;
 #[cfg(test)]
 mod tests;
 
@@ -37,6 +41,7 @@ use alloc::vec::Vec;
 
 pub use front::{Place, Videos};
 pub use handle::{Handle, PALETTE_BYTES};
+pub use mix_door::MixDoor;
 
 /// The clock a front reads: an interval on one clock, so no zone enters.
 pub trait Clock {
@@ -59,9 +64,15 @@ pub struct Track {
     pub channels: u8,
 }
 
-/// The sound door. No front calls it yet: a later step pushes each frame's
-/// samples at `smack_do_frame`.
+/// The sound door: one stream a clip that plays, each painted frame's samples
+/// pushed at `smack_do_frame`.
 pub trait SoundDoor {
+    /// Whether a stream through here reaches anything. The default, `false`, is a
+    /// door that plays nothing: no front calls it, and a caller asking whether a
+    /// clip has sound is told 0.
+    fn plays(&self) -> bool {
+        false
+    }
     /// Opens a clip's stream.
     fn stream_open(&mut self, track: Track) -> u32;
     /// Pushes one frame's interleaved samples.

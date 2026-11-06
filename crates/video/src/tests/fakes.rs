@@ -26,13 +26,45 @@ impl ClipBytes for FakeBytes {
     }
 }
 
-/// A door that counts every call it takes.
+/// A door that plays, keeping every call it takes. Its streams count from `0x100`.
 #[derive(Default)]
 pub(super) struct FakeDoor {
     pub(super) calls: u32,
+    pub(super) opened: Vec<(u32, Track)>,
+    pub(super) pushed: Vec<(u32, Vec<i16>)>,
+    pub(super) closed: Vec<u32>,
 }
 
 impl SoundDoor for FakeDoor {
+    fn plays(&self) -> bool {
+        true
+    }
+
+    fn stream_open(&mut self, track: Track) -> u32 {
+        self.calls += 1;
+        let stream = 0x100 + u32::try_from(self.opened.len()).expect("a test's streams fit");
+        self.opened.push((stream, track));
+        stream
+    }
+
+    fn stream_push(&mut self, stream: u32, samples: &[i16]) {
+        self.calls += 1;
+        self.pushed.push((stream, samples.to_vec()));
+    }
+
+    fn stream_close(&mut self, stream: u32) {
+        self.calls += 1;
+        self.closed.push(stream);
+    }
+}
+
+/// A door left at `plays`' default, as a program with no mixer hands in.
+#[derive(Default)]
+pub(super) struct Mute {
+    pub(super) calls: u32,
+}
+
+impl SoundDoor for Mute {
     fn stream_open(&mut self, _: Track) -> u32 {
         self.calls += 1;
         0
@@ -51,9 +83,19 @@ pub(super) type Fakes = Videos<FakeClock, FakeBytes, FakeDoor>;
 
 /// The fronts holding `clip` as `a.smk`, the clock at `now_us`.
 pub(super) fn holding(clip: &[u8], now_us: u64, choices: Choices) -> Fakes {
+    holding_with(FakeDoor::default(), clip, now_us, choices)
+}
+
+/// The fronts holding `clip` as `a.smk` over the door given.
+pub(super) fn holding_with<S: SoundDoor>(
+    door: S,
+    clip: &[u8],
+    now_us: u64,
+    choices: Choices,
+) -> Videos<FakeClock, FakeBytes, S> {
     let mut bytes = FakeBytes::default();
     bytes.0.insert(b"a.smk".to_vec(), clip.to_vec());
-    Videos::new(FakeClock(now_us), bytes, FakeDoor::default(), choices)
+    Videos::new(FakeClock(now_us), bytes, door, choices)
 }
 
 /// A caller's buffer.
@@ -92,7 +134,11 @@ impl Buffer {
     }
 
     /// Names this buffer to the clip; it outlives the clip's use of it in every test.
-    pub(super) fn name_to(&mut self, videos: &mut Fakes, handle: *const Handle) {
+    pub(super) fn name_to<S: SoundDoor>(
+        &mut self,
+        videos: &mut Videos<FakeClock, FakeBytes, S>,
+        handle: *const Handle,
+    ) {
         // SAFETY: `pixels` holds pitch * height bytes and neither it nor the
         // allocation moves while the test uses the clip.
         unsafe {

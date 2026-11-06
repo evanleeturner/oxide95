@@ -238,6 +238,18 @@
       "template": "frame {i} is due at {d}, the clock reads {t}"
     },
     {
+      "id": "video.stream.open",
+      "level": "D",
+      "fields": { "s": "the door's number for the clip", "r": "samples a second, a channel", "c": "the channels, 1 or 2" },
+      "template": "clip's sound opened on door {s}, {r} Hz, {c} channels"
+    },
+    {
+      "id": "video.stream.close",
+      "level": "D",
+      "fields": { "s": "the door's number" },
+      "template": "clip's sound on door {s} ended"
+    },
+    {
       "id": "video.refused",
       "level": "D",
       "fields": { "c": "the import, as DLL!NAME", "w": "the reason, by its name" },

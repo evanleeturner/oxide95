@@ -1,12 +1,15 @@
 // SPDX-License-Identifier: MIT
 //! The clips these tests read, built here by the decoder's test-only writer.
-use super::writer::{Frame, SOLID, Trees, VOID, clip, kind, palette_chunk, set_word, sound_chunk};
+use super::writer::{
+    Frame, SOLID, Trees, VOID, clip, kind, palette_chunk, set_word, sound_chunk, sound_from_bits,
+};
 
 /// Markers for a kinds tree, kind words no clip here paints with.
 const KIND_MARKS: [u16; 3] = [0x00f4, 0x00f8, 0x00fc];
 /// The header word of the frame rate.
 const RATE_WORD: usize = 4;
 const SIXTEEN_PACKED: u32 = (1 << 31) | (1 << 30) | (1 << 29);
+const STEREO: u32 = 1 << 28;
 const HZ: u32 = 22050;
 
 /// All 256 entries, each its own colour.
@@ -88,6 +91,52 @@ pub(super) fn long_clip(count: usize, rate: i32) -> Vec<u8> {
     let mut bytes = clip(16, 8, &trees, &frames, None);
     set_word(&mut bytes, RATE_WORD, rate.cast_unsigned());
     bytes
+}
+
+/// What a frame's sound chunk holds.
+pub(super) enum Chunk {
+    /// Interleaved samples; none is a frame with no chunk.
+    Samples(Vec<i16>),
+    /// An unpacked length past the track's most, so the decoder refuses it.
+    TooLarge,
+}
+
+/// One frame an entry at `rate`, on a track of `hz` and `channels`.
+pub(super) fn chunk_clip(hz: u32, rate: i32, channels: usize, chunks: &[Chunk]) -> Vec<u8> {
+    let kinds = [ALL_SOLID_3, ALL_VOID];
+    let trees = Trees::new(None, None, None, Some((&kinds, KIND_MARKS)));
+    let largest = chunks.iter().fold(0, |most, chunk| match chunk {
+        Chunk::Samples(samples) => most.max(samples.len() * 2),
+        Chunk::TooLarge => most,
+    });
+    let frames: Vec<Frame> = chunks
+        .iter()
+        .enumerate()
+        .map(|(at, chunk)| Frame {
+            palette: (at == 0).then(whole_palette),
+            sound: match chunk {
+                Chunk::Samples(samples) if samples.is_empty() => None,
+                Chunk::Samples(samples) => Some(sound_chunk(channels, samples)),
+                Chunk::TooLarge => Some(sound_from_bits(u32::MAX, &[0x80])),
+            },
+            video: trees
+                .video()
+                .kind(if at == 0 { ALL_SOLID_3 } else { ALL_VOID })
+                .bytes(),
+        })
+        .collect();
+    let stereo = if channels == 2 { STEREO } else { 0 };
+    let largest = u32::try_from(largest).expect("a test's sound fits");
+    let track = (SIXTEEN_PACKED | stereo | hz, largest);
+    let mut bytes = clip(16, 8, &trees, &frames, Some(track));
+    set_word(&mut bytes, RATE_WORD, rate.cast_unsigned());
+    bytes
+}
+
+/// One frame for each entry, holding those samples.
+pub(super) fn samples_clip(hz: u32, rate: i32, channels: usize, frames: &[Vec<i16>]) -> Vec<u8> {
+    let chunks: Vec<Chunk> = frames.iter().cloned().map(Chunk::Samples).collect();
+    chunk_clip(hz, rate, channels, &chunks)
 }
 
 /// 2 frames with a mono track.
