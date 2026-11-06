@@ -84,6 +84,7 @@ pub(crate) fn paint(
     trees: &mut Trees,
     pixels: &mut [u8],
     width: usize,
+    painted: &mut [bool],
 ) -> Result<Blocks, Refused> {
     trees.map.forget();
     trees.colours.forget();
@@ -99,6 +100,7 @@ pub(crate) fn paint(
         let end = usize::min(block + chain(code >> 2), total);
         for one in block..end {
             let at = (one / across) * 4 * width + (one % across) * 4;
+            painted[one] = code & 3 != 2;
             match code & 3 {
                 0 => {
                     mono(trees, &mut bits, pixels, at, width)?;

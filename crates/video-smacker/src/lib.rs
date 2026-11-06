@@ -120,6 +120,7 @@ pub struct Clip {
     data: Vec<u8>,
     trees: Trees,
     pixels: Vec<u8>,
+    painted: Vec<bool>,
     palette: [u8; palette::BYTES],
     cursor: u32,
 }
@@ -311,6 +312,7 @@ impl Clip {
         }
         let data = rest.get(..end).ok_or(cut)?.to_vec();
         let pixels = vec![0; (header.width as usize) * (header.height as usize)];
+        let painted = vec![false; pixels.len() / 16];
         log::debug!(
             w = header.width, h = header.height, f = header.frames, t = header.frame_us,
             c = header.track.map_or(0, |track| track.channels); "smk.open"
@@ -322,6 +324,7 @@ impl Clip {
             data,
             trees,
             pixels,
+            painted,
             palette: [0; palette::BYTES],
             cursor: 0,
         })
@@ -338,6 +341,13 @@ impl Clip {
     #[must_use]
     pub fn cursor(&self) -> u32 {
         self.cursor
+    }
+
+    /// Which blocks the last frame painted wrote, left to right and top to
+    /// bottom: a void block reads `false`, whatever pixels it holds.
+    #[must_use]
+    pub fn painted_blocks(&self) -> &[bool] {
+        &self.painted
     }
 
     /// The bytes of frame `frame`, which the caller has checked exists, and
@@ -390,6 +400,7 @@ impl Clip {
             &mut self.trees,
             &mut self.pixels,
             self.header.width as usize,
+            &mut self.painted,
         )?;
         log::debug!(
             i = frame, n = bytes.len(), p = u8::from(chunks.palette.is_some()),
