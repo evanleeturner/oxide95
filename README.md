@@ -29,6 +29,7 @@ source code that you compile against these libraries.
 | `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
 | `draw` | pixels and palettes |
 | `draw-surfaces` | DirectDraw's surfaces and palette, painted through `draw` |
+| `video_smacker` | Smacker video clips, turned into pictures, palettes and sound; no Windows calls of its own yet |
 | `oxide_trace` | macros that log the values a rewritten function reads and writes |
 | `oxide_logline` | writes those logs in one line format and checks them against `logbook.json` |
 
@@ -38,8 +39,8 @@ page or a test. Every call writes one log line naming the call, its numbers
 and its answer, so a wrong answer shows up in the log.
 
 Some calls and cases are not answered yet. `kernel_registry`, `kernel_text`,
-`draw`, `draw-surfaces`, `window`, `window-dialogs` and `window-input` list
-theirs at the top of `src/lib.rs`.
+`draw`, `draw-surfaces`, `video_smacker`, `window`, `window-dialogs` and
+`window-input` list theirs at the top of `src/lib.rs`.
 
 ## Where it has been checked
 
