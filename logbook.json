@@ -160,9 +160,57 @@
       "template": "a stream's door closed: {a}"
     },
     {
+      "id": "sound.page.started",
+      "level": "D",
+      "fields": { "by": "the crate the mix belongs to" },
+      "template": "the page's gesture came: the mix's frames are kept from here"
+    },
+    {
+      "id": "sound.page.read",
+      "level": "D",
+      "fields": { "frames": "the frames the page's script took", "by": "the crate the mix belongs to" },
+      "template": "the page's script read {frames} frames"
+    },
+    {
+      "id": "sound.page.closed",
+      "level": "D",
+      "fields": { "frames": "the frames still in the ring, never heard", "by": "the crate the mix belongs to" },
+      "template": "the page's back closed with {frames} frames unread"
+    },
+    {
+      "id": "sound.native.opened",
+      "level": "D",
+      "fields": { "rate": "the rate the device took", "by": "the crate the mix belongs to" },
+      "template": "the device opened at {rate}"
+    },
+    {
+      "id": "sound.native.open.refused",
+      "level": "W",
+      "fields": { "rate": "the rate asked of it", "why": "what stood in the way", "by": "the crate the mix belongs to" },
+      "template": "no device at {rate}: {why}; nothing is written, and the program goes on"
+    },
+    {
+      "id": "sound.native.stream.error",
+      "level": "W",
+      "fields": { "why": "what the audio library said", "by": "the crate the mix belongs to" },
+      "template": "the device's stream said: {why}"
+    },
+    {
+      "id": "sound.native.underrun",
+      "level": "D",
+      "fields": { "frames": "the frames of silence since the last report", "by": "the crate the mix belongs to" },
+      "template": "the device ran out of frames: {frames} frames of silence"
+    },
+    {
+      "id": "sound.native.closed",
+      "level": "D",
+      "fields": { "frames": "the frames still in the ring, never heard", "by": "the crate the mix belongs to" },
+      "template": "the device closed with {frames} frames unplayed"
+    },
+    {
       "id": "imp.call",
       "level": "D",
-      "fields": { "c": "the import, as DLL!NAME; a DirectDraw method, reached through a table and no import, as INTERFACE::NAME", "a": "its arguments, in order (absent when it takes none); the file and registry calls' seams log their numbers alone, never a pointer; a window, input or drawing call's numbers alone too, a record it is handed (a message, a rectangle, a point, a class) as its fields comma-joined, never its address, a null rectangle none; a DirectDraw Blt's two rectangles each after a 0 or 1 saying it was handed, zeros for a null, as its fill colour is a number, 0 with no effects record; a joystick position's device and its record's flags", "h": "the heap the block came from or goes to: the C library's memory helpers alone", "v": "the value it returned (absent when void); a key-state input call's low 16 bits, the SHORT the caller reads", "p": "the file name the call was given, as text: the file calls' seam alone", "m": "the module name a process call was given or wrote, as text: the process calls' seam alone", "q": "the entry name GetProcAddress was asked, as text", "s": "other text a process or text call was given: an environment block or variable, a command line, a debug string, the bytes or units to convert, map or compare; the key path or value name a registry call was given; the class, icon or cursor name a window or input call was given, # and the number for an atom or a resource id below 0x10000, empty for null; a byte past printable ASCII as \\xNN, a unit as \\uNNNN", "with": "the second text a compare call was given, shown as s shows the first; the default character WideCharToMultiByte was given, empty for null; the title or menu name a window call was given, shown as s shows the class", "o": "what a drawing call wrote, as numbers (a bits pointer, a paint record), empty on a 0 answer; what a CD-audio call wrote, a number or its text; what a joystick call wrote, its record's numbers in the record's order, empty on a refusal; what a DirectDraw call wrote, its record or its out pointer, empty on any answer but DD_OK; what a text call wrote into its buffer, shown as s shows its text, its length the smaller of the value and the buffer: GetStringType's classes as hex words, comma-joined; GetCPInfo's 18-byte record as bytes; empty for no buffer or a 0 answer; what a registry call wrote or kept, its numbers comma-joined: the handle an open wrote, the handle and disposition a create wrote, the type, size and value a query wrote (the value only with a buffer), the value a set kept; empty for a refusal that writes nothing; the record a window or input call wrote, its numbers comma-joined (a message's 7, a rectangle's 4, a point's 2), empty on a 0 answer","r": "the start-up record GetStartupInfoA wrote: its flags, show-window, reserved count and reserved address; the used-default flag WideCharToMultiByte wrote, empty for null", "to": "the new name a move was given, as text", "n": "the bytes a read or write moved, read from its out-pointer after the call", "found": "the file name a find call found, empty when it found none", "e": "the thread's last error as the file, process or text call left it, the value the file would read", "t": "the instant a time call read: the wall clock's file-time ticks, or the game clock's microseconds", "w": "the 8 date words a time call wrote: year, month, weekday, day, hour, minute, second, millisecond", "f": "the file time a time call wrote", "from": "the address the call returns to in the file that made it: the drawing, thread, process, text, registry, window and input calls' seams alone; 0 where a target has none", "by": "who computed the answer the caller reads: the crate's name from a front, orig from the original; absent on a line that does not say yet" },
+      "fields": { "c": "the import, as DLL!NAME; a DirectDraw or DirectSound method, reached through a table and no import, as INTERFACE::NAME", "a": "its arguments, in order (absent when it takes none); the file and registry calls' seams log their numbers alone, never a pointer; a window, input or drawing call's numbers alone too, a record it is handed (a message, a rectangle, a point, a class) as its fields comma-joined, never its address, a null rectangle none; a DirectDraw Blt's two rectangles each after a 0 or 1 saying it was handed, zeros for a null, as its fill colour is a number, 0 with no effects record; a joystick position's device and its record's flags", "h": "the heap the block came from or goes to: the C library's memory helpers alone", "v": "the value it returned (absent when void); a key-state input call's low 16 bits, the SHORT the caller reads", "p": "the file name the call was given, as text: the file calls' seam alone", "m": "the module name a process call was given or wrote, as text: the process calls' seam alone", "q": "the entry name GetProcAddress was asked, as text", "s": "other text a process or text call was given: an environment block or variable, a command line, a debug string, the bytes or units to convert, map or compare; the key path or value name a registry call was given; the class, icon or cursor name a window or input call was given, # and the number for an atom or a resource id below 0x10000, empty for null; a byte past printable ASCII as \\xNN, a unit as \\uNNNN", "with": "the second text a compare call was given, shown as s shows the first; the default character WideCharToMultiByte was given, empty for null; the title or menu name a window call was given, shown as s shows the class", "o": "what a drawing call wrote, as numbers (a bits pointer, a paint record), empty on a 0 answer; what a CD-audio call wrote, a number or its text; what a joystick call wrote, its record's numbers in the record's order, empty on a refusal; what a DirectDraw call wrote, its record or its out pointer, empty on any answer but DD_OK; what a DirectSound call wrote, its numbers comma-joined (a new buffer's number, the two positions, a number read back, a Lock's offset and two lengths), zeros on any answer but DS_OK; what a text call wrote into its buffer, shown as s shows its text, its length the smaller of the value and the buffer: GetStringType's classes as hex words, comma-joined; GetCPInfo's 18-byte record as bytes; empty for no buffer or a 0 answer; what a registry call wrote or kept, its numbers comma-joined: the handle an open wrote, the handle and disposition a create wrote, the type, size and value a query wrote (the value only with a buffer), the value a set kept; empty for a refusal that writes nothing; the record a window or input call wrote, its numbers comma-joined (a message's 7, a rectangle's 4, a point's 2), empty on a 0 answer","r": "the start-up record GetStartupInfoA wrote: its flags, show-window, reserved count and reserved address; the used-default flag WideCharToMultiByte wrote, empty for null", "to": "the new name a move was given, as text", "n": "the bytes a read or write moved, read from its out-pointer after the call", "found": "the file name a find call found, empty when it found none", "e": "the thread's last error as the file, process or text call left it, the value the file would read", "t": "the instant a time call read: the wall clock's file-time ticks, or the game clock's microseconds", "w": "the 8 date words a time call wrote: year, month, weekday, day, hour, minute, second, millisecond", "f": "the file time a time call wrote", "from": "the address the call returns to in the file that made it: the drawing, thread, process, text, registry, window and input calls' seams alone; 0 where a target has none", "by": "who computed the answer the caller reads: the crate's name from a front, orig from the original; absent on a line that does not say yet" },
       "template": "the layer's call to {c} with {a} returned {v}"
     },
     {
@@ -206,6 +254,36 @@
       "level": "D",
       "fields": { "c": "the DirectDraw interface, by its SDK name", "i": "the slot's offset in that interface's table, ddraw.h's on a 32-bit target" },
       "template": "{c}'s slot at {i} has no front: answered unsupported"
+    },
+    {
+      "id": "sound.buffers.absent",
+      "level": "D",
+      "fields": { "c": "the DirectSound interface, by its SDK name", "i": "the slot's offset in that interface's table, dsound.h's on a 32-bit target", "by": "the crate that answered" },
+      "template": "{c}'s slot at {i} has no front: answered unsupported"
+    },
+    {
+      "id": "sound.buffers.named.stop",
+      "level": "E",
+      "fields": { "c": "the sound call no true answer exists for, as DLL!NAME", "file": "the file its row names", "by": "the crate that stopped it" },
+      "template": "{c} from {file} stops the program here"
+    },
+    {
+      "id": "sound.buffers.pushed",
+      "level": "D",
+      "fields": { "a": "the buffer's number, the first frame handed over counted from where it set out, and how many", "by": "the crate that moved them" },
+      "template": "a playing buffer handed its door {a}"
+    },
+    {
+      "id": "sound.buffers.passed.over",
+      "level": "D",
+      "fields": { "a": "the buffer's number and the frames the clock passed before they could be handed over", "by": "the crate that passed them" },
+      "template": "a playing buffer passed over {a}, late"
+    },
+    {
+      "id": "sound.buffers.ended",
+      "level": "D",
+      "fields": { "a": "the buffer's number", "by": "the crate that saw it" },
+      "template": "buffer {a} reached its end by the clock, its door left to drain"
     },
     {
       "id": "draw.refused",
@@ -260,6 +338,18 @@
       "level": "D",
       "fields": { "i": "the frame next due, from 0", "t": "the clock's microseconds", "d": "the instant that frame is due, in microseconds" },
       "template": "frame {i} is due at {d}, the clock reads {t}"
+    },
+    {
+      "id": "video.stream.open",
+      "level": "D",
+      "fields": { "s": "the door's number for the clip", "r": "samples a second, a channel", "c": "the channels, 1 or 2" },
+      "template": "clip's sound opened on door {s}, {r} Hz, {c} channels"
+    },
+    {
+      "id": "video.stream.close",
+      "level": "D",
+      "fields": { "s": "the door's number" },
+      "template": "clip's sound on door {s} ended"
     },
     {
       "id": "video.refused",

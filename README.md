@@ -24,7 +24,8 @@ source code that you compile against these libraries.
 | `kernel_threads` | thread numbers, locks, per-thread slots and counters |
 | `kernel_time` | clocks and dates |
 | `cd-audio` | the calls a program makes to its CD-audio disc: one front answers from a row and reads no disc, another plays the disc's tracks through `sound-mix` or a page's script; it has run only in tests over stand-in discs, so nothing has reached a speaker |
-| `sound-mix` | Miles Sound System's calls, mixed in memory; a back over Windows' `waveOut` is written but has not run on real Windows yet, so nothing has reached a speaker |
+| `sound-mix` | Miles Sound System's calls, mixed in memory; a back over Windows' `waveOut` is written but has not run on real Windows yet, a browser page's back has run muted, and one over cpal for Linux and macOS, the feature `native`, needs ALSA's headers on Linux; nothing has reached a speaker |
+| `sound-buffers` | DirectSound's object and buffers, moved by a clock onto `sound-mix`'s doors; it has run only in tests, with no real program calling it and nothing reaching a speaker |
 | `joystick` | the calls a program makes to a joystick: one front says none is there, another reads real pads through a page's script, `gilrs` or Windows' own calls; no real pad has been read yet |
 | `logical_disc` | a read-only copy of a CD: a cue sheet with its bin files, or an iso |
 | `window` | windows and their message queues |
@@ -32,7 +33,7 @@ source code that you compile against these libraries.
 | `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
 | `draw` | pixels and palettes |
 | `draw-surfaces` | DirectDraw's surfaces and palette, painted through `draw` |
-| `video` | a program's Smacker calls, stepped on the game's clock over `video_smacker`; no sound yet, and no Windows calls of its own yet |
+| `video` | a program's Smacker calls, stepped on the game's clock over `video_smacker`, the clip's sound handed to `sound-mix`; no Windows calls of its own yet, and no clip has reached a speaker |
 | `video_smacker` | Smacker video clips, turned into pictures, palettes and sound; no Windows calls of its own yet |
 | `oxide_trace` | macros that log the values a rewritten function reads and writes |
 | `oxide_logline` | writes those logs in one line format and checks them against `logbook.json` |
@@ -43,7 +44,7 @@ page or a test. Every call writes one log line naming the call, its numbers
 and its answer, so a wrong answer shows up in the log.
 
 Some calls and cases are not answered yet. `kernel_registry`, `kernel_text`,
-`cd-audio`, `draw`, `draw-surfaces`, `joystick`, `sound-mix`, `video`, `video_smacker`, `window`,
+`cd-audio`, `draw`, `draw-surfaces`, `joystick`, `sound-buffers`, `sound-mix`, `video`, `video_smacker`, `window`,
 `window-dialogs` and `window-input` list theirs at the top of `src/lib.rs`.
 
 ## Where it has been checked
@@ -61,7 +62,7 @@ only check that it compiles and run nothing:
 ```bash
 cargo clippy --workspace --all-targets --target i686-pc-windows-gnu
 cargo check --workspace --target wasm32-unknown-unknown \
-  --features kernel_threads/page,kernel_registry/page,window/page,window-input/desk,draw/page
+  --features kernel_threads/page,kernel_registry/page,window/page,window-input/desk,draw/page,sound-mix/page
 ```
 
 macOS has never been built or tested.

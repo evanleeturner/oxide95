@@ -10,6 +10,8 @@ mod clock;
 mod disc;
 mod fakes;
 mod fronts;
+mod mix;
+mod sound;
 mod test_log;
 #[allow(
     dead_code,

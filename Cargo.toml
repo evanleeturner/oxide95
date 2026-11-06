@@ -1,7 +1,7 @@
 # One workspace: stand-ins for the Windows 95 calls an old program makes, a
 # crate a chunk, with the trace and the log sink they report through.
 [workspace]
-members = ["crates/cd-audio", "crates/sound-mix", "crates/draw", "crates/draw-surfaces",
+members = ["crates/cd-audio", "crates/sound-buffers", "crates/sound-mix", "crates/draw", "crates/draw-surfaces",
            "crates/kernel-files", "crates/kernel-memory", "crates/kernel-process", "crates/kernel-registry",
            "crates/joystick", "crates/kernel-text", "crates/kernel-threads", "crates/kernel-time", "crates/logical-disc",
            "crates/oxide-logline", "crates/oxide-trace", "crates/video", "crates/video-smacker",

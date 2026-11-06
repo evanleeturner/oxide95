@@ -14,7 +14,7 @@ use core::ptr;
 
 use video_smacker::{Clip, Picture, Refused};
 
-use crate::{Choices, ClipBytes, Clock, Handle, SoundDoor, VoidBlocks};
+use crate::{Choices, ClipBytes, Clock, Handle, SoundDoor, Track, VoidBlocks};
 
 /// What each line says computed its answer.
 const BY: &str = "video";
@@ -38,6 +38,11 @@ const NULL_BUFFER: &str = "null-buffer";
 const NO_TARGET: &str = "no-target";
 /// A frame the decoder refused; its own `smk.refused` line gives the reason.
 const DECODER: &str = "decoder";
+
+/// The library's bit for a clip's first track, in `smack_open`'s flags and
+/// `smack_sound_in_track`'s mask. The 6 bits above it name tracks the decoder
+/// refuses to open a clip with, so no answer turns on them.
+const TRACK_1: u32 = 0x2000;
 
 /// `smack_wait`'s answers: the frame is due, and it is not yet.
 const DUE: u32 = 0;
@@ -138,6 +143,8 @@ struct Playing {
     /// The frame last painted, unless a `smack_goto` came since.
     painted: Option<u32>,
     target: Option<Target>,
+    /// The door's number, for a clip opened to play.
+    stream: Option<u32>,
     /// The next paint writes the whole picture: what the target shows is unknown.
     whole_next: bool,
     /// A frame's length.
@@ -157,6 +164,7 @@ impl Playing {
             cursor: 0,
             painted: None,
             target: None,
+            stream: None,
             whole_next: false,
             period_us: u64::from(header.frame_us),
             anchor_us: now_us,
@@ -169,14 +177,30 @@ impl Playing {
         self.anchor_us + u64::from(self.cursor - self.anchor_frame) * self.period_us
     }
 
-    /// Paints the cursor's frame; the cursor stays.
-    fn paint(&mut self, void_blocks: VoidBlocks) -> Result<(), Refused> {
+    /// The clip's track as a door takes it; none for a track of no rate, which no
+    /// door could drain.
+    fn track(&self) -> Option<Track> {
+        let track = self.clip.header().track?;
+        (track.hz != 0).then_some(Track {
+            rate_hz: track.hz,
+            channels: track.channels,
+        })
+    }
+
+    /// Paints the cursor's frame and answers its samples, none for a clip with no
+    /// stream; the cursor stays. Frames a seek steps over stay unheard.
+    fn paint(&mut self, void_blocks: VoidBlocks) -> Result<Vec<i16>, Refused> {
         let frame = self.cursor;
         let follows = match self.painted {
             None => frame == 0,
             Some(last) => last + 1 == frame,
         };
         self.clip.seek(frame)?;
+        let samples = if self.stream.is_some() {
+            self.clip.frame_samples()?
+        } else {
+            Vec::new()
+        };
         let painted = self.clip.decode_next_frame(&mut self.picture)?;
         let changed = painted.palette_changed || self.picture.palette != self.handle.palette;
         self.handle.palette_changed = u32::from(changed);
@@ -185,7 +209,7 @@ impl Playing {
         self.whole_next = false;
         self.painted = Some(frame);
         self.write(whole);
-        Ok(())
+        Ok(samples)
     }
 
     /// Writes the picture to the target, whole or by its painted blocks alone,
@@ -250,7 +274,7 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
         &mut self.clock
     }
 
-    /// The sound door, which no front has called.
+    /// The sound door.
     pub fn sound(&self) -> &S {
         &self.sound
     }
@@ -268,7 +292,8 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
     }
 
     /// `_SmackOpen`: reads the file whole and answers its handle; null for a file
-    /// the back lacks or a clip the decoder refuses, and no row kept. `flags` and
+    /// the back lacks or a clip the decoder refuses, and no row kept. `flags` naming
+    /// the clip's track open its stream, if the door plays; the other bits and
     /// `extra` are kept in the line and change nothing.
     pub fn smack_open(&mut self, name: &[u8], flags: u32, extra: u32) -> *mut Handle {
         let bytes = self.bytes.read(name);
@@ -277,6 +302,15 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
         let handle = match clip {
             Some(clip) => {
                 let mut one = Playing::new(clip, self.clock.now_us());
+                if flags & TRACK_1 != 0 && self.sound.plays() {
+                    one.stream = one.track().map(|track| {
+                        let stream = self.sound.stream_open(track);
+                        log::debug!(
+                            s = stream, r = track.rate_hz, c = track.channels; "video.stream.open"
+                        );
+                        stream
+                    });
+                }
                 let handle = ptr::from_mut(&mut *one.handle);
                 self.clips.push(one);
                 handle
@@ -298,7 +332,12 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
             .iter()
             .position(|one| ptr::eq(&raw const *one.handle, handle));
         match found {
-            Some(at) => drop(self.clips.swap_remove(at)),
+            Some(at) => {
+                if let Some(stream) = self.clips.swap_remove(at).stream {
+                    self.sound.stream_close(stream);
+                    log::debug!(s = stream; "video.stream.close");
+                }
+            }
             None => refuse(CLOSE, UNKNOWN_HANDLE),
         }
         line(CLOSE, &[address(handle)], None);
@@ -341,20 +380,26 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
         );
     }
 
-    /// `_SmackDoFrame`: paints the cursor's frame and does not move the cursor,
-    /// so twice in a row paints once. Answers 0.
+    /// `_SmackDoFrame`: paints the cursor's frame and pushes its samples, and does
+    /// not move the cursor, so twice in a row paints and pushes once. Answers 0.
     pub fn smack_do_frame(&mut self, handle: *const Handle) -> u32 {
         let void_blocks = self.choices.void_blocks;
+        let mut heard = None;
         match self.find(handle) {
             None => refuse(DO_FRAME, UNKNOWN_HANDLE),
             Some(one) if one.painted == Some(one.cursor) => {}
-            Some(one) => {
-                if one.paint(void_blocks).is_err() {
-                    refuse(DO_FRAME, DECODER);
-                } else if one.target.is_none() {
-                    refuse(DO_FRAME, NO_TARGET);
+            Some(one) => match one.paint(void_blocks) {
+                Err(_) => refuse(DO_FRAME, DECODER),
+                Ok(samples) => {
+                    if one.target.is_none() {
+                        refuse(DO_FRAME, NO_TARGET);
+                    }
+                    heard = one.stream.zip(Some(samples));
                 }
-            }
+            },
+        }
+        if let Some((stream, samples)) = heard.filter(|(_, samples)| !samples.is_empty()) {
+            self.sound.stream_push(stream, &samples);
         }
         line(DO_FRAME, &[address(handle)], Some(0));
         0
@@ -371,7 +416,8 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
     }
 
     /// `_SmackGoto`: moves the cursor and re-anchors the clock there. What the
-    /// number counts from is [`Choices::goto_base`].
+    /// number counts from is [`Choices::goto_base`]. What the door still holds plays
+    /// out; the next sound is the frame landed on.
     pub fn smack_goto(&mut self, handle: *const Handle, frame: u32) {
         let (now_us, base) = (self.clock.now_us(), self.choices.goto_base);
         match self.find(handle) {
@@ -418,13 +464,23 @@ impl<C: Clock, B: ClipBytes, S: SoundDoor> Videos<C, B, S> {
         answer
     }
 
-    /// `_SmackSoundInTrack`: 0 for every mask at this step, so a caller that asks
-    /// plays the clip silent.
+    /// `_SmackSoundInTrack`: 1 if the mask names a track the clip holds and the door
+    /// plays, else 0, whichever flags the clip opened with. Only 0 or not was read
+    /// from the one caller, so the 1 is this front's own.
     pub fn smack_sound_in_track(&mut self, handle: *const Handle, mask: u32) -> u32 {
-        if self.find(handle).is_none() {
-            refuse(SOUND_IN_TRACK, UNKNOWN_HANDLE);
-        }
-        line(SOUND_IN_TRACK, &[address(handle), u64::from(mask)], Some(0));
-        0
+        let plays = self.sound.plays();
+        let answer = match self.find(handle) {
+            None => {
+                refuse(SOUND_IN_TRACK, UNKNOWN_HANDLE);
+                0
+            }
+            Some(one) => u32::from(plays && mask & TRACK_1 != 0 && one.track().is_some()),
+        };
+        line(
+            SOUND_IN_TRACK,
+            &[address(handle), u64::from(mask)],
+            Some(u64::from(answer)),
+        );
+        answer
     }
 }

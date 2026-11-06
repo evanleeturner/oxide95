@@ -1,7 +1,8 @@
 # The mixer a program's sound calls answer from, needing no device: voices move
 # by the clock, each call answered and logged here. It names no game, and needs
 # an allocator but nothing of any one target, so it builds for the browser too;
-# one back, over Windows' winmm, is compiled on Windows alone.
+# one back, over Windows' winmm, is compiled on Windows alone, and one, over cpal,
+# on Linux and macOS alone and only when asked for.
 [package]
 name = "sound-mix"
 version = "0.1.0"
@@ -23,9 +24,32 @@ missing_panics_doc = "allow"
 unwrap_used = "deny"
 undocumented_unsafe_blocks = "deny"
 
+[features]
+# The ring a browser page's script reads. It needs nothing the rest does not.
+page = []
+# The back over cpal, on Linux and macOS. It turns nothing on elsewhere, and on Linux
+# it needs ALSA's headers to build.
+native = ["dep:cpal"]
+
+# The thin export the page's proof runs: `cargo build --example page_tone --features page
+# --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_tone"
+path = "page/tone.rs"
+crate-type = ["cdylib"]
+required-features = ["page"]
+
+# One tone for a person to hear; nothing runs it for them.
+[[example]]
+name = "native_tone"
+required-features = ["native"]
+
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }
+
+[target.'cfg(not(any(target_arch = "wasm32", windows)))'.dependencies]
+cpal = { version = "=0.18.2", optional = true }
 
 [dev-dependencies]
 oxide_logline = { path = "../oxide-logline" }

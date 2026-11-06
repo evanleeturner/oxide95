@@ -26,14 +26,29 @@
 //!
 //! The crate names no game. One module is one target's: `waveout`, a back over winmm
 //! and the thread that pumps it, compiled on Windows alone. The rest needs an allocator
-//! and nothing of one target, so it builds for `wasm32-unknown-unknown` too.
+//! and nothing of one target, so it builds for `wasm32-unknown-unknown` too. Two more
+//! backs stand behind features, off by default: `page`, the ring a browser page's
+//! script reads, and `native`, over cpal on Linux and macOS.
+//!
+//! Not answered yet: joining `page`'s script to a game's page and to `draw`'s script,
+//! and any back reaching a speaker. macOS has been neither built nor run.
 #![cfg_attr(not(test), no_std)]
 
 extern crate alloc;
 
 mod door;
 mod lock;
+#[cfg(all(feature = "native", not(target_arch = "wasm32"), not(windows)))]
+pub mod native;
 pub mod output;
+#[cfg(any(test, feature = "page"))]
+pub mod page;
+#[cfg(any(
+    test,
+    feature = "page",
+    all(feature = "native", not(target_arch = "wasm32"), not(windows))
+))]
+mod ring;
 pub mod table;
 #[cfg(test)]
 mod test_log;
@@ -56,6 +71,12 @@ use voice::{MIX_HZ, USER_WORDS, Voice};
 use wave::{FORMAT_PCM, Wave};
 
 pub use output::NullBack;
+#[cfg(any(
+    test,
+    feature = "page",
+    all(feature = "native", not(target_arch = "wasm32"), not(windows))
+))]
+pub use ring::RING_FRAMES;
 pub use voice::{SMP_DONE, SMP_FREE, SMP_PLAYING, SMP_STOPPED};
 #[cfg(windows)]
 pub use waveout::{WaveOutBack, start_pump_thread};

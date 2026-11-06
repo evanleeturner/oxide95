@@ -3,7 +3,7 @@
 use std::ptr;
 
 use super::clips::{long_clip, painting_clip, track_clip};
-use super::fakes::{Buffer, direct, holding, read_handle};
+use super::fakes::{Buffer, Mute, direct, holding, holding_with, read_handle};
 use super::test_log::debug_lines;
 use crate::{Choices, GotoBase, Place, VoidBlocks};
 
@@ -297,9 +297,9 @@ fn the_table_has_no_fixed_size_and_a_closed_handle_is_refused_by_name() {
 }
 
 #[test]
-fn sound_in_track_answers_0_for_every_mask_and_the_door_takes_no_call() {
+fn a_door_that_plays_nothing_leaves_every_clip_silent_at_all_8_fronts() {
     for clip in [track_clip(), long_clip(2, -1000)] {
-        let mut videos = holding(&clip, 0, Choices::default());
+        let mut videos = holding_with(Mute::default(), &clip, 0, Choices::default());
         let handle = videos.smack_open(b"a.smk", 0xfe000, 0);
         let mut buffer = Buffer::sized(16, 8);
         buffer.name_to(&mut videos, handle);
