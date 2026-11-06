@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
-//! Falsifier 1 over real clips: `VIDEO_CLIP_LIST` names a file listing one clip's
-//! path a line, outside this tree. It prints counts alone, never a name.
+//! Falsifiers 1 and 5 over real clips: `VIDEO_CLIP_LIST` names a file listing one
+//! clip's path a line, outside this tree. It prints counts alone, never a name.
 use std::env;
 use std::fs;
 
@@ -45,6 +45,7 @@ fn every_clip_listed_plays_through_the_fronts_as_a_direct_decode() {
     let list = env::var("VIDEO_CLIP_LIST").expect("VIDEO_CLIP_LIST names a list");
     let list = fs::read_to_string(list).expect("the list is readable");
     let (mut clips, mut frames, mut reversed, mut differences, mut short) = (0, 0, 0, 0, 0);
+    let (mut over, mut sounding, mut door) = (0, 0, 0);
     for path in list.lines().filter(|line| !line.is_empty()) {
         let bytes = fs::read(path).expect("the clip is readable");
         let (width, height, hashes) = direct_hashes(&bytes);
@@ -54,6 +55,11 @@ fn every_clip_listed_plays_through_the_fronts_as_a_direct_decode() {
         let mut buffer = Buffer::new(SCREEN);
         let handle = videos.smack_open(b"a.smk", 0, 0);
         buffer.name_to(&mut videos, handle);
+        for bit in 0..32 {
+            if videos.smack_sound_in_track(handle, 1 << bit) != 0 {
+                sounding += 1;
+            }
+        }
         for expected in &hashes {
             videos.smack_do_frame(handle);
             frames += 1;
@@ -64,6 +70,10 @@ fn every_clip_listed_plays_through_the_fronts_as_a_direct_decode() {
         }
         if read_handle(handle).2 as usize != hashes.len() {
             short += 1;
+        }
+        videos.smack_do_frame(handle);
+        if Some(&hash(&buffer.rect(width, height))) != hashes.last() {
+            over += 1;
         }
         videos.smack_close(handle);
 
@@ -81,9 +91,10 @@ fn every_clip_listed_plays_through_the_fronts_as_a_direct_decode() {
                 differences += 1;
             }
         }
+        door += videos.sound().calls;
     }
     println!(
-        "clips {clips} frames {frames} next-then-do frames {reversed} differences {differences} short {short}"
+        "clips {clips} frames {frames} next-then-do frames {reversed} differences {differences} short {short} over {over} sound answers {sounding} door calls {door}"
     );
-    assert_eq!((differences, short), (0, 0));
+    assert_eq!((differences, short, over, sounding, door), (0, 0, 0, 0, 0));
 }
