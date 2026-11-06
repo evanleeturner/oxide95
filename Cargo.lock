@@ -1390,6 +1390,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "sound-mix"
+version = "0.1.0"
+dependencies = [
+ "log",
+ "oxide_logline",
+ "oxide_trace",
+]
+
+[[package]]
 name = "strict-num"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
