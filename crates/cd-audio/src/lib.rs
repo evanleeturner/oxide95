@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-//! The calls a program makes to find its CD-audio disc: WINMM's
-//! `mciSendCommandA` and `auxGetNumDevs`, answered from a row, no disc read and
-//! no sound, on any target.
+//! The calls a program makes to its CD-audio disc: WINMM's `mciSendCommandA`
+//! and `auxGetNumDevs`. [`Front`] answers them from a row, no disc read and no
+//! sound, on any target; [`play::PlayFront`] holds one and plays a disc's tracks.
 //!
 //! What the answers hold lives in a [`table::Row`], kept in the game's rows
 //! crate: how many devices, how many tracks, the device's name and number.
@@ -11,23 +11,59 @@
 //! name, `a` its numbers and the record's words it read, `v` its answer, `o`
 //! what it wrote, `by` that this crate answered.
 //!
-//! No mode is ever answered. A mode is a claim about a disc nothing here has
-//! read, so the caller gets `MCIERR_UNSUPPORTED_FUNCTION` and goes without.
+//! [`Front`] answers no mode. A mode is a claim about a disc it has not read, so
+//! the caller gets `MCIERR_UNSUPPORTED_FUNCTION` and goes without.
 //!
-//! Not answered yet: every other message or flags, `MCI_PLAY` among them, a
-//! device but the row's, a record holding what no row answers, and the names
+//! [`Front`] does not answer every other message or flags, `MCI_PLAY` among them,
+//! a device but the row's, a record holding what no row answers, or the names
 //! `mciGetErrorStringA`, `auxGetDevCapsA`, `auxSetVolume` and `auxGetVolume`.
 //! Each is a stop by name, never a guess: one `cd.stop` line, then [`Back::stop`].
 //!
-//! The crate names no game, nothing of any one target and no allocator, so it
-//! builds for `wasm32-unknown-unknown` and runs where no heap exists yet.
+//! [`play::PlayFront`] hands [`Front`] whatever a disc has no say in, so a disc
+//! with no audio tracks answers exactly as [`Front`] does. With audio tracks it
+//! adds `MCI_PLAY`, `MCI_STOP`, `MCI_PAUSE`, `MCI_RESUME`, the mode and position,
+//! `auxGetDevCapsA` and `auxSetVolume`. Not answered yet by either, and the same
+//! stop: `MCI_SET`'s door, the notify flag, `mciGetErrorStringA` and `auxGetVolume`.
+//!
+//! The sound goes to a [`play::Player`]: [`page::PagePlayer`] hands its orders to
+//! a page's script, `page/cd-player.mjs`, and `door::DoorPlayer` to `sound-mix`.
+//! All of it has run only in tests, over stand-ins made by name: no real disc, no
+//! game and no speaker.
+//!
+//! With no feature the crate names no game, nothing of any one target and no
+//! allocator, so it builds for `wasm32-unknown-unknown` and runs where no heap
+//! exists yet. `disc` counts a `logical_disc`'s tracks and needs an allocator.
+//! `door` adds `sound-mix`, never in the browser's graph. `ogg` adds `lewton` to
+//! decode a store's files, needs `std`, and is off on `wasm32`.
 #![cfg_attr(not(test), no_std)]
 
+#[cfg(any(test, feature = "disc"))]
+extern crate alloc;
+#[cfg(all(any(test, feature = "ogg"), not(target_arch = "wasm32")))]
+extern crate std;
+
+#[cfg(any(test, feature = "disc"))]
+pub mod disc;
+#[cfg(any(test, feature = "door"))]
+pub mod door;
+#[cfg(test)]
+mod door_tests;
+#[cfg(all(any(test, feature = "ogg"), not(target_arch = "wasm32")))]
+pub mod ogg;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod ogg_tests;
+pub mod page;
+pub mod play;
+#[cfg(test)]
+mod play_tests;
 pub mod table;
+#[cfg(test)]
+mod test_disc;
 #[cfg(test)]
 mod test_log;
 #[cfg(test)]
 mod tests;
+pub mod tmsf;
 
 use oxide_trace::Args;
 use table::Row;
@@ -86,6 +122,7 @@ macro_rules! numbers {
         Args([$(oxide_trace::__shown!($value)),+])
     };
 }
+pub(crate) use numbers;
 
 /// What a target does for the front.
 pub trait Back {

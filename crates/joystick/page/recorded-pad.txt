@@ -1,0 +1,20 @@
+# A stand-in, written by hand from the W3C Gamepad standard mapping, from no device: no pad made these numbers.
+# Read by page/gamepads.test.mjs and src/pads_tests.rs. Each frame is one pad in the first slot.
+# name | mapping, or null for a pulled pad | how many buttons | axes | which buttons are down | the 11 words: present, X, Y, Z, R, U, V, wCaps, button count, button bits, POV
+rest | standard | 17 | 0,0,0,0 | | 1,32768,32768,32768,32768,32768,32768,54,13,0,65535
+corner | standard | 17 | -1,-1,1,1 | | 1,0,0,32768,65535,65535,32768,54,13,0,65535
+other corner | standard | 17 | 1,1,-1,-1 | | 1,65535,65535,32768,0,0,32768,54,13,0,65535
+partway | standard | 17 | 0.5,-0.5,0.25,-0.25 | | 1,49151,16384,32768,40959,24576,32768,54,13,0,65535
+past the ends | standard | 17 | 1.5,-3,2,-2 | | 1,65535,0,32768,65535,0,32768,54,13,0,65535
+some buttons | standard | 17 | 0,0,0,0 | 0,3,11,16 | 1,32768,32768,32768,32768,32768,32768,54,13,6153,65535
+every button | standard | 17 | 0,0,0,0 | 0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16 | 1,32768,32768,32768,32768,32768,32768,54,13,8191,0
+hat forward | standard | 17 | 0,0,0,0 | 12 | 1,32768,32768,32768,32768,32768,32768,54,13,0,0
+hat right | standard | 17 | 0,0,0,0 | 15 | 1,32768,32768,32768,32768,32768,32768,54,13,0,9000
+hat back | standard | 17 | 0,0,0,0 | 13 | 1,32768,32768,32768,32768,32768,32768,54,13,0,18000
+hat left | standard | 17 | 0,0,0,0 | 14 | 1,32768,32768,32768,32768,32768,32768,54,13,0,27000
+hat diagonal up right | standard | 17 | 0,0,0,0 | 12,15 | 1,32768,32768,32768,32768,32768,32768,54,13,0,0
+hat diagonal down left | standard | 17 | 0,0,0,0 | 13,14 | 1,32768,32768,32768,32768,32768,32768,54,13,0,18000
+no mapping, six axes | | 6 | 1,-1,0.5,-0.5,0,0 | 5 | 1,65535,0,49151,16384,32768,32768,15,6,32,65535
+no mapping, two axes | | 2 | 0,0 | 1 | 1,32768,32768,32768,32768,32768,32768,0,2,2,65535
+no mapping, too many buttons | | 40 | 0,0 | 31,39 | 1,32768,32768,32768,32768,32768,32768,0,32,2147483648,65535
+pulled | null | | | | 0,0,0,0,0,0,0,0,0,0,0

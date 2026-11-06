@@ -7,7 +7,7 @@ use crate::table::{Calls, Row};
 use crate::test_log::debug_lines;
 use crate::{Back, Front, Record};
 
-const CALLS: Calls = Calls {
+pub(crate) const CALLS: Calls = Calls {
     send_command: "WINMM!mciSendCommandA",
     aux_devices: "WINMM!auxGetNumDevs",
     error_string: "WINMM!mciGetErrorStringA",
@@ -35,7 +35,7 @@ static SMALL: Row = Row {
 };
 
 /// A stop a test can catch, where a target ends the program.
-struct Panics;
+pub(crate) struct Panics;
 
 impl Back for Panics {
     fn stop(&self, name: &str) -> ! {
@@ -44,12 +44,12 @@ impl Back for Panics {
 }
 
 /// A record: its 5 words, and what went through its return pointer.
-struct Words {
-    words: [u32; 5],
-    through: Vec<u8>,
+pub(crate) struct Words {
+    pub(crate) words: [u32; 5],
+    pub(crate) through: Vec<u8>,
 }
 
-fn record(words: [u32; 5]) -> Words {
+pub(crate) fn record(words: [u32; 5]) -> Words {
     Words {
         words,
         through: Vec::new(),
@@ -74,7 +74,7 @@ impl Record for Words {
 }
 
 /// A record no call may look at: a message that carries none may be handed null.
-struct Untouched;
+pub(crate) struct Untouched;
 
 impl Record for Untouched {
     fn word(&self, _: usize) -> u32 {
@@ -91,7 +91,7 @@ impl Record for Untouched {
 }
 
 /// What a call that stops said: the stop's name, and the lines it logged.
-fn stopped(call: impl FnOnce()) -> (String, Vec<String>) {
+pub(crate) fn stopped(call: impl FnOnce()) -> (String, Vec<String>) {
     let mut name = String::new();
     let lines = debug_lines(|| {
         let panic = catch_unwind(AssertUnwindSafe(call)).expect_err("the call stops");
@@ -176,30 +176,32 @@ fn counts_names_and_numbers_come_from_the_row() {
     assert_eq!(tracks.words[1], 7);
 }
 
+/// Every send the front answers with a stop, each with a record of its own.
+pub(crate) const OTHERS: [(u32, u32, u32, [u32; 5]); 18] = [
+    (7, 0x806, 0x4, [0; 5]),                   // MCI_PLAY
+    (7, 0x809, 0, [0; 5]),                     // MCI_PAUSE
+    (7, 0x855, 0, [0; 5]),                     // MCI_RESUME
+    (7, 0x808, 0, [0; 5]),                     // MCI_STOP
+    (7, 0x80d, 0x100, [0; 5]),                 // MCI_SET, other flags
+    (7, 0x814, 0x110, [0, 0, 2, 0, 0]),        // MCI_STATUS, other flags
+    (7, 0x814, 0x100, [0, 0, 2, 0, 0]),        // an item no row answers
+    (7, 0x80d, 0x400, [0, 3, 0, 0, 0]),        // another time format
+    (0, 0x80d, 0x400, [0, 10, 0, 0, 0]),       // no device yet
+    (u32::MAX, 0x804, 0, [0; 5]),              // a device already closed
+    (7, 0x803, 0x2000, [0; 5]),                // open on an open device
+    (0, 0x803, 0x200, [0; 5]),                 // open, other flags
+    (7, 0x810, 0x100, [0, 0, 4, 0, 0x204]),    // the count, on a device
+    (0, 0x810, 0x100, [0, 0, 4, 0, 0x205]),    // the count of another type
+    (0, 0x810, 0x100, [0, 0, 3, 0, 0x204]),    // no room for the count
+    (0, 0x810, 0x400, [0, 0, 0x20, 0, 0x204]), // device 0
+    (0, 0x810, 0x400, [0, 0, 0x20, 2, 0x204]), // past the count
+    (0, 0x810, 0x400, [0, 0, 7, 1, 0x204]),    // no room for the zero
+];
+
 #[test]
 fn every_other_send_stops_by_name_before_it_writes() {
     let front = Front::new(&ROW, Panics);
-    let others: [(u32, u32, u32, [u32; 5]); 18] = [
-        (7, 0x806, 0x4, [0; 5]),                   // MCI_PLAY
-        (7, 0x809, 0, [0; 5]),                     // MCI_PAUSE
-        (7, 0x855, 0, [0; 5]),                     // MCI_RESUME
-        (7, 0x808, 0, [0; 5]),                     // MCI_STOP
-        (7, 0x80d, 0x100, [0; 5]),                 // MCI_SET, other flags
-        (7, 0x814, 0x110, [0, 0, 2, 0, 0]),        // MCI_STATUS, other flags
-        (7, 0x814, 0x100, [0, 0, 2, 0, 0]),        // an item no row answers
-        (7, 0x80d, 0x400, [0, 3, 0, 0, 0]),        // another time format
-        (0, 0x80d, 0x400, [0, 10, 0, 0, 0]),       // no device yet
-        (u32::MAX, 0x804, 0, [0; 5]),              // a device already closed
-        (7, 0x803, 0x2000, [0; 5]),                // open on an open device
-        (0, 0x803, 0x200, [0; 5]),                 // open, other flags
-        (7, 0x810, 0x100, [0, 0, 4, 0, 0x204]),    // the count, on a device
-        (0, 0x810, 0x100, [0, 0, 4, 0, 0x205]),    // the count of another type
-        (0, 0x810, 0x100, [0, 0, 3, 0, 0x204]),    // no room for the count
-        (0, 0x810, 0x400, [0, 0, 0x20, 0, 0x204]), // device 0
-        (0, 0x810, 0x400, [0, 0, 0x20, 2, 0x204]), // past the count
-        (0, 0x810, 0x400, [0, 0, 7, 1, 0x204]),    // no room for the zero
-    ];
-    for (device, message, flags, words) in others {
+    for (device, message, flags, words) in OTHERS {
         let mut asked = record(words);
         let (name, lines) = stopped(|| {
             let _ = front.send(device, message, flags, &mut asked);
