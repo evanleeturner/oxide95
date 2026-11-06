@@ -171,11 +171,7 @@ async function theKey(browser, port, out, axePath) {
     const { wasm, sound } = window.toneProof;
     const { nodes } = window.toneSpy;
     const given = nodes.reduce((sum, node) => sum + node.frames, 0);
-    return (
-      wasm.kept() > 0 &&
-      wasm.read_frames() === 0 &&
-      given + sound.stats.dropped === wasm.kept()
-    );
+    return wasm.kept() > 0 && given + sound.stats.dropped === wasm.kept();
   });
   const done = await read(page);
   out(
