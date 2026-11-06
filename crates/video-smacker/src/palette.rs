@@ -41,9 +41,9 @@ pub(crate) fn apply(chunk: &[u8], palette: &mut [u8; BYTES]) -> Result<(), Refus
             entry += count;
             at += 2;
         } else {
-            let blue = widened(first);
+            let red = widened(first);
             let green = widened(*chunk.get(at + 1).ok_or(cut)?);
-            let red = widened(*chunk.get(at + 2).ok_or(cut)?);
+            let blue = widened(*chunk.get(at + 2).ok_or(cut)?);
             palette[entry * 3..entry * 3 + 3].copy_from_slice(&[red, green, blue]);
             entry += 1;
             at += 3;
