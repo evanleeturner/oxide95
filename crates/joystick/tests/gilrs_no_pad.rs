@@ -42,6 +42,12 @@ impl Record for Words {
 
 const UNTOUCHED: u32 = 0xdead_beef;
 
+/// A lock makes a thing shareable only if the thing can move to another thread at all.
+const _: fn() = || {
+    fn moves_between_threads<T: Send>() {}
+    moves_between_threads::<GilrsPads>();
+};
+
 fn position_record(flags: u32) -> Words {
     let mut words = vec![UNTOUCHED; 13];
     words[0] = 0x34;

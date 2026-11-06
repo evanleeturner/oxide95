@@ -135,7 +135,7 @@ function readGamepads(navigator, refused) {
 export function startPolling(window, post, logger) {
   let told = false;
   const refused = (error) => {
-    if (!told) logger.info("joy.page.refused", String(error));
+    if (!told) logger.info("pads refused", String(error));
     told = true;
   };
   let frame = 0;
