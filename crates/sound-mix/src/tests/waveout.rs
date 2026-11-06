@@ -197,7 +197,10 @@ impl Winmm for Fake {
         // SAFETY: the trait's own; the back filled the buffer before this call.
         let (samples, length) = unsafe {
             let length = (*header).length;
-            (slice::from_raw_parts((*header).data, length as usize / 2), length)
+            (
+                slice::from_raw_parts((*header).data, length as usize / 2),
+                length,
+            )
         };
         books.taken.extend_from_slice(samples);
         books.lengths.push(length);
@@ -260,7 +263,9 @@ impl Winmm for Fake {
 fn within<T: Send + 'static>(seconds: u64, body: impl FnOnce() -> T + Send + 'static) -> T {
     let (sender, receiver) = channel();
     thread::spawn(move || sender.send(body()));
-    receiver.recv_timeout(Duration::from_secs(seconds)).expect("the body ended inside its limit")
+    receiver
+        .recv_timeout(Duration::from_secs(seconds))
+        .expect("the body ended inside its limit")
 }
 
 /// The calls of the crate's reference mix: voices and a door, through set readings.
@@ -297,7 +302,10 @@ fn digest(samples: &[i16]) -> String {
 }
 
 fn lines_named(lines: &[String], name: &str) -> usize {
-    lines.iter().filter(|line| line.split(' ').next() == Some(name)).count()
+    lines
+        .iter()
+        .filter(|line| line.split(' ').next() == Some(name))
+        .count()
 }
 
 fn dropped_frames(lines: &[String]) -> usize {
@@ -332,8 +340,16 @@ fn the_bytes_winmm_takes_equal_the_mix_over_a_whole_run() {
         let fake = Fake::at_once();
         whole_run(Device::new(fake.clone(), count, frames));
         let books = fake.books();
-        assert_eq!(digest(&books.taken), digest(&mix), "taken, {count} of {frames}");
-        assert_eq!(digest(&books.played), digest(&mix), "played, {count} of {frames}");
+        assert_eq!(
+            digest(&books.taken),
+            digest(&mix),
+            "taken, {count} of {frames}"
+        );
+        assert_eq!(
+            digest(&books.played),
+            digest(&mix),
+            "played, {count} of {frames}"
+        );
         assert_eq!(books.refusals, [], "{count} of {frames}");
     }
 }
@@ -344,13 +360,22 @@ fn a_whole_run_wraps_its_buffers_and_ends_on_a_short_fill() {
     whole_run(Device::new(fake.clone(), 8, 16));
     let books = fake.books();
     let full = 16 * 4;
-    assert!(books.lengths.contains(&full), "no fill ran on into the next buffer");
+    assert!(
+        books.lengths.contains(&full),
+        "no fill ran on into the next buffer"
+    );
     let mut distinct = books.written_at.clone();
     distinct.sort_unstable();
     distinct.dedup();
     assert!(distinct.len() > 1, "only one buffer was ever written");
-    assert!(books.written_at.len() > distinct.len(), "no buffer was written twice");
-    assert!(*books.lengths.last().expect("the run wrote") < full, "no short last fill");
+    assert!(
+        books.written_at.len() > distinct.len(),
+        "no buffer was written twice"
+    );
+    assert!(
+        *books.lengths.last().expect("the run wrote") < full,
+        "no short last fill"
+    );
 }
 
 #[test]
@@ -362,7 +387,11 @@ fn a_write_longer_than_a_buffer_runs_on_into_the_next() {
     assert_eq!(back.room(), 12);
     let frames: Vec<i16> = (0..20).collect();
     back.write(&frames);
-    assert_eq!(fake.books().lengths, [16, 16, 8], "2 full buffers and a short one");
+    assert_eq!(
+        fake.books().lengths,
+        [16, 16, 8],
+        "2 full buffers and a short one"
+    );
     assert_eq!(back.room(), 0, "a short fill holds its whole buffer");
     fake.finish(1);
     assert_eq!(back.room(), 4);
@@ -371,7 +400,11 @@ fn a_write_longer_than_a_buffer_runs_on_into_the_next() {
     assert_eq!(back.room(), 12);
     assert_eq!(fake.books().played, frames);
     back.write(&frames[..6]);
-    assert_eq!(fake.books().unprepared.len(), 3, "a write hands back what is done first");
+    assert_eq!(
+        fake.books().unprepared.len(),
+        3,
+        "a write hands back what is done first"
+    );
     assert_eq!(back.room(), 8);
     back.close();
     assert_eq!(back.room(), 0);
@@ -384,11 +417,23 @@ fn a_stalled_device_takes_its_room_and_the_front_counts_the_rest() {
     let fake = Fake::waits();
     let lines = debug_lines(|| whole_run(Device::new(fake.clone(), 4, 64)));
     let books = fake.books();
-    assert_eq!(books.lengths.len(), 4, "the stalled queue holds 4 buffers and no more");
-    assert_eq!(books.taken, mix[..books.taken.len()], "what it took is the mix's start");
+    assert_eq!(
+        books.lengths.len(),
+        4,
+        "the stalled queue holds 4 buffers and no more"
+    );
+    assert_eq!(
+        books.taken,
+        mix[..books.taken.len()],
+        "what it took is the mix's start"
+    );
     let dropped = dropped_frames(&lines);
     assert!(dropped > 0);
-    assert_eq!(books.taken.len() / 2 + dropped, mix.len() / 2, "each frame taken or counted");
+    assert_eq!(
+        books.taken.len() / 2 + dropped,
+        mix.len() / 2,
+        "each frame taken or counted"
+    );
     assert_eq!(books.refusals, []);
 }
 
@@ -425,14 +470,20 @@ fn a_refused_open_falls_to_silence_with_one_warning() {
         front.register_eos_callback(handle, 64);
         front.start_sample(handle);
         seat.at(90_703);
-        assert_eq!(front.sample_status(handle), SMP_DONE, "it ends on time, unheard");
+        assert_eq!(
+            front.sample_status(handle),
+            SMP_DONE,
+            "it ends on time, unheard"
+        );
         seat.at(200_000);
         front.pump();
     });
     assert_eq!(lines_named(&lines, "sound.output.refused"), 1, "{lines:?}");
     assert_eq!(lines_named(&lines, "sound.waveout.refused"), 0, "{lines:?}");
-    let refused: Vec<_> =
-        lines.iter().filter(|line| line.starts_with("sound.waveout.open.refused")).collect();
+    let refused: Vec<_> = lines
+        .iter()
+        .filter(|line| line.starts_with("sound.waveout.open.refused"))
+        .collect();
     assert_eq!(refused.len(), 1, "{lines:?}");
     assert!(refused[0].contains("code=2"), "{}", refused[0]);
     assert_eq!(seat.fired(), [(64, handle)], "its callback fires once");
@@ -506,7 +557,11 @@ fn back_mix_and_clock_on_two_threads_at_volume_never_hang() {
         let books = fake.books();
         assert!(!books.played.is_empty(), "the device finished nothing");
         assert_eq!(books.refusals, []);
-        assert_eq!(books.played, books.taken[..books.played.len()], "played as taken, in order");
+        assert_eq!(
+            books.played,
+            books.taken[..books.played.len()],
+            "played as taken, in order"
+        );
     });
 }
 
@@ -535,7 +590,11 @@ fn a_thread_holding_the_lock_stands_in_for_the_frozen_one() {
                 });
             });
             thread::sleep(Duration::from_millis(200));
-            assert_eq!(pumps.load(Ordering::SeqCst), 0, "a pump moved while the lock was held");
+            assert_eq!(
+                pumps.load(Ordering::SeqCst),
+                0,
+                "a pump moved while the lock was held"
+            );
             free.send(()).expect("the holder is waiting");
             while pumps.load(Ordering::SeqCst) < 5 {
                 thread::yield_now();
@@ -564,7 +623,10 @@ fn the_fake_refuses_what_winmm_documents_refusing() {
     // SAFETY: every pointer is to a local alive through the block, and the queue is emptied
     // before the block ends.
     unsafe {
-        assert_eq!(fake.open(&raw mut handle, WAVE_MAPPER, &raw const format, 0, 0, 0), 0);
+        assert_eq!(
+            fake.open(&raw mut handle, WAVE_MAPPER, &raw const format, 0, 0, 0),
+            0
+        );
         assert_eq!(fake.write(handle, at, HEADER_SIZE), UNPREPARED);
         assert_eq!(fake.prepare(handle, at, HEADER_SIZE), 0);
         assert_eq!(fake.prepare(handle, at, HEADER_SIZE), STRICTER);
@@ -572,7 +634,11 @@ fn the_fake_refuses_what_winmm_documents_refusing() {
         assert_eq!(fake.unprepare(handle, at, HEADER_SIZE), STILL_PLAYING);
         assert_eq!(fake.close(handle), STILL_PLAYING);
         assert_eq!(fake.reset(handle), 0);
-        assert_ne!(flags(at).load(Ordering::Acquire) & WHDR_DONE, 0, "a reset marks done");
+        assert_ne!(
+            flags(at).load(Ordering::Acquire) & WHDR_DONE,
+            0,
+            "a reset marks done"
+        );
         assert_eq!(fake.unprepare(handle, at, HEADER_SIZE), 0);
         assert_eq!(fake.close(handle), 0);
         assert_eq!(fake.write(handle, at, HEADER_SIZE), BAD_HANDLE);
@@ -611,7 +677,10 @@ fn a_close_with_buffers_in_flight_resets_unprepares_each_once_and_closes() {
     });
     let want = recording.frames();
     let want = &want[*mark.lock().expect("no test panics holding this")..];
-    assert!(want.iter().any(|&sample| sample != 0), "the second open's mix is silent");
+    assert!(
+        want.iter().any(|&sample| sample != 0),
+        "the second open's mix is silent"
+    );
 
     let fake = Fake::waits();
     let at_close = fake.clone();
@@ -622,7 +691,11 @@ fn a_close_with_buffers_in_flight_resets_unprepares_each_once_and_closes() {
         assert_eq!(books.refusals, []);
         assert_eq!(books.closes, 1);
         assert!(books.queue.is_empty());
-        assert_eq!(books.prepared, [] as [usize; 0], "a header was never unprepared");
+        assert_eq!(
+            books.prepared,
+            [] as [usize; 0],
+            "a header was never unprepared"
+        );
         let mut unprepared = books.unprepared.clone();
         unprepared.sort_unstable();
         let mut written = books.written_at.clone();
@@ -635,7 +708,11 @@ fn a_close_with_buffers_in_flight_resets_unprepares_each_once_and_closes() {
     assert_eq!(books.refusals, []);
     assert_eq!(books.closes, 2, "the back's drop closed the second open");
     let taken_at_close = *taken_at_close.lock().expect("no test panics holding this");
-    assert_eq!(digest(&books.taken[taken_at_close..]), digest(want), "the later open's bytes");
+    assert_eq!(
+        digest(&books.taken[taken_at_close..]),
+        digest(want),
+        "the later open's bytes"
+    );
 }
 
 #[test]
@@ -651,15 +728,28 @@ fn a_refused_write_warns_once_and_what_follows_counts_as_dropped() {
             front.pump();
         }
     });
-    let refused: Vec<_> =
-        lines.iter().filter(|line| line.starts_with("sound.waveout.refused")).collect();
+    let refused: Vec<_> = lines
+        .iter()
+        .filter(|line| line.starts_with("sound.waveout.refused"))
+        .collect();
     assert_eq!(refused.len(), 1, "{lines:?}");
-    assert!(refused[0].contains("call=waveOutWrite") && refused[0].contains("code=6"), "{lines:?}");
+    assert!(
+        refused[0].contains("call=waveOutWrite") && refused[0].contains("code=6"),
+        "{lines:?}"
+    );
     assert!(dropped_frames(&lines) > 0, "{lines:?}");
     assert_eq!(fake.books().lengths, [] as [u32; 0]);
     let closes = debug_lines(|| front.shutdown());
-    assert_eq!(lines_named(&closes, "sound.waveout.closed"), 1, "{closes:?}");
-    assert_eq!(fake.books().prepared, [] as [usize; 0], "the refused buffer is unprepared too");
+    assert_eq!(
+        lines_named(&closes, "sound.waveout.closed"),
+        1,
+        "{closes:?}"
+    );
+    assert_eq!(
+        fake.books().prepared,
+        [] as [usize; 0],
+        "the refused buffer is unprepared too"
+    );
 }
 
 #[test]
@@ -672,8 +762,10 @@ fn a_refused_close_keeps_its_buffers_with_one_warning() {
     front.pump();
     fake.books().refuse = Some(("close", 6));
     let lines = debug_lines(|| front.wave_out_close(driver));
-    let refused: Vec<_> =
-        lines.iter().filter(|line| line.starts_with("sound.waveout.refused")).collect();
+    let refused: Vec<_> = lines
+        .iter()
+        .filter(|line| line.starts_with("sound.waveout.refused"))
+        .collect();
     assert_eq!(refused.len(), 1, "{lines:?}");
     assert!(refused[0].contains("call=waveOutClose"), "{lines:?}");
     assert_eq!(lines_named(&lines, "sound.waveout.closed"), 0, "{lines:?}");
@@ -701,7 +793,11 @@ fn the_thread_body_pumps_until_told_to_stop() {
         });
         let at_stop = pumps.load(Ordering::SeqCst);
         pump_until(&front, &stop, count);
-        assert_eq!(pumps.load(Ordering::SeqCst), at_stop, "stopped before it starts: no pump");
+        assert_eq!(
+            pumps.load(Ordering::SeqCst),
+            at_stop,
+            "stopped before it starts: no pump"
+        );
     });
 }
 
@@ -721,7 +817,11 @@ fn a_pump_after_shutdown_touches_no_device() {
         seat.at(reading);
         front.pump();
     }
-    assert_eq!(fake.books().calls, calls, "a pump reached winmm after the shutdown");
+    assert_eq!(
+        fake.books().calls,
+        calls,
+        "a pump reached winmm after the shutdown"
+    );
     assert_eq!(fake.books().refusals, []);
 }
 

@@ -65,7 +65,16 @@ pub(crate) struct WaveHdr {
 impl WaveHdr {
     /// What a prepare asks for: the buffer and its length in bytes, and the flags 0.
     pub(crate) const fn new(data: *mut i16, length: u32) -> Self {
-        Self { data, length, recorded: 0, user: 0, flags: 0, loops: 0, next: null_mut(), reserved: 0 }
+        Self {
+            data,
+            length,
+            recorded: 0,
+            user: 0,
+            flags: 0,
+            loops: 0,
+            next: null_mut(),
+            reserved: 0,
+        }
     }
 }
 
@@ -207,7 +216,14 @@ impl<W: Winmm> Back<W> {
             count > 0 && frames > 0 && MIX_CHUNK % (frames as u64) == 0,
             "a back needs buffers, each dividing the mix's chunk"
         );
-        Self { winmm, handle: 0, count, frames, slots: Vec::new(), dead: false }
+        Self {
+            winmm,
+            handle: 0,
+            count,
+            frames,
+            slots: Vec::new(),
+            dead: false,
+        }
     }
 
     /// Hands back every buffer the device has finished.
@@ -218,7 +234,10 @@ impl<W: Winmm> Back<W> {
         for slot in &mut self.slots {
             if slot.prepared && slot.done() {
                 // SAFETY: the handle is open while slots exist, and the header is this slot's.
-                let code = unsafe { self.winmm.unprepare(self.handle, slot.header.get(), HEADER_SIZE) };
+                let code = unsafe {
+                    self.winmm
+                        .unprepare(self.handle, slot.header.get(), HEADER_SIZE)
+                };
                 if code != 0 {
                     refused(&mut self.dead, "waveOutUnprepareHeader", code);
                     return;
@@ -232,15 +251,19 @@ impl<W: Winmm> Back<W> {
     /// header's length as set before it, so a short fill never changes a prepared header.
     #[allow(clippy::cast_possible_truncation)]
     fn send(&mut self, fill: &[i16]) {
-        let slot = self
-            .slots
-            .iter_mut()
-            .find(|slot| !slot.prepared)
-            .expect("invariant: the front writes no more than room said, and the chunk divides");
+        let slot =
+            self.slots.iter_mut().find(|slot| !slot.prepared).expect(
+                "invariant: the front writes no more than room said, and the chunk divides",
+            );
         slot.samples[..fill.len()].copy_from_slice(fill);
         let header = slot.header.get();
         // SAFETY: not prepared, so neither winmm nor its thread holds this header.
-        unsafe { header.write(WaveHdr::new(slot.samples.as_mut_ptr(), size_of_val(fill) as u32)) };
+        unsafe {
+            header.write(WaveHdr::new(
+                slot.samples.as_mut_ptr(),
+                size_of_val(fill) as u32,
+            ))
+        };
         // SAFETY: the header and its buffer stay put until a good unprepare: the slots'
         // block is not touched until the close, and neither is `samples`' block.
         let code = unsafe { self.winmm.prepare(self.handle, header, HEADER_SIZE) };
@@ -272,7 +295,14 @@ impl<W: Winmm> Output for Back<W> {
         let mut handle = 0;
         // SAFETY: both pointers are to locals alive through the call, and no callback is asked.
         let code = unsafe {
-            self.winmm.open(&raw mut handle, WAVE_MAPPER, &raw const format, 0, 0, CALLBACK_NULL)
+            self.winmm.open(
+                &raw mut handle,
+                WAVE_MAPPER,
+                &raw const format,
+                0,
+                0,
+                CALLBACK_NULL,
+            )
         };
         if code != 0 {
             log::debug!(code:% = oxide_trace::__shown!(code), by = "sound-mix"; "sound.waveout.open.refused");
@@ -292,7 +322,11 @@ impl<W: Winmm> Output for Back<W> {
         if self.dead {
             return 0;
         }
-        self.slots.iter().filter(|slot| !slot.prepared || slot.done()).count() * self.frames
+        self.slots
+            .iter()
+            .filter(|slot| !slot.prepared || slot.done())
+            .count()
+            * self.frames
     }
 
     fn write(&mut self, frames: &[i16]) {
@@ -320,7 +354,10 @@ impl<W: Winmm> Output for Back<W> {
         for slot in &mut self.slots {
             if slot.prepared {
                 // SAFETY: as the reset's, and the header is this slot's.
-                let code = unsafe { self.winmm.unprepare(self.handle, slot.header.get(), HEADER_SIZE) };
+                let code = unsafe {
+                    self.winmm
+                        .unprepare(self.handle, slot.header.get(), HEADER_SIZE)
+                };
                 if code != 0 {
                     refused(&mut self.dead, "waveOutUnprepareHeader", code);
                 }
@@ -502,7 +539,14 @@ mod real {
         // SAFETY: the start function matches the signature it takes, and is given the pair
         // of its own types, which it frees; the attributes and id may be null.
         let thread = unsafe {
-            CreateThread(null_mut(), 0, Some(pump_thread::<H, O>), pair.cast(), 0, null_mut())
+            CreateThread(
+                null_mut(),
+                0,
+                Some(pump_thread::<H, O>),
+                pair.cast(),
+                0,
+                null_mut(),
+            )
         };
         if thread.is_null() {
             // SAFETY: no thread was made, so this is the only owner of the pair.

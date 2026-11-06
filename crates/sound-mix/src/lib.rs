@@ -64,8 +64,8 @@ use core::fmt;
 
 use door::Door;
 use lock::Lock;
-use oxide_trace::Args;
 use output::Output;
+use oxide_trace::Args;
 use table::Row;
 use voice::{MIX_HZ, USER_WORDS, Voice};
 use wave::{FORMAT_PCM, Wave};
@@ -137,7 +137,11 @@ struct Pass {
 
 impl Pass {
     const fn new() -> Self {
-        Self { owed: Vec::new(), dropped: 0, refused: None }
+        Self {
+            owed: Vec::new(),
+            dropped: 0,
+            refused: None,
+        }
     }
 }
 
@@ -188,7 +192,10 @@ impl<O> State<O> {
             return None;
         }
         let slot = (past_base / NUMBER_STEP) as usize;
-        self.voices.get(slot).filter(|voice| voice.used).map(|_| slot)
+        self.voices
+            .get(slot)
+            .filter(|voice| voice.used)
+            .map(|_| slot)
     }
 
     /// A free slot's handle, so numbers come back as they did in the logged run;
@@ -209,7 +216,9 @@ impl<O> State<O> {
     }
 
     fn sounding(&self) -> bool {
-        self.voices.iter().any(|voice| voice.used && voice.status == SMP_PLAYING)
+        self.voices
+            .iter()
+            .any(|voice| voice.used && voice.status == SMP_PLAYING)
             || self.doors.iter().any(Door::sounding)
     }
 }
@@ -236,7 +245,11 @@ impl<O: Output> State<O> {
     /// room are still rendered, so the cursors stay with the clock.
     #[allow(clippy::cast_possible_truncation)]
     fn mix(&mut self, mut frames: u64) {
-        let mut room = if self.writes { self.output.room() as u64 } else { 0 };
+        let mut room = if self.writes {
+            self.output.room() as u64
+        } else {
+            0
+        };
         while frames > 0 {
             let chunk = frames.min(MIX_CHUNK);
             frames -= chunk;
@@ -299,17 +312,17 @@ pub struct Front<H, O> {
 
 impl<H: Host, O: Output> Front<H, O> {
     pub const fn new(row: &'static Row, host: H, output: O) -> Self {
-        Self { row, host, state: Lock::new(State::new(output)) }
+        Self {
+            row,
+            host,
+            state: Lock::new(State::new(output)),
+        }
     }
 
     /// The one path every call takes: the clock moves every voice, the call runs,
     /// and with the lock free its line is written and any callback fires. A callback
     /// run under the lock would hang the moment it called back in.
-    fn front<R>(
-        &self,
-        call: impl FnOnce(&mut State<O>, u64) -> R,
-        line: impl FnOnce(&R),
-    ) -> R {
+    fn front<R>(&self, call: impl FnOnce(&mut State<O>, u64) -> R, line: impl FnOnce(&R)) -> R {
         let (answer, pass) = self.state.with(|state| {
             let now_us = self.host.now_us();
             state.advance(now_us);
@@ -586,7 +599,10 @@ impl<H: Host, O: Output> Front<H, O> {
 
     pub fn resume_sample(&self, handle: u32) {
         self.front(
-            |state, now_us| self.voice(state, "AIL_resume_sample", handle).resume(now_us),
+            |state, now_us| {
+                self.voice(state, "AIL_resume_sample", handle)
+                    .resume(now_us)
+            },
             |()| {
                 log::debug!(
                     c:% = self.called("AIL_resume_sample"),
@@ -651,12 +667,13 @@ impl<H: Host, O: Output> Front<H, O> {
             |state, _| {
                 let handle = state.allocate(driver);
                 if handle != 0 {
-                    self.voice(state, "AIL_allocate_file_sample", handle).set_file(
-                        u32::from(sound.channels),
-                        u32::from(sound.bits),
-                        sound.rate_hz,
-                        sound.data,
-                    );
+                    self.voice(state, "AIL_allocate_file_sample", handle)
+                        .set_file(
+                            u32::from(sound.channels),
+                            u32::from(sound.bits),
+                            sound.rate_hz,
+                            sound.data,
+                        );
                 }
                 handle
             },
@@ -715,7 +732,8 @@ impl<H: Host, O: Output> Front<H, O> {
     pub fn set_sample_playback_rate(&self, handle: u32, rate_hz: u32) {
         self.front(
             |state, now_us| {
-                self.voice(state, "AIL_set_sample_playback_rate", handle).set_rate(now_us, rate_hz);
+                self.voice(state, "AIL_set_sample_playback_rate", handle)
+                    .set_rate(now_us, rate_hz);
             },
             |()| {
                 log::debug!(
@@ -805,7 +823,8 @@ impl<H: Host, O: Output> Front<H, O> {
         let bytes = data.len();
         self.front(
             |state, _| {
-                self.voice(state, "AIL_load_sample_buffer", handle).load(slot as usize, data);
+                self.voice(state, "AIL_load_sample_buffer", handle)
+                    .load(slot as usize, data);
             },
             |()| {
                 log::debug!(
@@ -887,7 +906,10 @@ impl<H: Host, O: Output> Front<H, O> {
                 }
             },
         );
-        assert!(known, "sound-mix: MEM_free_lock: {block:x} was not handed out by FILE_read");
+        assert!(
+            known,
+            "sound-mix: MEM_free_lock: {block:x} was not handed out by FILE_read"
+        );
         if block != 0 {
             self.host.free_block(block);
         }

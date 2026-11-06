@@ -53,11 +53,21 @@ pub fn parse(file: &[u8]) -> Result<Wave<'_>, WaveError> {
             }
             b"data" => {
                 let (format, channels, rate_hz, bits) = format.ok_or(WaveError::NoFormat)?;
-                return Ok(Wave { format, channels, rate_hz, bits, data: &file[body..end] });
+                return Ok(Wave {
+                    format,
+                    channels,
+                    rate_hz,
+                    bits,
+                    data: &file[body..end],
+                });
             }
             _ => {}
         }
         at = end + (size & 1);
     }
-    Err(if format.is_some() { WaveError::NoData } else { WaveError::NoFormat })
+    Err(if format.is_some() {
+        WaveError::NoData
+    } else {
+        WaveError::NoFormat
+    })
 }

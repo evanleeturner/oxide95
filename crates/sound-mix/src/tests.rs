@@ -20,7 +20,10 @@ mod native;
 mod page;
 mod waveout;
 
-static ROW: Row = Row { file: "a program", module: "MSS32" };
+static ROW: Row = Row {
+    file: "a program",
+    module: "MSS32",
+};
 
 /// What a test runs inside the callback, handed the sample's handle.
 type OnFire = Box<dyn FnOnce(u32) + Send>;
@@ -41,8 +44,15 @@ impl Host for Arc<Seat> {
     }
 
     fn call_back(&self, callback: u32, handle: u32) {
-        self.fired.lock().expect("no test panics holding this").push((callback, handle));
-        let call = self.on_fire.lock().expect("no test panics holding this").take();
+        self.fired
+            .lock()
+            .expect("no test panics holding this")
+            .push((callback, handle));
+        let call = self
+            .on_fire
+            .lock()
+            .expect("no test panics holding this")
+            .take();
         if let Some(call) = call {
             call(handle);
         }
@@ -53,7 +63,10 @@ impl Host for Arc<Seat> {
     }
 
     fn free_block(&self, block: u32) {
-        self.freed.lock().expect("no test panics holding this").push(block);
+        self.freed
+            .lock()
+            .expect("no test panics holding this")
+            .push(block);
     }
 }
 
@@ -63,7 +76,10 @@ impl Seat {
     }
 
     fn fired(&self) -> Vec<(u32, u32)> {
-        self.fired.lock().expect("no test panics holding this").clone()
+        self.fired
+            .lock()
+            .expect("no test panics holding this")
+            .clone()
     }
 
     fn hand_out(&self, block: Option<u32>) {
@@ -88,17 +104,28 @@ struct Back {
 
 impl Default for Back {
     fn default() -> Self {
-        Self { seen: Arc::default(), room: usize::MAX, took: None }
+        Self {
+            seen: Arc::default(),
+            room: usize::MAX,
+            took: None,
+        }
     }
 }
 
 impl Back {
     fn frames(&self) -> Vec<i16> {
-        self.seen.lock().expect("no test panics holding this").frames.clone()
+        self.seen
+            .lock()
+            .expect("no test panics holding this")
+            .frames
+            .clone()
     }
 
     fn closes(&self) -> u32 {
-        self.seen.lock().expect("no test panics holding this").closes
+        self.seen
+            .lock()
+            .expect("no test panics holding this")
+            .closes
     }
 }
 
@@ -113,12 +140,22 @@ impl Output for Back {
     }
 
     fn write(&mut self, frames: &[i16]) {
-        assert!(frames.len() / 2 <= self.room, "the front wrote past the room it was told");
-        self.seen.lock().expect("no test panics holding this").frames.extend_from_slice(frames);
+        assert!(
+            frames.len() / 2 <= self.room,
+            "the front wrote past the room it was told"
+        );
+        self.seen
+            .lock()
+            .expect("no test panics holding this")
+            .frames
+            .extend_from_slice(frames);
     }
 
     fn close(&mut self) {
-        self.seen.lock().expect("no test panics holding this").closes += 1;
+        self.seen
+            .lock()
+            .expect("no test panics holding this")
+            .closes += 1;
     }
 }
 
@@ -157,7 +194,10 @@ fn pcm(channels: u16, rate_hz: u32, bits: u16, data: &[u8]) -> Vec<u8> {
 }
 
 fn little(samples: &[i16]) -> Vec<u8> {
-    samples.iter().flat_map(|sample| sample.to_le_bytes()).collect()
+    samples
+        .iter()
+        .flat_map(|sample| sample.to_le_bytes())
+        .collect()
 }
 
 /// `count` frames of one held pair.
@@ -223,7 +263,10 @@ fn every_front_writes_one_line_of_its_own_name_and_this_crate() {
     for line in &lines {
         assert!(line.starts_with("imp.call c=MSS32!"), "{line}");
         assert!(line.ends_with(" by=sound-mix"), "{line}");
-        let name = line["imp.call c=MSS32!".len()..].split(' ').next().expect("a line has a name");
+        let name = line["imp.call c=MSS32!".len()..]
+            .split(' ')
+            .next()
+            .expect("a line has a name");
         named.push(name.to_owned());
     }
     named.sort_unstable();
@@ -236,7 +279,10 @@ fn every_front_writes_one_line_of_its_own_name_and_this_crate() {
 #[test]
 fn each_front_writes_by_where_its_answer_is_computed() {
     let code = include_str!("lib.rs");
-    assert_eq!(code.matches("by = \"sound-mix\"; \"imp.call\"").count(), FRONTS.len());
+    assert_eq!(
+        code.matches("by = \"sound-mix\"; \"imp.call\"").count(),
+        FRONTS.len()
+    );
 }
 
 #[test]
@@ -246,7 +292,9 @@ fn each_stop_panics_after_one_line_naming_it() {
         let lines = stops(|| front.named_stop(name));
         assert_eq!(
             lines,
-            [format!("sound.named.stop c=MSS32!{name} why=unreached by=sound-mix")]
+            [format!(
+                "sound.named.stop c=MSS32!{name} why=unreached by=sound-mix"
+            )]
         );
     }
 }
@@ -257,7 +305,10 @@ fn a_handle_not_live_stops_loudly() {
     let lines = stops(|| {
         front.sample_status(0x1234);
     });
-    assert_eq!(lines, ["sound.not.live c=MSS32!AIL_sample_status a=1234 by=sound-mix"]);
+    assert_eq!(
+        lines,
+        ["sound.not.live c=MSS32!AIL_sample_status a=1234 by=sound-mix"]
+    );
 }
 
 #[test]
@@ -277,7 +328,10 @@ fn a_released_handle_is_not_live_and_its_slot_comes_back() {
 fn a_driver_not_open_allocates_nothing() {
     let (_seat, front, driver) = rig(NullBack);
     assert_eq!(front.allocate_sample_handle(0), 0);
-    assert_eq!(front.allocate_file_sample(0, 0x10, &pcm(1, 11_025, 8, &[128; 2]), 0), 0);
+    assert_eq!(
+        front.allocate_file_sample(0, 0x10, &pcm(1, 11_025, 8, &[128; 2]), 0),
+        0
+    );
     front.wave_out_close(driver);
     assert_eq!(front.allocate_sample_handle(driver), 0);
     let (_, reopened) = front.wave_out_open(0, 11_025, 1, 8);
@@ -299,7 +353,10 @@ fn old_values_come_back_and_user_words_hold() {
     let lines = stops(|| {
         front.sample_user_data(handle, 8);
     });
-    assert_eq!(lines, ["sound.named.stop c=MSS32!AIL_sample_user_data why=user-word-past-8 by=sound-mix"]);
+    assert_eq!(
+        lines,
+        ["sound.named.stop c=MSS32!AIL_sample_user_data why=user-word-past-8 by=sound-mix"]
+    );
 }
 
 // 3: Harvested. A logged run's calls in logged order, its driver and handles mapped.
@@ -312,7 +369,10 @@ fn the_logged_calls_replay_in_their_order_with_their_answers() {
     let lines = debug_lines(|| {
         first = front.allocate_sample_handle(driver);
         front.init_sample(first);
-        assert_eq!(front.set_sample_file(first, 0x0170_0e48, &short, 0xffff_ffff), 1);
+        assert_eq!(
+            front.set_sample_file(first, 0x0170_0e48, &short, 0xffff_ffff),
+            1
+        );
         front.set_sample_volume(first, 0x1e);
         front.set_sample_loop_count(first, 0);
         front.set_sample_loop_count(first, 0);
@@ -320,11 +380,17 @@ fn the_logged_calls_replay_in_their_order_with_their_answers() {
         front.start_sample(first);
         second = front.allocate_sample_handle(driver);
         front.init_sample(second);
-        assert_eq!(front.set_sample_file(second, 0x0170_ba48, &short, 0xffff_ffff), 1);
+        assert_eq!(
+            front.set_sample_file(second, 0x0170_ba48, &short, 0xffff_ffff),
+            1
+        );
         front.set_sample_volume(second, 0x32);
         third = front.allocate_sample_handle(driver);
         front.init_sample(third);
-        assert_eq!(front.set_sample_file(third, 0x0170_d180, &short, 0xffff_ffff), 1);
+        assert_eq!(
+            front.set_sample_file(third, 0x0170_d180, &short, 0xffff_ffff),
+            1
+        );
         front.set_sample_volume(third, 0x32);
         seat.hand_out(Some(0x8b_c2f0));
         assert_eq!(front.file_read(0x31_f048, "a-sound", 0), 0x8b_c2f0);
@@ -345,21 +411,39 @@ fn the_logged_calls_replay_in_their_order_with_their_answers() {
     });
     let call = |name: &str, tail: String| format!("imp.call c=MSS32!{name} {tail} by=sound-mix");
     let wanted = [
-        call("AIL_allocate_sample_handle", format!("a={driver:x} v={first:x}")),
+        call(
+            "AIL_allocate_sample_handle",
+            format!("a={driver:x} v={first:x}"),
+        ),
         call("AIL_init_sample", format!("a={first:x}")),
-        call("AIL_set_sample_file", format!("a={first:x},1700e48,ffffffff v=1")),
+        call(
+            "AIL_set_sample_file",
+            format!("a={first:x},1700e48,ffffffff v=1"),
+        ),
         call("AIL_set_sample_volume", format!("a={first:x},1e")),
         call("AIL_set_sample_loop_count", format!("a={first:x},0")),
         call("AIL_set_sample_loop_count", format!("a={first:x},0")),
         call("AIL_set_sample_volume", format!("a={first:x},1e")),
         call("AIL_start_sample", format!("a={first:x}")),
-        call("AIL_allocate_sample_handle", format!("a={driver:x} v={second:x}")),
+        call(
+            "AIL_allocate_sample_handle",
+            format!("a={driver:x} v={second:x}"),
+        ),
         call("AIL_init_sample", format!("a={second:x}")),
-        call("AIL_set_sample_file", format!("a={second:x},170ba48,ffffffff v=1")),
+        call(
+            "AIL_set_sample_file",
+            format!("a={second:x},170ba48,ffffffff v=1"),
+        ),
         call("AIL_set_sample_volume", format!("a={second:x},32")),
-        call("AIL_allocate_sample_handle", format!("a={driver:x} v={third:x}")),
+        call(
+            "AIL_allocate_sample_handle",
+            format!("a={driver:x} v={third:x}"),
+        ),
         call("AIL_init_sample", format!("a={third:x}")),
-        call("AIL_set_sample_file", format!("a={third:x},170d180,ffffffff v=1")),
+        call(
+            "AIL_set_sample_file",
+            format!("a={third:x},170d180,ffffffff v=1"),
+        ),
         call("AIL_set_sample_volume", format!("a={third:x},32")),
         call("FILE_read", "a=31f048,0 v=8bc2f0 p=a-sound".to_owned()),
         call("FILE_read", "a=31ed38,0 v=0 p=no-such-sound".to_owned()),
@@ -400,7 +484,10 @@ fn statuses<O: Output>(output: O) -> (Vec<u32>, Vec<String>) {
 #[test]
 fn a_sample_ends_at_the_first_reading_past_its_length() {
     let (seen, lines) = statuses(NullBack);
-    assert_eq!(seen, [SMP_PLAYING, SMP_PLAYING, SMP_PLAYING, SMP_DONE, SMP_DONE]);
+    assert_eq!(
+        seen,
+        [SMP_PLAYING, SMP_PLAYING, SMP_PLAYING, SMP_DONE, SMP_DONE]
+    );
     assert!(lines.iter().all(|line| !line.contains("frames-dropped")));
 }
 
@@ -419,7 +506,10 @@ fn a_sample_of_whole_microseconds_ends_on_its_length_exactly() {
 /// cross 44, 3955 and 1 of them.
 #[test]
 fn a_refusing_back_changes_no_status_and_each_refused_frame_is_reported() {
-    let back = Back { room: 0, ..Back::default() };
+    let back = Back {
+        room: 0,
+        ..Back::default()
+    };
     let (seen, lines) = statuses(back.clone());
     assert_eq!(seen, statuses(NullBack).0);
     assert!(back.frames().is_empty());
@@ -436,14 +526,21 @@ fn a_refusing_back_changes_no_status_and_each_refused_frame_is_reported() {
 
 #[test]
 fn a_full_back_takes_its_room_and_the_rest_is_reported() {
-    let back = Back { room: 10, ..Back::default() };
+    let back = Back {
+        room: 10,
+        ..Back::default()
+    };
     let (seat, front, driver) = rig(back.clone());
     let handle = front.allocate_file_sample(driver, 0x10, &pcm(1, 44_100, 8, &[128; 1000]), 0);
     front.start_sample(handle);
     seat.at(1_000);
     let lines = debug_lines(|| front.pump());
     assert_eq!(back.frames().len(), 20, "10 frames, 2 numbers each");
-    assert_eq!(lines, ["sound.frames.dropped frames=22 by=sound-mix"], "44 less the 10");
+    assert_eq!(
+        lines,
+        ["sound.frames.dropped frames=22 by=sound-mix"],
+        "44 less the 10"
+    );
 }
 
 #[test]
@@ -471,7 +568,11 @@ fn a_new_rate_moves_the_end_from_where_the_voice_is() {
     seat.at(500_000);
     front.set_sample_playback_rate(handle, 22_050);
     seat.at(750_022);
-    assert_eq!(front.sample_status(handle), SMP_PLAYING, "5513 frames left at 22050 are 250022.7 us");
+    assert_eq!(
+        front.sample_status(handle),
+        SMP_PLAYING,
+        "5513 frames left at 22050 are 250022.7 us"
+    );
     seat.at(750_023);
     assert_eq!(front.sample_status(handle), SMP_DONE);
 }
@@ -479,20 +580,30 @@ fn a_new_rate_moves_the_end_from_where_the_voice_is() {
 #[test]
 fn a_refused_open_warns_once_and_the_program_goes_on() {
     for took in [0, 22_050] {
-        let back = Back { took: Some(took), ..Back::default() };
+        let back = Back {
+            took: Some(took),
+            ..Back::default()
+        };
         let seat = Arc::new(Seat::default());
         let front = Front::new(&ROW, seat.clone(), back.clone());
         let mut opened = 0;
         let lines = debug_lines(|| opened = front.wave_out_open(0, 11_025, 1, 8).1);
         assert_eq!(lines.len(), 2, "{lines:?}");
-        assert_eq!(lines[1], format!("sound.output.refused took={took:x} by=sound-mix"));
+        assert_eq!(
+            lines[1],
+            format!("sound.output.refused took={took:x} by=sound-mix")
+        );
         let handle = front.allocate_file_sample(opened, 0x10, &pcm(1, 11_025, 8, &[128; 11]), 0);
         front.start_sample(handle);
         seat.at(1_000);
         let quiet = debug_lines(|| {
             assert_eq!(front.sample_status(handle), SMP_DONE);
         });
-        assert_eq!(quiet.len(), 1, "no dropped line: the warning said it: {quiet:?}");
+        assert_eq!(
+            quiet.len(),
+            1,
+            "no dropped line: the warning said it: {quiet:?}"
+        );
         assert!(back.frames().is_empty());
     }
 }
@@ -514,7 +625,13 @@ fn each_format_the_archives_hold_parses_and_plays_its_length() {
         let file = pcm(channels, rate_hz, bits, &data);
         let sound = wave::parse(&file).expect("a made file parses");
         assert_eq!(
-            (sound.format, sound.channels, sound.rate_hz, sound.bits, sound.data.len()),
+            (
+                sound.format,
+                sound.channels,
+                sound.rate_hz,
+                sound.bits,
+                sound.data.len()
+            ),
             (1, channels, rate_hz, bits, data.len())
         );
         let (seat, front, driver) = rig(NullBack);
@@ -522,9 +639,17 @@ fn each_format_the_archives_hold_parses_and_plays_its_length() {
         front.start_sample(handle);
         let end = (100 * 1_000_000u64).div_ceil(u64::from(rate_hz));
         seat.at(end - 1);
-        assert_eq!(front.sample_status(handle), SMP_PLAYING, "{channels} {rate_hz} {bits}");
+        assert_eq!(
+            front.sample_status(handle),
+            SMP_PLAYING,
+            "{channels} {rate_hz} {bits}"
+        );
         seat.at(end);
-        assert_eq!(front.sample_status(handle), SMP_DONE, "{channels} {rate_hz} {bits}");
+        assert_eq!(
+            front.sample_status(handle),
+            SMP_DONE,
+            "{channels} {rate_hz} {bits}"
+        );
     }
 }
 
@@ -533,7 +658,12 @@ fn a_file_the_mix_could_not_play_is_a_named_stop() {
     let not_pcm = wav(2, 1, 22_050, 4, &[0; 8]);
     let wide = pcm(1, 22_050, 24, &[0; 9]);
     let many = pcm(6, 22_050, 16, &[0; 12]);
-    for file in [not_pcm.as_slice(), b"not a wave at all", wide.as_slice(), many.as_slice()] {
+    for file in [
+        not_pcm.as_slice(),
+        b"not a wave at all",
+        wide.as_slice(),
+        many.as_slice(),
+    ] {
         let (_seat, front, driver) = rig(NullBack);
         let handle = front.allocate_sample_handle(driver);
         let lines = stops(|| {
@@ -544,7 +674,10 @@ fn a_file_the_mix_could_not_play_is_a_named_stop() {
             ["sound.named.stop c=MSS32!AIL_set_sample_file why=not-pcm-wave by=sound-mix"]
         );
     }
-    assert_eq!(wave::parse(b"RIFFxxxxWAVE").err(), Some(WaveError::NoFormat));
+    assert_eq!(
+        wave::parse(b"RIFFxxxxWAVE").err(),
+        Some(WaveError::NoFormat)
+    );
 }
 
 #[test]
@@ -562,7 +695,8 @@ fn a_parse_walks_past_other_chunks_and_an_odd_one_pads() {
 fn a_hand_worked_mix_comes_out_to_the_sample() {
     let back = Back::default();
     let (seat, front, driver) = rig(back.clone());
-    let handle = front.allocate_file_sample(driver, 0x10, &pcm(1, 11_025, 8, &[128, 192, 64, 255]), 0);
+    let handle =
+        front.allocate_file_sample(driver, 0x10, &pcm(1, 11_025, 8, &[128, 192, 64, 255]), 0);
     front.start_sample(handle);
     seat.at(363);
     front.pump();
@@ -581,7 +715,8 @@ fn a_hand_worked_mix_comes_out_to_the_sample() {
 fn volume_and_pan_scale_by_hand_worked_numbers() {
     let back = Back::default();
     let (seat, front, driver) = rig(back.clone());
-    let handle = front.allocate_file_sample(driver, 0x10, &pcm(1, 11_025, 8, &[128, 192, 64, 255]), 0);
+    let handle =
+        front.allocate_file_sample(driver, 0x10, &pcm(1, 11_025, 8, &[128, 192, 64, 255]), 0);
     front.set_sample_volume(handle, 64);
     front.set_sample_pan(handle, 127);
     front.start_sample(handle);
@@ -600,7 +735,12 @@ fn volume_and_pan_scale_by_hand_worked_numbers() {
 fn two_voices_of_different_shapes_sum() {
     let back = Back::default();
     let (seat, front, driver) = rig(back.clone());
-    let a = front.allocate_file_sample(driver, 0x10, &pcm(1, 44_100, 16, &little(&[1_000, -2_000])), 0);
+    let a = front.allocate_file_sample(
+        driver,
+        0x10,
+        &pcm(1, 44_100, 16, &little(&[1_000, -2_000])),
+        0,
+    );
     let b = front.allocate_file_sample(driver, 0x20, &pcm(2, 22_050, 8, &[129, 127]), 0);
     front.start_sample(a);
     front.start_sample(b);
@@ -658,7 +798,11 @@ fn two_runs_of_the_reference_mix_hash_the_same() {
         "the test's own hash, against FIPS 180's example"
     );
     let first = reference_mix();
-    assert!(first.len() > 20_000, "the reference mix wrote {}", first.len());
+    assert!(
+        first.len() > 20_000,
+        "the reference mix wrote {}",
+        first.len()
+    );
     assert!(first.iter().any(|&sample| sample != 0));
     let bytes = |frames: &[i16]| sha256(&little(frames));
     assert_eq!(hex(&bytes(&first)), hex(&bytes(&reference_mix())));
@@ -675,19 +819,79 @@ fn hex(bytes: &[u8]) -> String {
 /// FIPS 180-4's SHA-256, so the test needs no outside crate.
 fn sha256(message: &[u8]) -> [u8; 32] {
     const K: [u32; 64] = [
-        0x428a_2f98, 0x7137_4491, 0xb5c0_fbcf, 0xe9b5_dba5, 0x3956_c25b, 0x59f1_11f1, 0x923f_82a4,
-        0xab1c_5ed5, 0xd807_aa98, 0x1283_5b01, 0x2431_85be, 0x550c_7dc3, 0x72be_5d74, 0x80de_b1fe,
-        0x9bdc_06a7, 0xc19b_f174, 0xe49b_69c1, 0xefbe_4786, 0x0fc1_9dc6, 0x240c_a1cc, 0x2de9_2c6f,
-        0x4a74_84aa, 0x5cb0_a9dc, 0x76f9_88da, 0x983e_5152, 0xa831_c66d, 0xb003_27c8, 0xbf59_7fc7,
-        0xc6e0_0bf3, 0xd5a7_9147, 0x06ca_6351, 0x1429_2967, 0x27b7_0a85, 0x2e1b_2138, 0x4d2c_6dfc,
-        0x5338_0d13, 0x650a_7354, 0x766a_0abb, 0x81c2_c92e, 0x9272_2c85, 0xa2bf_e8a1, 0xa81a_664b,
-        0xc24b_8b70, 0xc76c_51a3, 0xd192_e819, 0xd699_0624, 0xf40e_3585, 0x106a_a070, 0x19a4_c116,
-        0x1e37_6c08, 0x2748_774c, 0x34b0_bcb5, 0x391c_0cb3, 0x4ed8_aa4a, 0x5b9c_ca4f, 0x682e_6ff3,
-        0x748f_82ee, 0x78a5_636f, 0x84c8_7814, 0x8cc7_0208, 0x90be_fffa, 0xa450_6ceb, 0xbef9_a3f7,
+        0x428a_2f98,
+        0x7137_4491,
+        0xb5c0_fbcf,
+        0xe9b5_dba5,
+        0x3956_c25b,
+        0x59f1_11f1,
+        0x923f_82a4,
+        0xab1c_5ed5,
+        0xd807_aa98,
+        0x1283_5b01,
+        0x2431_85be,
+        0x550c_7dc3,
+        0x72be_5d74,
+        0x80de_b1fe,
+        0x9bdc_06a7,
+        0xc19b_f174,
+        0xe49b_69c1,
+        0xefbe_4786,
+        0x0fc1_9dc6,
+        0x240c_a1cc,
+        0x2de9_2c6f,
+        0x4a74_84aa,
+        0x5cb0_a9dc,
+        0x76f9_88da,
+        0x983e_5152,
+        0xa831_c66d,
+        0xb003_27c8,
+        0xbf59_7fc7,
+        0xc6e0_0bf3,
+        0xd5a7_9147,
+        0x06ca_6351,
+        0x1429_2967,
+        0x27b7_0a85,
+        0x2e1b_2138,
+        0x4d2c_6dfc,
+        0x5338_0d13,
+        0x650a_7354,
+        0x766a_0abb,
+        0x81c2_c92e,
+        0x9272_2c85,
+        0xa2bf_e8a1,
+        0xa81a_664b,
+        0xc24b_8b70,
+        0xc76c_51a3,
+        0xd192_e819,
+        0xd699_0624,
+        0xf40e_3585,
+        0x106a_a070,
+        0x19a4_c116,
+        0x1e37_6c08,
+        0x2748_774c,
+        0x34b0_bcb5,
+        0x391c_0cb3,
+        0x4ed8_aa4a,
+        0x5b9c_ca4f,
+        0x682e_6ff3,
+        0x748f_82ee,
+        0x78a5_636f,
+        0x84c8_7814,
+        0x8cc7_0208,
+        0x90be_fffa,
+        0xa450_6ceb,
+        0xbef9_a3f7,
         0xc671_78f2,
     ];
     let mut state: [u32; 8] = [
-        0x6a09_e667, 0xbb67_ae85, 0x3c6e_f372, 0xa54f_f53a, 0x510e_527f, 0x9b05_688c, 0x1f83_d9ab,
+        0x6a09_e667,
+        0xbb67_ae85,
+        0x3c6e_f372,
+        0xa54f_f53a,
+        0x510e_527f,
+        0x9b05_688c,
+        0x1f83_d9ab,
         0x5be0_cd19,
     ];
     let mut padded = message.to_vec();
@@ -704,17 +908,33 @@ fn sha256(message: &[u8]) -> [u8; 32] {
         for t in 16..64 {
             let s0 = w[t - 15].rotate_right(7) ^ w[t - 15].rotate_right(18) ^ (w[t - 15] >> 3);
             let s1 = w[t - 2].rotate_right(17) ^ w[t - 2].rotate_right(19) ^ (w[t - 2] >> 10);
-            w[t] = w[t - 16].wrapping_add(s0).wrapping_add(w[t - 7]).wrapping_add(s1);
+            w[t] = w[t - 16]
+                .wrapping_add(s0)
+                .wrapping_add(w[t - 7])
+                .wrapping_add(s1);
         }
         let mut v = state;
         for t in 0..64 {
             let s1 = v[4].rotate_right(6) ^ v[4].rotate_right(11) ^ v[4].rotate_right(25);
             let ch = (v[4] & v[5]) ^ (!v[4] & v[6]);
-            let t1 = v[7].wrapping_add(s1).wrapping_add(ch).wrapping_add(K[t]).wrapping_add(w[t]);
+            let t1 = v[7]
+                .wrapping_add(s1)
+                .wrapping_add(ch)
+                .wrapping_add(K[t])
+                .wrapping_add(w[t]);
             let s0 = v[0].rotate_right(2) ^ v[0].rotate_right(13) ^ v[0].rotate_right(22);
             let maj = (v[0] & v[1]) ^ (v[0] & v[2]) ^ (v[1] & v[2]);
             let t2 = s0.wrapping_add(maj);
-            v = [t1.wrapping_add(t2), v[0], v[1], v[2], v[3].wrapping_add(t1), v[4], v[5], v[6]];
+            v = [
+                t1.wrapping_add(t2),
+                v[0],
+                v[1],
+                v[2],
+                v[3].wrapping_add(t1),
+                v[4],
+                v[5],
+                v[6],
+            ];
         }
         for (held, moved) in state.iter_mut().zip(v) {
             *held = held.wrapping_add(moved);
@@ -807,11 +1027,23 @@ fn the_double_buffer_hands_its_slots_in_turn() {
     let handle = stream_of_two(&front, driver);
     front.start_sample(handle);
     seat.at(363);
-    assert_eq!(front.sample_buffer_ready(handle), 0, "the clock passed the first slot");
+    assert_eq!(
+        front.sample_buffer_ready(handle),
+        0,
+        "the clock passed the first slot"
+    );
     front.load_sample_buffer(handle, 0, 0x30, &[138; 4]);
-    assert_eq!(front.sample_buffer_ready(handle), -1, "the second still sounds");
+    assert_eq!(
+        front.sample_buffer_ready(handle),
+        -1,
+        "the second still sounds"
+    );
     seat.at(726);
-    assert_eq!(front.sample_buffer_ready(handle), 1, "the clock passed the second");
+    assert_eq!(
+        front.sample_buffer_ready(handle),
+        1,
+        "the clock passed the second"
+    );
     assert_eq!(front.sample_status(handle), SMP_PLAYING);
 }
 
@@ -854,11 +1086,23 @@ fn a_stopped_stream_keeps_its_place_in_the_slot() {
     seat.at(10_000);
     front.resume_sample(handle);
     seat.at(10_100);
-    assert_eq!(front.sample_buffer_ready(handle), -1, "not yet through the first slot");
+    assert_eq!(
+        front.sample_buffer_ready(handle),
+        -1,
+        "not yet through the first slot"
+    );
     seat.at(10_272);
-    assert_eq!(front.sample_buffer_ready(handle), -1, "3 frames were left: 272.1 us");
+    assert_eq!(
+        front.sample_buffer_ready(handle),
+        -1,
+        "3 frames were left: 272.1 us"
+    );
     seat.at(10_273);
-    assert_eq!(front.sample_buffer_ready(handle), 0, "through it, with the time before the stop");
+    assert_eq!(
+        front.sample_buffer_ready(handle),
+        0,
+        "through it, with the time before the stop"
+    );
 }
 
 #[test]
@@ -876,7 +1120,11 @@ fn a_sample_ends_once_and_fires_once() {
     seat.at(2_000);
     front.pump();
     front.end_sample(handle);
-    assert_eq!(seat.fired(), [(0x77, handle)], "ended already: no second firing");
+    assert_eq!(
+        seat.fired(),
+        [(0x77, handle)],
+        "ended already: no second firing"
+    );
 }
 
 #[test]
@@ -924,13 +1172,18 @@ fn a_callback_may_call_back_in_the_lock_being_free() {
     let (teller, heard) = channel();
     let again = front.clone();
     *seat.on_fire.lock().expect("no test panics holding this") = Some(Box::new(move |handle| {
-        teller.send(again.sample_user_data(handle, 0)).expect("the test is waiting");
+        teller
+            .send(again.sample_user_data(handle, 0))
+            .expect("the test is waiting");
     }));
     seat.at(1_000);
     let pumping = front.clone();
     std::thread::spawn(move || pumping.pump());
     let word = heard.recv_timeout(Duration::from_secs(5));
-    assert_eq!(word.expect("a hang here means the lock was held across the callback"), 0xfeed);
+    assert_eq!(
+        word.expect("a hang here means the lock was held across the callback"),
+        0xfeed
+    );
 }
 
 // 7: The door.
@@ -941,7 +1194,8 @@ fn a_callback_may_call_back_in_the_lock_being_free() {
 fn a_door_goes_on_past_the_close_and_a_miles_voice_does_not() {
     let back = Back::default();
     let (seat, front, driver) = rig(back.clone());
-    let handle = front.allocate_file_sample(driver, 0x10, &pcm(1, 44_100, 16, &little(&[1_000; 2])), 0);
+    let handle =
+        front.allocate_file_sample(driver, 0x10, &pcm(1, 44_100, 16, &little(&[1_000; 2])), 0);
     front.set_sample_loop_count(handle, 0);
     let door = front.stream_open(44_100, 1);
     front.stream_push(door, &[100, 200, 300, 400]);
@@ -949,11 +1203,18 @@ fn a_door_goes_on_past_the_close_and_a_miles_voice_does_not() {
     seat.at(46);
     front.pump();
     front.wave_out_close(driver);
-    assert_eq!(front.sample_status(handle), SMP_DONE, "its handle still answers");
+    assert_eq!(
+        front.sample_status(handle),
+        SMP_DONE,
+        "its handle still answers"
+    );
     assert_eq!(back.closes(), 0, "a door lives, so the output stays open");
     seat.at(92);
     front.pump();
-    assert_eq!(back.frames(), [1_100, 1_100, 1_200, 1_200, 300, 300, 400, 400]);
+    assert_eq!(
+        back.frames(),
+        [1_100, 1_100, 1_200, 1_200, 300, 300, 400, 400]
+    );
     front.stream_close(door);
     assert_eq!(back.closes(), 1, "the last door takes the output with it");
 }
@@ -983,7 +1244,12 @@ fn shutdown_clears_the_door_and_a_closed_door_is_not_live() {
     front.shutdown();
     assert_eq!(back.closes(), 1);
     let lines = stops(|| front.stream_push(door, &[1]));
-    assert_eq!(lines, [format!("sound.not.live c=MSS32!stream_push a={door:x} by=sound-mix")]);
+    assert_eq!(
+        lines,
+        [format!(
+            "sound.not.live c=MSS32!stream_push a={door:x} by=sound-mix"
+        )]
+    );
 }
 
 #[test]
@@ -993,7 +1259,10 @@ fn a_door_of_no_rate_or_six_channels_stops() {
         let lines = stops(|| {
             front.stream_open(rate_hz, channels);
         });
-        assert_eq!(lines, ["sound.named.stop c=MSS32!stream_open why=door-shape by=sound-mix"]);
+        assert_eq!(
+            lines,
+            ["sound.named.stop c=MSS32!stream_open why=door-shape by=sound-mix"]
+        );
     }
 }
 
@@ -1007,15 +1276,26 @@ fn the_pair_frees_what_it_handed_out() {
     assert_eq!(block, 0x8b_c2f0);
     front.mem_free_lock(block);
     front.mem_free_lock(0);
-    assert_eq!(*seat.freed.lock().expect("no test panics holding this"), [block]);
+    assert_eq!(
+        *seat.freed.lock().expect("no test panics holding this"),
+        [block]
+    );
 }
 
 #[test]
 fn a_block_not_handed_out_stops() {
     let (seat, front, _driver) = rig(NullBack);
     let lines = stops(|| front.mem_free_lock(0x1234));
-    assert_eq!(lines, ["sound.free.unknown c=MSS32!MEM_free_lock a=1234 by=sound-mix"]);
-    assert!(seat.freed.lock().expect("no test panics holding this").is_empty());
+    assert_eq!(
+        lines,
+        ["sound.free.unknown c=MSS32!MEM_free_lock a=1234 by=sound-mix"]
+    );
+    assert!(
+        seat.freed
+            .lock()
+            .expect("no test panics holding this")
+            .is_empty()
+    );
 }
 
 #[test]
@@ -1025,8 +1305,17 @@ fn a_second_free_stops() {
     let block = front.file_read(0x10, "a name", 0);
     front.mem_free_lock(block);
     let lines = stops(|| front.mem_free_lock(block));
-    assert_eq!(lines, ["sound.free.unknown c=MSS32!MEM_free_lock a=40 by=sound-mix"]);
-    assert_eq!(seat.freed.lock().expect("no test panics holding this").len(), 1);
+    assert_eq!(
+        lines,
+        ["sound.free.unknown c=MSS32!MEM_free_lock a=40 by=sound-mix"]
+    );
+    assert_eq!(
+        seat.freed
+            .lock()
+            .expect("no test panics holding this")
+            .len(),
+        1
+    );
 }
 
 #[test]
@@ -1035,7 +1324,10 @@ fn a_destination_of_the_callers_own_stops() {
     let lines = stops(|| {
         front.file_read(0x10, "a name", 0x20);
     });
-    assert_eq!(lines, ["sound.named.stop c=MSS32!FILE_read why=destination-not-0 by=sound-mix"]);
+    assert_eq!(
+        lines,
+        ["sound.named.stop c=MSS32!FILE_read why=destination-not-0 by=sound-mix"]
+    );
 }
 
 // Stops beside the formats.
@@ -1046,7 +1338,10 @@ fn a_sample_type_mss_does_not_name_stops() {
         let (_seat, front, driver) = rig(NullBack);
         let handle = front.allocate_sample_handle(driver);
         let lines = stops(|| front.set_sample_type(handle, format, flags));
-        assert_eq!(lines, ["sound.named.stop c=MSS32!AIL_set_sample_type why=format-unnamed by=sound-mix"]);
+        assert_eq!(
+            lines,
+            ["sound.named.stop c=MSS32!AIL_set_sample_type why=format-unnamed by=sound-mix"]
+        );
     }
 }
 
@@ -1055,5 +1350,8 @@ fn a_third_slot_stops() {
     let (_seat, front, driver) = rig(NullBack);
     let handle = front.allocate_sample_handle(driver);
     let lines = stops(|| front.load_sample_buffer(handle, 2, 0x10, &[1]));
-    assert_eq!(lines, ["sound.named.stop c=MSS32!AIL_load_sample_buffer why=slot-past-2 by=sound-mix"]);
+    assert_eq!(
+        lines,
+        ["sound.named.stop c=MSS32!AIL_load_sample_buffer why=slot-past-2 by=sound-mix"]
+    );
 }

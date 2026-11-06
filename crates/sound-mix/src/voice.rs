@@ -5,7 +5,11 @@
 //! status, so a sample ends with no output at all. `mix_*` walks the bytes for
 //! the mix, and moves only when the mix runs. They agree to within a frame.
 //! The volume and pan curves are plain linear ones, unmeasured against Miles.
-#![allow(clippy::cast_possible_truncation, clippy::cast_sign_loss, clippy::cast_possible_wrap)]
+#![allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
 
 use alloc::vec::Vec;
 
@@ -136,7 +140,11 @@ impl Voice {
 
     fn first_filled(&self) -> usize {
         // The slot loaded first: the one the next load would not take.
-        if self.slots[self.fill_next].is_empty() { 1 - self.fill_next } else { self.fill_next }
+        if self.slots[self.fill_next].is_empty() {
+            1 - self.fill_next
+        } else {
+            self.fill_next
+        }
     }
 
     /// Frames the clock has passed since the anchor.
@@ -175,7 +183,11 @@ impl Voice {
 
     /// The double buffer's next slot to fill, -1 if both hold sound.
     pub(crate) fn ready(&self) -> i32 {
-        if self.slots[self.fill_next].is_empty() { self.fill_next as i32 } else { -1 }
+        if self.slots[self.fill_next].is_empty() {
+            self.fill_next as i32
+        } else {
+            -1
+        }
     }
 
     pub(crate) fn load(&mut self, slot: usize, data: &[u8]) {
@@ -250,8 +262,14 @@ impl Voice {
         let left_gain = volume * (127 - self.pan).clamp(0, 63);
         let right_gain = volume * self.pan.clamp(0, 64);
         for pair in out.chunks_exact_mut(2) {
-            let Some(at) = self.next_frame(frame_bytes) else { return };
-            let source: &[u8] = if self.is_stream() { &self.slots[self.mix_slot] } else { &self.file };
+            let Some(at) = self.next_frame(frame_bytes) else {
+                return;
+            };
+            let source: &[u8] = if self.is_stream() {
+                &self.slots[self.mix_slot]
+            } else {
+                &self.file
+            };
             let left = self.sample(source, at);
             let right = if self.channels > 1 {
                 self.sample(source, at + frame_bytes / 2)

@@ -17,7 +17,10 @@ unsafe impl<T: Send> Sync for Lock<T> {}
 
 impl<T> Lock<T> {
     pub(crate) const fn new(value: T) -> Self {
-        Self { held: AtomicBool::new(false), value: UnsafeCell::new(value) }
+        Self {
+            held: AtomicBool::new(false),
+            value: UnsafeCell::new(value),
+        }
     }
 
     /// Runs `call` holding the lock. A panic inside leaves it held on purpose:
