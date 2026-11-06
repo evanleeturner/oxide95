@@ -108,6 +108,7 @@ pub struct Front<'e, B, W> {
     file: &'static Row,
     easel: &'e Easel<B>,
     windows: &'e W,
+    from: Option<u32>,
 }
 
 impl<'e, B: Back, W: Windows> Front<'e, B, W> {
@@ -116,7 +117,16 @@ impl<'e, B: Back, W: Windows> Front<'e, B, W> {
             file,
             easel,
             windows,
+            from: None,
         }
+    }
+
+    /// The same front, its lines naming `from`, the address the call returns
+    /// to, as the layer's own lines do. A desk has no caller to name.
+    #[must_use]
+    pub const fn from(mut self, from: u32) -> Self {
+        self.from = Some(from);
+        self
     }
 
     /// Whether the easel's state is lent out now, `answer` then being the
@@ -137,11 +147,18 @@ impl<'e, B: Back, W: Windows> Front<'e, B, W> {
     fn line(&self, call: &str, arguments: &[u32], wrote: &[u32], answer: u32) {
         let (a, o) = (Numbers(arguments), Numbers(wrote));
         let v = oxide_trace::__shown!(answer);
-        self.windows.quiet(|| {
-            if wrote.is_empty() {
-                log::debug!(c = call, a:% = a, v:% = v, by = "draw"; "imp.call");
-            } else {
+        self.windows.quiet(|| match (wrote.is_empty(), self.from) {
+            (true, None) => log::debug!(c = call, a:% = a, v:% = v, by = "draw"; "imp.call"),
+            (false, None) => {
                 log::debug!(c = call, a:% = a, o:% = o, v:% = v, by = "draw"; "imp.call");
+            }
+            (true, Some(from)) => {
+                let from = oxide_trace::__shown!(from);
+                log::debug!(c = call, a:% = a, v:% = v, from:% = from, by = "draw"; "imp.call");
+            }
+            (false, Some(from)) => {
+                let from = oxide_trace::__shown!(from);
+                log::debug!(c = call, a:% = a, o:% = o, v:% = v, from:% = from, by = "draw"; "imp.call");
             }
         });
     }

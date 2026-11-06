@@ -394,6 +394,12 @@ impl<B: Back> Easel<B> {
         }
     }
 
+    /// The back this easel shows on, for an owner that must aim it.
+    #[must_use]
+    pub const fn back(&self) -> &B {
+        &self.back
+    }
+
     /// Whether the state is lent out now, a front having come back in from
     /// inside [`Self::with_buffer`] or [`Self::with_screen`]. One thread's
     /// answer: this type is not `Sync`, so a second thread is its owner's to
