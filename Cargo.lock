@@ -1789,6 +1789,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "window-dialogs"
+version = "0.1.0"
+dependencies = [
+ "kernel_process",
+ "log",
+ "oxide_logline",
+ "oxide_trace",
+ "window",
+]
+
+[[package]]
 name = "window-input"
 version = "0.1.0"
 dependencies = [

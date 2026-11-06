@@ -40,8 +40,8 @@
 //! owner chain are not kept; the key-to-character map is `window-input`'s,
 //! handed to `TranslateMessage` by [`Screen::character`], so a
 //! back with none posts no character; a key message's scan code is 0, no
-//! back handing one in; icons and painting are another crate's, so an icon is a
-//! handle and nothing more.
+//! back handing one in; a command's `l` is 0, as [`Event::Command`] says; icons
+//! and painting are another crate's, so an icon is a handle and nothing more.
 //!
 //! The crate names no game and nothing of any one target, so it builds for
 //! `wasm32-unknown-unknown`; a game's facts live in its rows crate.
@@ -133,6 +133,11 @@ pub enum Event {
     /// program's `WM_KEYDOWN` or `WM_KEYUP`, or their `WM_SYS` forms while
     /// Alt is down. A held key's repeat is another down.
     Key { window: u32, key: u8, down: bool },
+    /// A menu item or a box's button was chosen in `window`, `id` its number:
+    /// the program's `WM_COMMAND`, `id` the low word, the high word 0, `l` 0.
+    /// A real button's `l` is its handle: no measured procedure reads it, and
+    /// a menu item's is 0. It writes no call's line: the program made no call.
+    Command { window: u32, id: u16 },
     /// A pointer button went down or up in `window`, `key` its virtual key
     /// number (1 left, 2 right, 4 middle). It queues nothing: the
     /// program's pumps ask for key messages alone, and poll the buttons.

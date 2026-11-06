@@ -48,6 +48,7 @@ static ROW: Row = Row {
 const PM_REMOVE: u32 = 1;
 const WM_CLOSE: u32 = 0x10;
 const WM_QUIT: u32 = 0x12;
+const WM_COMMAND: u32 = 0x111;
 /// A program's own message number, `WM_USER`.
 const WM_USER: u32 = 0x400;
 /// The test class's procedure, an address as a program gives it.
@@ -179,6 +180,39 @@ fn dispatch_hands_the_class_procedure_and_0_for_a_window_not_here() {
             "imp.call c=USER32!DispatchMessageA a=999,400,0,0,0,0,0 v=0",
         ]
     );
+}
+
+/// A chosen item or button queues `WM_COMMAND`: its number in the low word,
+/// the high word and `l` 0. It writes no line of its own and is no key
+/// message, so `TranslateMessage` answers 0.
+#[test]
+fn a_command_queues_wm_command_and_writes_no_line_of_its_own() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let handle = window(&front);
+    desk.screen().frame(0x64);
+    let mut taken = None;
+    let lines = debug_lines(|| {
+        desk.screen().hand(Event::Command {
+            window: handle,
+            id: 0xffff,
+        });
+        taken = front.peek_message(0, 0, 0, PM_REMOVE);
+    });
+    let command = Message {
+        window: handle,
+        message: WM_COMMAND,
+        w: 0xffff,
+        l: 0,
+        time: 0x64,
+        ..Message::default()
+    };
+    assert_eq!(taken, Some(command));
+    assert_eq!(
+        lines,
+        ["imp.call c=USER32!PeekMessageA a=0,0,0,1 o=10020,111,ffff,0,64,0,0 v=1"]
+    );
+    assert_eq!(front.translate_message(&command), 0);
 }
 
 /// One whole loop on the page's back: the page hands in a close, the loop

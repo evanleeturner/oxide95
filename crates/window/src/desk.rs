@@ -10,14 +10,15 @@ use core::cell::{RefCell, RefMut};
 
 use crate::{Event, Message, Rect, Screen};
 
-/// `WM_CLOSE`, `WM_ACTIVATEAPP` and the 4 key messages, the messages an
-/// [`Event`] queues.
+/// `WM_CLOSE`, `WM_ACTIVATEAPP`, `WM_COMMAND` and the 4 key messages, the
+/// messages an [`Event`] queues.
 const WM_CLOSE: u32 = 0x10;
 const WM_ACTIVATEAPP: u32 = 0x1c;
 const WM_KEYDOWN: u32 = 0x100;
 const WM_KEYUP: u32 = 0x101;
 const WM_SYSKEYDOWN: u32 = 0x104;
 const WM_SYSKEYUP: u32 = 0x105;
+const WM_COMMAND: u32 = 0x111;
 /// `VK_MENU`, Alt: while it is down a key's message is its `WM_SYS` form.
 const VK_MENU: u8 = 0x12;
 /// The first window handle: never 0, which every call reads as none.
@@ -181,6 +182,7 @@ impl<S: Screen> Desk<S> {
                     let (message, l) = state.key(key, down);
                     (window, message, u32::from(key), l)
                 }
+                Event::Command { window, id } => (window, WM_COMMAND, u32::from(id), 0),
                 Event::Button { .. } | Event::Pointer { .. } | Event::Motion { .. } => continue,
             };
             state.queue.push_back(Message {

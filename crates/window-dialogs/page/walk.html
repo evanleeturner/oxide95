@@ -1,0 +1,28 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dialogs walk: a planted bar and box</title>
+    <link href="walk.css" rel="stylesheet" />
+    <script src="walk.mjs" type="module"></script>
+  </head>
+  <body>
+    <nav class="js-bar" aria-label="Menu bar"></nav>
+    <main>
+      <canvas
+        class="screen js-screen"
+        width="640"
+        height="480"
+        tabindex="0"
+        role="application"
+        aria-label="The program's screen"
+      ></canvas>
+    </main>
+    <dialog class="box js-box" aria-labelledby="box-title">
+      <h2 class="box-title js-title" id="box-title"></h2>
+      <div class="box-controls js-controls"></div>
+    </dialog>
+  </body>
+</html>

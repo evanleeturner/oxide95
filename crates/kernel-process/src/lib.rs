@@ -18,12 +18,20 @@
 //! for `wasm32-unknown-unknown`; a game's facts live in its rows crate.
 //! `FatalAppExitA`, `FindResourceA`, `LoadResource`, `LockResource`,
 //! imported by a game no row serves yet, have no front: each comes with
-//! its first measured caller.
+//! its first measured caller. [`Front::resource`] is no front of theirs:
+//! it serves `LoadMenuA` and `DialogBoxParamA`, which read a template with
+//! no such call, so it writes no line.
 #![cfg_attr(not(any(test, feature = "std")), no_std)]
+
+#[cfg(any(test, feature = "plant"))]
+extern crate alloc;
 
 #[cfg(any(test, feature = "std"))]
 pub mod host;
 pub mod page;
+#[cfg(any(test, feature = "plant"))]
+pub mod plant;
+pub mod resource;
 pub mod table;
 #[cfg(test)]
 mod tests;
@@ -58,6 +66,12 @@ pub trait Process {
     /// Whether all `size` bytes at `address` allow `access`: the memory
     /// map's answer, never a read that could fault.
     fn reaches(&self, address: u32, size: u32, access: Access) -> bool;
+    /// The bytes of the module `handle` as they lie on the disc, for
+    /// [`resource::find`]; `None` for a module or a back with no disc.
+    fn image(&self, handle: u32) -> Option<&[u8]> {
+        let _ = handle;
+        None
+    }
     /// Writes one line around whatever the target must keep across it.
     fn quiet(&self, line: impl FnOnce()) {
         line();
@@ -85,6 +99,10 @@ impl<P: Process> Process for &P {
 
     fn reaches(&self, address: u32, size: u32, access: Access) -> bool {
         (**self).reaches(address, size, access)
+    }
+
+    fn image(&self, handle: u32) -> Option<&[u8]> {
+        (**self).image(handle)
     }
 
     fn quiet(&self, line: impl FnOnce()) {
@@ -243,6 +261,20 @@ impl<P: Process> Front<P> {
             );
         });
         value
+    }
+
+    /// The bytes of resource `kind`, `id` in the module `handle`: the file's
+    /// own for 0 or its own handle, else one the table gave; `None` for any
+    /// other handle, a back with no disc, or a resource the module lacks.
+    /// Writes no line and leaves no error: the program made no call.
+    #[must_use]
+    pub fn resource(&self, handle: u32, kind: u32, id: u32) -> Option<&[u8]> {
+        let module = match handle {
+            0 => self.file.own,
+            own if own == self.file.own => own,
+            other => self.module(other)?.handle,
+        };
+        resource::find(self.process.image(module)?, kind, id)
     }
 
     /// `FreeLibrary`: 1 for a handle the table gave, its row kept, as the

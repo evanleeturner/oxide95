@@ -46,6 +46,8 @@ impl Counts {
                 self.motion += 1;
                 self.moved = (self.moved.0 + dx, self.moved.1 + dy);
             }
+            // The native back raises none: it draws no box and no bar.
+            Event::Command { .. } => {}
         }
     }
 }

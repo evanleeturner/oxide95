@@ -1,0 +1,52 @@
+# The window stand-in's dialogs and menus: the USER32 names a program asks of
+# its boxes and its menu bar, over the `window` crate's desk, each template read
+# from the module on the player's disc through `kernel-process`. The tables are
+# every target's; a box draws nothing, and no font rides here. It builds for
+# any target, the browser's included.
+[package]
+name = "window-dialogs"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+[features]
+# The fronts and the tables: they allocate, so they stay off where no allocator
+# is: the swap under Wine is `no_std` with none, and links this crate through a
+# game's rows crate for the rows alone.
+desk = ["window/desk"]
+# Planted templates and files, built in code, for a test or a page's walk.
+plant = ["desk", "kernel_process/plant"]
+
+# The thin export a page's walk runs: `cargo build --example page_walk --features plant
+# --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_walk"
+path = "page/walk.rs"
+crate-type = ["cdylib"]
+required-features = ["plant"]
+
+[dependencies]
+window = { path = "../window" }
+kernel_process = { path = "../kernel-process" }
+oxide_trace = { path = "../oxide-trace" }
+log = { version = "0.4", features = ["kv"] }
+
+[dev-dependencies]
+window = { path = "../window", features = ["desk", "page"] }
+kernel_process = { path = "../kernel-process", features = ["plant"] }
+oxide_logline = { path = "../oxide-logline" }

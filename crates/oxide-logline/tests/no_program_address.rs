@@ -9,7 +9,7 @@ use std::process::Command;
 use std::str;
 
 /// This file: its own table and its own cases would trip the rule.
-const THIS_FILE: &str = "crates/oxide-logline/tests/names_no_game.rs";
+const THIS_FILE: &str = "crates/oxide-logline/tests/no_program_address.rs";
 
 /// The runs the rule takes that are no program's address: the exact path, the
 /// exact value, the lines holding it, and what the value is. Anything else is

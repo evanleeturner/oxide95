@@ -110,6 +110,18 @@
       "level": "W",
       "fields": { "refused": "softbuffer's refusal, in place of a paint" },
       "template": "a host's paint refused: {refused}"
+    },
+    {
+      "id": "box.press",
+      "level": "D",
+      "fields": { "w": "the box the player pressed a control of", "id": "the control's id", "checked": "whether the control is checked after the press flipped it; false for a control that takes no check and for an id the box lacks" },
+      "template": "the player pressed control {id} of box {w}, its check now {checked}"
+    },
+    {
+      "id": "box.wait",
+      "level": "D",
+      "fields": { "w": "the box whose own loop now runs" },
+      "template": "box {w} runs its own loop on the queue until EndDialog: it draws nothing, and sends its owner none of the messages Windows sends there"
     }
   ]
 }
