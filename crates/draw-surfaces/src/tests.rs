@@ -578,10 +578,10 @@ fn each_call_writes_one_line_as_interface_name() {
     assert_eq!(
         lines,
         [
-            "imp.call c=DDRAW!DirectDrawCreate a=0,0 v=0",
-            "imp.call c=IDirectDraw::SetDisplayMode a=140,c8,8 v=0",
-            "imp.call c=IDirectDrawSurface::IsLost a=9 v=0",
-            "imp.call c=IDirectDraw::RestoreDisplayMode v=0",
+            "imp.call c=DDRAW!DirectDrawCreate a=0,0 v=0 by=draw-surfaces",
+            "imp.call c=IDirectDraw::SetDisplayMode a=140,c8,8 v=0 by=draw-surfaces",
+            "imp.call c=IDirectDrawSurface::IsLost a=9 v=0 by=draw-surfaces",
+            "imp.call c=IDirectDraw::RestoreDisplayMode v=0 by=draw-surfaces",
         ]
     );
     let mut palette = 0;
@@ -591,7 +591,7 @@ fn each_call_writes_one_line_as_interface_name() {
     assert_eq!(lines.len(), 3);
     assert_eq!(
         lines[0],
-        format!("imp.call c=IDirectDraw::CreatePalette a=44 o={palette:x} v=0")
+        format!("imp.call c=IDirectDraw::CreatePalette a=44 o={palette:x} v=0 by=draw-surfaces")
     );
     assert!(lines[2].starts_with("draw.table c=IDirectDraw::CreatePalette i=10 a=1"));
 }

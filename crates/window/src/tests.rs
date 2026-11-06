@@ -101,11 +101,11 @@ fn peek_removes_one_a_call_and_answers_0_when_empty() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!PostMessageA a=0,400,1,2 v=1",
-            "imp.call c=USER32!PostMessageA a=0,401,3,4 v=1",
-            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=0,400,1,2,64,0,0 v=1",
-            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=0,401,3,4,64,0,0 v=1",
-            "imp.call c=USER32!PeekMessageA a=0,0,0,1 v=0",
+            "imp.call c=USER32!PostMessageA a=0,400,1,2 v=1 by=window",
+            "imp.call c=USER32!PostMessageA a=0,401,3,4 v=1 by=window",
+            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=0,400,1,2,64,0,0 v=1 by=window",
+            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=0,401,3,4,64,0,0 v=1 by=window",
+            "imp.call c=USER32!PeekMessageA a=0,0,0,1 v=0 by=window",
         ]
     );
     assert!(desk.state().queue.is_empty());
@@ -132,7 +132,7 @@ fn wait_answers_1_at_once() {
     let desk = Desk::new(Page::new(0x280, 0x1e0));
     let front = Front::new(&ROW, &desk);
     let lines = debug_lines(|| assert_eq!(front.wait_message(), 1));
-    assert_eq!(lines, ["imp.call c=USER32!WaitMessage v=1"]);
+    assert_eq!(lines, ["imp.call c=USER32!WaitMessage v=1 by=window"]);
     assert!(desk.state().queue.is_empty());
 }
 
@@ -143,7 +143,10 @@ fn post_quit_leaves_wm_quit_with_its_code() {
     let desk = Desk::new(Page::new(0x280, 0x1e0));
     let front = Front::new(&ROW, &desk);
     let lines = debug_lines(|| front.post_quit_message(3));
-    assert_eq!(lines, ["imp.call c=USER32!PostQuitMessage a=3 v=0"]);
+    assert_eq!(
+        lines,
+        ["imp.call c=USER32!PostQuitMessage a=3 v=0 by=window"]
+    );
     let quit = front.peek_message(0, 0, 0, PM_REMOVE);
     assert_eq!(
         quit.map(|quit| (quit.window, quit.message, quit.w)),
@@ -176,8 +179,8 @@ fn dispatch_hands_the_class_procedure_and_0_for_a_window_not_here() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!DispatchMessageA a=10020,400,0,0,0,0,0 v=7",
-            "imp.call c=USER32!DispatchMessageA a=999,400,0,0,0,0,0 v=0",
+            "imp.call c=USER32!DispatchMessageA a=10020,400,0,0,0,0,0 v=7 by=window",
+            "imp.call c=USER32!DispatchMessageA a=999,400,0,0,0,0,0 v=0 by=window",
         ]
     );
 }
@@ -210,7 +213,7 @@ fn a_command_queues_wm_command_and_writes_no_line_of_its_own() {
     assert_eq!(taken, Some(command));
     assert_eq!(
         lines,
-        ["imp.call c=USER32!PeekMessageA a=0,0,0,1 o=10020,111,ffff,0,64,0,0 v=1"]
+        ["imp.call c=USER32!PeekMessageA a=0,0,0,1 o=10020,111,ffff,0,64,0,0 v=1 by=window"]
     );
     assert_eq!(front.translate_message(&command), 0);
 }
@@ -259,14 +262,14 @@ fn a_whole_loop_ends_on_the_quit_a_close_brings() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!WaitMessage v=1",
-            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=10020,10,0,0,64,0,0 v=1",
-            "imp.call c=USER32!TranslateMessage a=10020,10,0,0,64,0,0 v=0",
-            "imp.call c=USER32!DefWindowProcA a=10020,10,0,0 v=0",
-            "imp.call c=USER32!PostQuitMessage a=0 v=0",
-            "imp.call c=USER32!DispatchMessageA a=10020,10,0,0,64,0,0 v=0",
-            "imp.call c=USER32!WaitMessage v=1",
-            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=0,12,0,0,64,0,0 v=1",
+            "imp.call c=USER32!WaitMessage v=1 by=window",
+            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=10020,10,0,0,64,0,0 v=1 by=window",
+            "imp.call c=USER32!TranslateMessage a=10020,10,0,0,64,0,0 v=0 by=window",
+            "imp.call c=USER32!DefWindowProcA a=10020,10,0,0 v=0 by=window",
+            "imp.call c=USER32!PostQuitMessage a=0 v=0 by=window",
+            "imp.call c=USER32!DispatchMessageA a=10020,10,0,0,64,0,0 v=0 by=window",
+            "imp.call c=USER32!WaitMessage v=1 by=window",
+            "imp.call c=USER32!PeekMessageA a=0,0,0,1 o=0,12,0,0,64,0,0 v=1 by=window",
         ]
     );
     assert!(desk.state().window(handle).is_none());

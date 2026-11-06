@@ -236,7 +236,7 @@ impl<M: Memory> Heap<M> {
         self.memory.quiet(|| {
             log::debug!(
                 c = name, a:% = Args(arguments), h:% = oxide_trace::__shown!(heap),
-                v:% = oxide_trace::__shown!(value); "imp.call"
+                v:% = oxide_trace::__shown!(value), by = "kernel-memory"; "imp.call"
             );
         });
     }
@@ -245,7 +245,8 @@ impl<M: Memory> Heap<M> {
         let heap = self.memory.heap();
         self.memory.quiet(|| {
             log::debug!(
-                c = name, a:% = Args(arguments), h:% = oxide_trace::__shown!(heap); "imp.call"
+                c = name, a:% = Args(arguments), h:% = oxide_trace::__shown!(heap),
+                by = "kernel-memory"; "imp.call"
             );
         });
     }

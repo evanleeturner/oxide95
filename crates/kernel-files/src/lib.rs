@@ -240,7 +240,8 @@ impl<F: Folder> Files<F> {
         self.folder.quiet(|| {
             log::debug!(
                 c = row.calls.open, a:% = Args(arguments), v:% = oxide_trace::__shown!(value),
-                p:% = Text(name.to_bytes()), e:% = oxide_trace::__shown!(error); "imp.call"
+                p:% = Text(name.to_bytes()), e:% = oxide_trace::__shown!(error),
+                by = "kernel-files"; "imp.call"
             );
         });
         value
@@ -307,7 +308,8 @@ impl<F: Folder> Files<F> {
         self.folder.quiet(|| {
             log::debug!(
                 c = self.file.calls.delete, v:% = oxide_trace::__shown!(value),
-                p:% = Text(name.to_bytes()), e:% = oxide_trace::__shown!(error); "imp.call"
+                p:% = Text(name.to_bytes()), e:% = oxide_trace::__shown!(error),
+                by = "kernel-files"; "imp.call"
             );
         });
         value
@@ -319,7 +321,7 @@ impl<F: Folder> Files<F> {
             log::debug!(
                 c = self.file.calls.rename, v:% = oxide_trace::__shown!(value),
                 p:% = Text(from.to_bytes()), to:% = Text(to.to_bytes()),
-                e:% = oxide_trace::__shown!(error); "imp.call"
+                e:% = oxide_trace::__shown!(error), by = "kernel-files"; "imp.call"
             );
         });
         value
@@ -337,7 +339,7 @@ impl<F: Folder> Files<F> {
             log::debug!(
                 c = row.calls.find_first, v:% = oxide_trace::__shown!(value),
                 p:% = Text(pattern.to_bytes()), found:% = Text(name),
-                e:% = oxide_trace::__shown!(error); "imp.call"
+                e:% = oxide_trace::__shown!(error), by = "kernel-files"; "imp.call"
             );
         });
         value
@@ -353,7 +355,7 @@ impl<F: Folder> Files<F> {
             log::debug!(
                 c = row.calls.find_next, a:% = oxide_trace::__shown!(find),
                 v:% = oxide_trace::__shown!(value), found:% = Text(name),
-                e:% = oxide_trace::__shown!(error); "imp.call"
+                e:% = oxide_trace::__shown!(error), by = "kernel-files"; "imp.call"
             );
         });
         value
@@ -388,7 +390,8 @@ impl<F: Folder> Files<F> {
         self.folder.quiet(|| {
             log::debug!(
                 c = name, a:% = Args(arguments), v:% = oxide_trace::__shown!(value),
-                n:% = oxide_trace::__shown!(moved), e:% = oxide_trace::__shown!(error); "imp.call"
+                n:% = oxide_trace::__shown!(moved), e:% = oxide_trace::__shown!(error),
+                by = "kernel-files"; "imp.call"
             );
         });
         value
@@ -405,7 +408,7 @@ impl<F: Folder> Files<F> {
         self.folder.quiet(|| {
             log::debug!(
                 c = name, a:% = Args(arguments), v:% = oxide_trace::__shown!(*value),
-                e:% = oxide_trace::__shown!(error); "imp.call"
+                e:% = oxide_trace::__shown!(error), by = "kernel-files"; "imp.call"
             );
         });
     }

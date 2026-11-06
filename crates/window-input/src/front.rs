@@ -59,10 +59,13 @@ impl<'d, S: Screen> Front<'d, S> {
         self.desk
             .screen()
             .quiet(|| match (arguments.is_empty(), wrote.is_empty()) {
-                (true, true) => log::debug!(c = call, v:% = v; "imp.call"),
-                (false, true) => log::debug!(c = call, a:% = a, v:% = v; "imp.call"),
-                (true, false) => log::debug!(c = call, o:% = o, v:% = v; "imp.call"),
-                (false, false) => log::debug!(c = call, a:% = a, o:% = o, v:% = v; "imp.call"),
+                (true, true) => log::debug!(c = call, v:% = v, by = "window-input"; "imp.call"),
+                (false, true) => log::debug!(c = call, a:% = a, v:% = v,
+                    by = "window-input"; "imp.call"),
+                (true, false) => log::debug!(c = call, o:% = o, v:% = v,
+                    by = "window-input"; "imp.call"),
+                (false, false) => log::debug!(c = call, a:% = a, o:% = o, v:% = v,
+                    by = "window-input"; "imp.call"),
             });
     }
 
@@ -113,7 +116,7 @@ impl<'d, S: Screen> Front<'d, S> {
         let (a, v) = (Numbers(&[instance]), oxide_trace::__shown!(handle));
         let call = self.file.calls.load_cursor;
         self.desk.screen().quiet(|| {
-            log::debug!(c = call, a:% = a, s:% = name, v:% = v; "imp.call");
+            log::debug!(c = call, a:% = a, s:% = name, v:% = v, by = "window-input"; "imp.call");
         });
         handle
     }

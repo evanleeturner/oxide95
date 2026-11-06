@@ -209,12 +209,12 @@ fn another_root_answers_2_and_a_stray_handle_6_each_logged() {
     assert_eq!(
         lines,
         [
-            "imp.call c=open a=80000001,0,1 s=Software o=\"\" v=2",
-            "imp.call c=open a=1234,0,1 s=Software o=\"\" v=6",
-            "imp.call c=query a=80000001,0,4 s=First o=\"\" v=2",
-            "imp.call c=set a=1234,4,4 s=First o=\"\" v=6",
-            "imp.call c=close a=80000001 v=0",
-            "imp.call c=close a=1234 v=6",
+            "imp.call c=open a=80000001,0,1 s=Software o=\"\" v=2 by=kernel-registry",
+            "imp.call c=open a=1234,0,1 s=Software o=\"\" v=6 by=kernel-registry",
+            "imp.call c=query a=80000001,0,4 s=First o=\"\" v=2 by=kernel-registry",
+            "imp.call c=set a=1234,4,4 s=First o=\"\" v=6 by=kernel-registry",
+            "imp.call c=close a=80000001 v=0 by=kernel-registry",
+            "imp.call c=close a=1234 v=6 by=kernel-registry",
         ]
     );
 }
@@ -235,10 +235,10 @@ fn a_type_size_root_or_option_past_the_store_answers_87_logged() {
     assert_eq!(
         lines,
         [
-            "imp.call c=set a=100,1,5 s=Name o=\"\" v=57",
-            "imp.call c=set a=100,4,2 s=Name o=\"\" v=57",
-            "imp.call c=set a=80000002,4,4 s=Name o=\"\" v=57",
-            "imp.call c=open a=80000002,1,1 s=Software\\Maker\\Program o=\"\" v=57",
+            "imp.call c=set a=100,1,5 s=Name o=\"\" v=57 by=kernel-registry",
+            "imp.call c=set a=100,4,2 s=Name o=\"\" v=57 by=kernel-registry",
+            "imp.call c=set a=80000002,4,4 s=Name o=\"\" v=57 by=kernel-registry",
+            "imp.call c=open a=80000002,1,1 s=Software\\Maker\\Program o=\"\" v=57 by=kernel-registry",
         ]
     );
     assert_eq!(
@@ -287,10 +287,10 @@ fn a_query_answers_each_shape_it_is_handed() {
     assert_eq!(
         lines,
         [
-            "imp.call c=query a=100,0,2 s=First o=4,4 v=ea",
-            "imp.call c=query a=100,0,0 s=First o=4,4 v=0",
-            "imp.call c=query a=100,1,4 s=First o=\"\" v=57",
-            "imp.call c=query a=100,0,0 s=First o=\"\" v=57",
+            "imp.call c=query a=100,0,2 s=First o=4,4 v=ea by=kernel-registry",
+            "imp.call c=query a=100,0,0 s=First o=4,4 v=0 by=kernel-registry",
+            "imp.call c=query a=100,1,4 s=First o=\"\" v=57 by=kernel-registry",
+            "imp.call c=query a=100,0,0 s=First o=\"\" v=57 by=kernel-registry",
         ]
     );
 }

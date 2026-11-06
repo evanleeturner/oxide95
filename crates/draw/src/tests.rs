@@ -141,7 +141,12 @@ fn palette_calls_replay_d1() {
             .iter()
             .any(|l| l.ends_with("a=") || l.contains(",0,100 v=100"))
     );
-    assert!(lines.last().expect("invariant: lines").ends_with(" v=0"));
+    assert!(
+        lines
+            .last()
+            .expect("invariant: lines")
+            .ends_with(" v=0 by=draw")
+    );
 }
 
 /// A run: `GetDeviceCaps` `NUMCOLORS` answers `ffffffff`; an index not in the
@@ -169,7 +174,7 @@ fn set_dib_bits_to_device_replays_d1() {
         assert_eq!(answer, 0x1e0);
     });
     let want = format!(
-        "imp.call c=GDI32!SetDIBitsToDevice a={dc:x},0,0,280,1e0,0,0,0,1e0,1,28,280,fffffe20,80001,0,0,0,0,0,0 v=1e0"
+        "imp.call c=GDI32!SetDIBitsToDevice a={dc:x},0,0,280,1e0,0,0,0,1e0,1,28,280,fffffe20,80001,0,0,0,0,0,0 v=1e0 by=draw"
     );
     assert!(lines.contains(&want), "{lines:?}");
     assert_eq!(easel.shown().pixels[0x280 * 2 + 3], 9);
@@ -195,8 +200,9 @@ fn section_blit_replays_d1_and_shows_its_table() {
         );
         assert_eq!(answer, 1);
     });
-    let want =
-        format!("imp.call c=GDI32!BitBlt a={window_dc:x},1d,1ba,db,f,{memory:x},1d,1ba,cc0020 v=1");
+    let want = format!(
+        "imp.call c=GDI32!BitBlt a={window_dc:x},1d,1ba,db,f,{memory:x},1d,1ba,cc0020 v=1 by=draw"
+    );
     assert!(lines.contains(&want), "{lines:?}");
     let shown = easel.shown();
     assert_eq!(shown.pixels[0x280 * 0x1ba + 0x1d], 7);
@@ -257,7 +263,7 @@ fn paint_calls_answer_the_window() {
     assert_eq!(paint, [9; 6]);
     let lines = debug_lines(|| assert_ne!(front.begin_paint(WINDOW, &mut paint), 0));
     let want = format!(
-        "imp.call c=USER32!BeginPaint a=2005e o={:x},0,0,0,280,1e0 v={:x}",
+        "imp.call c=USER32!BeginPaint a=2005e o={:x},0,0,0,280,1e0 v={:x} by=draw",
         paint[0], paint[0]
     );
     assert!(lines.contains(&want), "{lines:?}");
@@ -288,7 +294,7 @@ fn system_palette_entries_write_what_fits() {
     let lines = debug_lines(|| {
         assert_eq!(front.get_system_palette_entries(dc, 0, 2, &mut into), 2);
     });
-    let want = format!("imp.call c=GDI32!GetSystemPaletteEntries a={dc:x},0,2 v=2");
+    let want = format!("imp.call c=GDI32!GetSystemPaletteEntries a={dc:x},0,2 v=2 by=draw");
     assert!(lines.contains(&want), "{lines:?}");
 }
 

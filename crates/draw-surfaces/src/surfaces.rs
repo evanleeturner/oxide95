@@ -141,11 +141,11 @@ impl<'e, B: Back, S: Screen> Surfaces<'e, B, S> {
         let v = oxide_trace::__shown!(answer);
         self.desk.screen().quiet(|| {
             if !wrote.is_empty() {
-                log::debug!(c = call, a:% = a, o:% = o, v:% = v; "imp.call");
+                log::debug!(c = call, a:% = a, o:% = o, v:% = v, by = "draw-surfaces"; "imp.call");
             } else if arguments.is_empty() {
-                log::debug!(c = call, v:% = v; "imp.call");
+                log::debug!(c = call, v:% = v, by = "draw-surfaces"; "imp.call");
             } else {
-                log::debug!(c = call, a:% = a, v:% = v; "imp.call");
+                log::debug!(c = call, a:% = a, v:% = v, by = "draw-surfaces"; "imp.call");
             }
         });
     }

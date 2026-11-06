@@ -112,7 +112,7 @@ impl<'d, S: Screen, R: Resources> Front<'d, S, R> {
         let (a, v) = (Numbers(arguments), oxide_trace::__shown!(answer));
         self.desk
             .screen()
-            .quiet(|| log::debug!(c = call, a:% = a, v:% = v; "imp.call"));
+            .quiet(|| log::debug!(c = call, a:% = a, v:% = v, by = "window-dialogs"; "imp.call"));
     }
 
     /// `LoadMenuA`, its name a resource number: the menu's handle, one
