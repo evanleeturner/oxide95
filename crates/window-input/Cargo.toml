@@ -30,6 +30,9 @@ undocumented_unsafe_blocks = "deny"
 # is `no_std` with none, and links `window-input` through a game's rows crate
 # for the keys and the rows alone.
 desk = ["window/desk"]
+# The direct back, `user32`, on the Win32 target alone: each front asks the
+# real USER32. No allocator, no desk, so it links into the swap.
+user32 = ["window/user32"]
 
 [dependencies]
 window = { path = "../window" }

@@ -52,6 +52,8 @@ pub mod table;
 mod test_log;
 #[cfg(test)]
 mod tests;
+#[cfg(all(feature = "user32", target_arch = "x86", target_os = "windows"))]
+pub mod user32;
 
 use core::cell::{Ref, RefCell, RefMut};
 

@@ -29,6 +29,7 @@
     reason = "this back is calls into USER32 and nothing else"
 )]
 
+use crate::Numbers;
 use core::ffi::CStr;
 use core::fmt;
 use core::ptr::with_exposed_provenance;
@@ -83,17 +84,24 @@ unsafe extern "system" {
     fn WaitMessage() -> u32;
 }
 
-/// One `imp.call` line, the thread's last error kept around it: a logger
-/// writes a file, and the program reads the error its call left. Each front
-/// writes its `log::debug!` whole, so the logline fence reads its fields.
+/// Writes one `imp.call` line, the thread's last error kept around it: a
+/// logger writes a file, and the program reads the error its call left.
+pub fn kept(line: impl FnOnce()) {
+    // SAFETY: reads the thread's own last error.
+    let value = unsafe { GetLastError() };
+    line();
+    // SAFETY: sets back the value read above.
+    unsafe { SetLastError(value) };
+}
+
+/// [`kept`], for a front here: each writes its `log::debug!` whole, so the
+/// logline fence reads its fields.
 macro_rules! kept {
-    ($line:expr) => {{
-        // SAFETY: reads the thread's own last error.
-        let kept = unsafe { GetLastError() };
-        $line;
-        // SAFETY: sets back the value read above.
-        unsafe { SetLastError(kept) };
-    }};
+    ($line:expr) => {
+        kept(|| {
+            $line;
+        })
+    };
 }
 
 /// Text as a line shows it: printable ASCII as it is, any other byte `\xNN`.
@@ -109,7 +117,7 @@ impl fmt::Display for Text<'_> {
 }
 
 /// A name a call is handed, as `s` and `with` show it.
-enum Name<'a> {
+pub enum Name<'a> {
     /// A NUL-ended text, the NUL left out; empty for a null name.
     Text(&'a [u8]),
     /// An atom or a resource id: a number below `0x10000`.
@@ -132,7 +140,8 @@ impl fmt::Display for Name<'_> {
 ///
 /// # Safety
 /// `address` is below `0x10000` or a NUL-ended text, as Win32 takes it.
-unsafe fn name<'a>(address: u32) -> Name<'a> {
+#[must_use]
+pub unsafe fn name<'a>(address: u32) -> Name<'a> {
     match address {
         0 => Name::Text(&[]),
         1..0x10000 => Name::Number(address),
@@ -148,7 +157,8 @@ unsafe fn name<'a>(address: u32) -> Name<'a> {
 ///
 /// # Safety
 /// `address` is 0 or `4 * N` bytes the caller handed in.
-unsafe fn record<const N: usize>(address: u32) -> [u32; N] {
+#[must_use]
+pub unsafe fn record<const N: usize>(address: u32) -> [u32; N] {
     if address == 0 {
         return [0; N];
     }
@@ -156,23 +166,9 @@ unsafe fn record<const N: usize>(address: u32) -> [u32; N] {
     unsafe { with_exposed_provenance::<[u32; N]>(address as usize).read_unaligned() }
 }
 
-/// Numbers as a line shows them, comma-joined: `a`'s, or `o`'s record.
-struct Numbers<'a>(&'a [u32]);
-
-impl fmt::Display for Numbers<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        self.0.iter().enumerate().try_for_each(|(index, number)| {
-            if index > 0 {
-                f.write_str(",")?;
-            }
-            oxide_trace::__shown!(*number).fmt(f)
-        })
-    }
-}
-
 /// What a call wrote at its record, the line's `o`: `N` numbers, or
 /// nothing on a 0 answer.
-struct Wrote<const N: usize>(Option<[u32; N]>);
+pub struct Wrote<const N: usize>(Option<[u32; N]>);
 
 impl<const N: usize> fmt::Display for Wrote<N> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -186,7 +182,8 @@ impl<const N: usize> fmt::Display for Wrote<N> {
 ///
 /// # Safety
 /// `address` is 0 or `4 * N` bytes the caller handed in.
-unsafe fn wrote<const N: usize>(value: u32, address: u32) -> Wrote<N> {
+#[must_use]
+pub unsafe fn wrote<const N: usize>(value: u32, address: u32) -> Wrote<N> {
     // SAFETY: the caller's record, read on a nonzero answer alone.
     Wrote((value != 0).then(|| unsafe { record(address) }))
 }
