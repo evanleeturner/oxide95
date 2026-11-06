@@ -9,8 +9,8 @@
 //! behind [`Screen`]: the screen's size, a window shown or placed, and the
 //! events the host's window raised, handed in as [`Event`]s, never a
 //! Windows type. The backs: a page's, `page::Page`; a host's, through
-//! winit, `native::Native`. Under Wine the original's calls stay Wine's,
-//! logged in the layer.
+//! winit, `native::Native`. On the Win32 target, `user32`: no desk at all,
+//! each front the real `USER32`'s call, its windows and queue Wine's own.
 //!
 //! The 24 fronts, in [`front::Front`]: windows `RegisterClassA`,
 //! `CreateWindowExA`, `DestroyWindow`, `FindWindowA`, `LoadIconA`,
@@ -59,6 +59,8 @@ pub mod native;
 #[cfg(any(test, feature = "page"))]
 pub mod page;
 pub mod table;
+#[cfg(all(feature = "user32", target_arch = "x86", target_os = "windows"))]
+pub mod user32;
 #[cfg(test)]
 mod test_log;
 #[cfg(test)]
