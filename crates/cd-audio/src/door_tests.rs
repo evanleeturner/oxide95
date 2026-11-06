@@ -64,11 +64,11 @@ const DISC: [Span; 3] = [
 
 /// A door that keeps what it is told, and refuses what a real one would stop on.
 #[derive(Default)]
-struct Doors {
-    live: Cell<Option<u32>>,
-    opened: Cell<u32>,
+pub(crate) struct Doors {
+    pub(crate) live: Cell<Option<u32>>,
+    pub(crate) opened: Cell<u32>,
     shapes: RefCell<Vec<(u32, u32)>>,
-    pushed: RefCell<Vec<i16>>,
+    pub(crate) pushed: RefCell<Vec<i16>>,
 }
 
 impl Door for Doors {

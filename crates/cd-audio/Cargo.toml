@@ -27,15 +27,24 @@ undocumented_unsafe_blocks = "deny"
 disc = ["dep:logical_disc", "logical_disc/disc"]
 # A disc's sound through `sound-mix`'s door. Never in the browser's graph.
 door = ["disc", "dep:sound-mix"]
+# A store's Ogg tracks through the door. Not in the browser, which plays the file itself.
+ogg = ["door", "dep:kernel_files", "dep:lewton"]
 
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }
 logical_disc = { path = "../logical-disc", optional = true }
 sound-mix = { path = "../sound-mix", optional = true }
+kernel_files = { path = "../kernel-files", optional = true }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+lewton = { version = "=0.10.2", optional = true }
 
 [dev-dependencies]
 oxide_logline = { path = "../oxide-logline" }
 logical_disc = { path = "../logical-disc", features = ["disc"] }
 sound-mix = { path = "../sound-mix" }
 kernel_files = { path = "../kernel-files" }
+
+[target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
+lewton = "=0.10.2"

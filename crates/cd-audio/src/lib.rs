@@ -25,6 +25,8 @@
 
 #[cfg(any(test, feature = "disc"))]
 extern crate alloc;
+#[cfg(all(any(test, feature = "ogg"), not(target_arch = "wasm32")))]
+extern crate std;
 
 #[cfg(any(test, feature = "disc"))]
 pub mod disc;
@@ -32,6 +34,10 @@ pub mod disc;
 pub mod door;
 #[cfg(test)]
 mod door_tests;
+#[cfg(all(any(test, feature = "ogg"), not(target_arch = "wasm32")))]
+pub mod ogg;
+#[cfg(all(test, not(target_arch = "wasm32")))]
+mod ogg_tests;
 pub mod page;
 pub mod play;
 #[cfg(test)]
