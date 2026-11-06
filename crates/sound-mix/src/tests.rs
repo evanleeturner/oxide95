@@ -3,6 +3,7 @@
 //! The mixes' expected numbers were worked by hand before the code first ran;
 //! the replay's order and answers are a logged run's, handles mapped by use.
 
+use std::fmt::Write as _;
 use std::panic::{AssertUnwindSafe, catch_unwind};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc::channel;
@@ -16,6 +17,9 @@ use crate::{Front, Host, NullBack, Output, SMP_DONE, SMP_PLAYING, SMP_STOPPED};
 
 static ROW: Row = Row { file: "a program", module: "MSS32" };
 
+/// What a test runs inside the callback, handed the sample's handle.
+type OnFire = Box<dyn FnOnce(u32) + Send>;
+
 /// The target, its clock driven by the test.
 #[derive(Default)]
 struct Seat {
@@ -23,7 +27,7 @@ struct Seat {
     fired: Mutex<Vec<(u32, u32)>>,
     freed: Mutex<Vec<u32>>,
     next_block: Mutex<Option<u32>>,
-    on_fire: Mutex<Option<Box<dyn FnOnce(u32) + Send>>>,
+    on_fire: Mutex<Option<OnFire>>,
 }
 
 impl Host for Arc<Seat> {
@@ -303,7 +307,7 @@ fn the_logged_calls_replay_in_their_order_with_their_answers() {
     let lines = debug_lines(|| {
         first = front.allocate_sample_handle(driver);
         front.init_sample(first);
-        assert_eq!(front.set_sample_file(first, 0x1700e48, &short, 0xffff_ffff), 1);
+        assert_eq!(front.set_sample_file(first, 0x0170_0e48, &short, 0xffff_ffff), 1);
         front.set_sample_volume(first, 0x1e);
         front.set_sample_loop_count(first, 0);
         front.set_sample_loop_count(first, 0);
@@ -311,11 +315,11 @@ fn the_logged_calls_replay_in_their_order_with_their_answers() {
         front.start_sample(first);
         second = front.allocate_sample_handle(driver);
         front.init_sample(second);
-        assert_eq!(front.set_sample_file(second, 0x170ba48, &short, 0xffff_ffff), 1);
+        assert_eq!(front.set_sample_file(second, 0x0170_ba48, &short, 0xffff_ffff), 1);
         front.set_sample_volume(second, 0x32);
         third = front.allocate_sample_handle(driver);
         front.init_sample(third);
-        assert_eq!(front.set_sample_file(third, 0x170d180, &short, 0xffff_ffff), 1);
+        assert_eq!(front.set_sample_file(third, 0x0170_d180, &short, 0xffff_ffff), 1);
         front.set_sample_volume(third, 0x32);
         seat.hand_out(Some(0x8b_c2f0));
         assert_eq!(front.file_read(0x31_f048, "a-sound", 0), 0x8b_c2f0);
@@ -656,7 +660,11 @@ fn two_runs_of_the_reference_mix_hash_the_same() {
 }
 
 fn hex(bytes: &[u8]) -> String {
-    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+    let mut text = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        write!(text, "{byte:02x}").expect("a String takes any write");
+    }
+    text
 }
 
 /// FIPS 180-4's SHA-256, so the test needs no outside crate.
@@ -908,10 +916,10 @@ fn a_callback_may_call_back_in_the_lock_being_free() {
     front.register_eos_callback(handle, 0x77);
     front.set_sample_user_data(handle, 0, 0xfeed);
     front.start_sample(handle);
-    let (sent, heard) = channel();
+    let (teller, heard) = channel();
     let again = front.clone();
     *seat.on_fire.lock().expect("no test panics holding this") = Some(Box::new(move |handle| {
-        sent.send(again.sample_user_data(handle, 0)).expect("the test is waiting");
+        teller.send(again.sample_user_data(handle, 0)).expect("the test is waiting");
     }));
     seat.at(1_000);
     let pumping = front.clone();
