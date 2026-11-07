@@ -128,7 +128,7 @@ async function gate(page, out, axePath, state) {
   assert.deepEqual(found, [], `axe, ${state}`);
 }
 
-// Falsifier 2 and 5 a, d, e: before a gesture, Escape, then a key.
+// Before a gesture, Escape, then a key.
 async function theKey(browser, port, out, axePath) {
   out("the key, on its own load:");
   const { context, page, errors } = await load(browser, port, axePath);
@@ -202,7 +202,7 @@ async function theKey(browser, port, out, axePath) {
   await context.close();
 }
 
-// Falsifier 5 b: a pointer counts at `click`, and never at a down-event.
+// A pointer counts at `click`, and never at a down-event.
 async function theClick(browser, port, out) {
   out("the click, on its own load:");
   const { context, page, errors } = await load(browser, port);
@@ -223,7 +223,7 @@ async function theClick(browser, port, out) {
   await context.close();
 }
 
-// Falsifier 5 a, c, d: the mute by Tab and Space, and out of it again by Tab.
+// The mute by Tab and Space, and out of it again by Tab.
 async function theMute(browser, port, out) {
   out("the mute, by the keyboard alone, on its own load:");
   const { context, page, errors } = await load(browser, port);
@@ -257,7 +257,7 @@ async function theMute(browser, port, out) {
   await context.close();
 }
 
-// Falsifier 8: a hidden tab, measured once. A second tab at the front is what a person
+// A hidden tab, measured once. A second tab at the front is what a person
 // does; if this browser keeps the first one visible, that is said, and owed.
 async function theHiddenTab(browser, port, out) {
   out("a hidden tab, measured once:");

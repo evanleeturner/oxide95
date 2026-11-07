@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Falsifiers 1, 2, 3, 5 and 6, on built clips.
+//! The fronts on built clips.
 use std::ptr;
 
 use super::clips::{long_clip, painting_clip, track_clip};

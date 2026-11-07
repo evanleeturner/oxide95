@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! Falsifier 4, on the fake clock: integers, stepped as a caller's loop steps.
+//! On the fake clock: integers, stepped as a caller's loop steps.
 use super::clips::long_clip;
 use super::fakes::{Buffer, Fakes, holding};
 use crate::{Choices, Handle};

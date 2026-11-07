@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// Falsifier 6: the page in a real browser, walked by the keyboard alone: Tab,
+// The page in a real browser, walked by the keyboard alone: Tab,
 // Space, Return, Escape. It acts by key presses only; `page.evaluate` only reads.
 // One browser and one page, so no workers. Exits non-zero at the first check that
 // fails, the output so far kept. A green walk is not a conformance claim: no
