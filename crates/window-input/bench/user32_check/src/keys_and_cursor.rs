@@ -95,12 +95,12 @@ enum First {
 }
 
 /// The driver on the other end of `ask`.
-struct Asker {
-    replies: Receiver<String>,
+pub struct Asker {
+    pub replies: Receiver<String>,
 }
 
 impl Asker {
-    fn new() -> Self {
+    pub fn new() -> Self {
         let (send, replies) = channel();
         thread::spawn(move || {
             for line in io::stdin().lines() {
@@ -114,7 +114,7 @@ impl Asker {
     }
 
     /// The driver's answer; the queue keeps moving until it comes.
-    fn ask(&self, request: &str) -> String {
+    pub fn ask(&self, request: &str) -> String {
         println!("ask {request}");
         loop {
             hand::pump();
@@ -127,14 +127,14 @@ impl Asker {
     }
 
     /// Keeps the queue moving long enough for what was just done to arrive.
-    fn settle() {
+    pub fn settle() {
         for _ in 0..SETTLE_TURNS {
             hand::pump();
             thread::sleep(TURN);
         }
     }
 
-    fn press(&self, request: &str) {
+    pub fn press(&self, request: &str) {
         self.ask(request);
         Self::settle();
     }
