@@ -25,6 +25,9 @@ export const SHIPPED = [
   "report.mjs",
 ];
 
+/** Files another crate owns, each as [crate, name]: one source, copied as it stands. */
+export const BORROWED = [["joystick", "gamepads.mjs"]];
+
 /** Every crate's `page/logger.mjs` under `cratesDir`, sorted by path. */
 function loggerPaths(cratesDir) {
   return readdirSync(cratesDir)
@@ -47,6 +50,9 @@ export function copyPage(cratesDir, pageDir, outDir) {
   for (const name of SHIPPED)
     copyFileSync(join(pageDir, name), join(outDir, name));
   copyFileSync(loggers[0], join(outDir, "logger.mjs"));
+  for (const [crate, name] of BORROWED) {
+    copyFileSync(join(cratesDir, crate, "page", name), join(outDir, name));
+  }
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

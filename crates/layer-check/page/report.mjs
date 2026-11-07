@@ -17,6 +17,7 @@ const SENTENCES = {
   H1: "Your browser reports no speakers or headphones. Plug one in, or allow the page to see them.",
   H2: "A device was plugged in and this page did not notice. That is a fault in this page.",
   H3: "Your browser never answered about the microphone. The check goes on without it.",
+  H6: "No gamepad seen yet. Press a button on it: browsers hide a pad until then.",
   P1: "This page started sound before you asked for it. That is a fault in this page.",
   P2: "This page tried to send something out, and it was stopped. That is a fault in this page.",
   P3: "The report holds a device's name. Nothing was sent. That is a fault in this page.",
@@ -34,6 +35,7 @@ const PASSES = {
   H1: "Your browser reports at least 1 speaker or pair of headphones. This does not show that sound can be heard.",
   H2: "This page reacted to a test signal that a device was plugged in.",
   H3: "Your browser answered about the microphone.",
+  H6: "Your browser shows this page a gamepad.",
 };
 
 const NAMES = {
@@ -47,6 +49,7 @@ const NAMES = {
   H1: "Speakers and headphones",
   H2: "Plugging in",
   H3: "Microphone question",
+  H6: "Gamepads",
   P2: "Nothing sent",
 };
 

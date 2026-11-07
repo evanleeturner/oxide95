@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-// H1, H2 and H3: which speakers and microphones the browser shows this page.
+// H1, H2, H3 and H6: which speakers, microphones and pads the browser shows this page.
 // The list alone: it chooses no speaker and stores nothing. Each check answers one
 // result and never throws, as `computer.mjs` does. A listing is asked without a press,
 // since it plays nothing. The microphone is asked only from a person's press.
@@ -15,6 +15,7 @@ export const YES = "yes";
 const FOLLOW_WAIT_MS = 1000;
 const FOLLOW_POLL_MS = 20;
 const QUESTION_WAIT_MS = 30000;
+const WORDS_A_PAD = 11;
 const NEEDS_SECURE = "This check needs a secure address, which this page lacks.";
 
 const wait = (ms) => new Promise((done) => setTimeout(done, ms));
@@ -105,4 +106,44 @@ export async function askMicrophone(mediaDevices, waitMs = QUESTION_WAIT_MS) {
 /** H3. Any answer passes, a person's no included: only silence is red. */
 export function checkQuestion(answer) {
   return answer === NO_ANSWER ? failed("H3") : passed("H3");
+}
+
+/** How many pads `padWords` found present: each pad's first word says so. */
+export function padsPresent(words) {
+  let count = 0;
+  for (let at = 0; at < words.length; at += WORDS_A_PAD) {
+    if (words[at] === 1) count += 1;
+  }
+  return count;
+}
+
+/** H6. A browser hides a pad until its first press, so 0 is what a pad unpressed reads. */
+export function checkPads(count) {
+  return count > 0 ? passed("H6") : failed("H6");
+}
+
+/** The names of the pads showing; a pad's name is its maker's, and a refusal is none. */
+export function padRows(navigator) {
+  try {
+    return Array.from(navigator?.getGamepads?.() ?? [])
+      .filter((pad) => pad && pad.connected !== false)
+      .map((pad) => pad.id);
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Runs `startPolling` and hands `shown` the count of pads, first and at each change.
+ * Returns the script's stop().
+ */
+export function followPads(window, startPolling, logger, shown) {
+  let seen = null;
+  const post = (words) => {
+    const count = padsPresent(words);
+    if (count === seen) return;
+    seen = count;
+    shown(count);
+  };
+  return startPolling(window, post, logger);
 }

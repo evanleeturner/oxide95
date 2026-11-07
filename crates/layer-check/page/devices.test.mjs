@@ -3,17 +3,23 @@
 // this code does with an answer. Whether a real browser gives that answer is the browser
 // harness's to find, and in the end a person's.
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+import { padWords, startPolling } from "../../joystick/page/gamepads.mjs";
 import { NOT_RUN, PASS, RED } from "./computer.mjs";
 import {
   askMicrophone,
   checkFollows,
   checkList,
+  checkPads,
   checkQuestion,
   deviceRows,
+  followPads,
   listCounts,
   NO_ANSWER,
+  padRows,
+  padsPresent,
   readList,
   watchDevices,
   YES,
@@ -26,6 +32,12 @@ const NAMELESS = { kind: "audiooutput", label: "", deviceId: "id-of-2" };
 const MICROPHONE = { kind: "audioinput", label: "", deviceId: "id-of-3" };
 const CAMERA = { kind: "videoinput", label: "A camera", deviceId: "id-of-4" };
 const SHORT_WAIT_MS = 5;
+const NO_PRESS = [null, null, null, null];
+
+const RECORDING = readFileSync(
+  new URL("../../joystick/page/recorded-pad.txt", import.meta.url),
+  "utf8",
+);
 
 function aList(devices) {
   const media = new EventTarget();
@@ -53,6 +65,50 @@ function aQuestion() {
   };
   return media;
 }
+
+const numbers = (text) => text.split(",").filter(Boolean).map(Number);
+
+/** The named line of the joystick crate's recording, as `getGamepads` would answer it. */
+function recorded(name) {
+  const line = RECORDING.split("\n").find((text) =>
+    text.startsWith(`${name} |`),
+  );
+  const [, mapping, count, axes, down] = line
+    .split("|")
+    .map((cell) => cell.trim());
+  if (mapping === "null") return [null];
+  const pressed = new Set(numbers(down));
+  const buttons = Array.from({ length: Number(count) }, (_, at) => ({
+    pressed: pressed.has(at),
+  }));
+  return [
+    {
+      id: "A made pad",
+      mapping,
+      connected: true,
+      axes: numbers(axes),
+      buttons,
+    },
+  ];
+}
+
+/** A window that runs a frame only when the test calls `step`. */
+function aWindow(frame) {
+  const window = {
+    frame,
+    navigator: { getGamepads: () => window.frame },
+    requestAnimationFrame: (step) => {
+      window.step = step;
+      return 1;
+    },
+    cancelAnimationFrame: () => {
+      window.step = null;
+    },
+  };
+  return window;
+}
+
+const noNotes = { info: () => {} };
 
 // H1 reads a browser that shows a speaker as a pass.
 test("H1 passes with 1 output", async () => {
@@ -201,4 +257,94 @@ test("a label reaches the row, and never the counts or the report", () => {
 test("the rows are speakers, then microphones, with no camera", () => {
   const rows = deviceRows([CAMERA, MICROPHONE, NAMELESS, SPEAKER]);
   assert.deepEqual(rows, ["Speaker 1", FAKE_LABEL, "Microphone 1"]);
+});
+
+test("padsPresent counts the pads padWords found", () => {
+  assert.equal(padsPresent(padWords(NO_PRESS)), 0);
+  assert.equal(padsPresent(padWords(recorded("some buttons"))), 1);
+  assert.equal(padsPresent(padWords(recorded("pulled"))), 0);
+  const two = [...recorded("rest"), null, ...recorded("corner")];
+  assert.equal(padsPresent(padWords(two)), 2);
+});
+
+// A browser hides a pad until its first press, so the pressed frame is what H6 can see.
+test("H6 passes on the recording's pressed frame", () => {
+  const window = aWindow(recorded("some buttons"));
+  const found = [];
+  const shown = (count) => found.push(checkPads(count));
+  const stop = followPads(window, startPolling, noNotes, shown);
+  window.step();
+  stop();
+  assert.equal(found.length, 1);
+  assert.equal(found[0].check, "H6");
+  assert.equal(found[0].state, PASS);
+  assert.equal(found[0].words, passSentence("H6"));
+});
+
+test("H6 is red on a pad with no press", () => {
+  const window = aWindow(NO_PRESS);
+  const found = [];
+  const shown = (count) => found.push(checkPads(count));
+  const stop = followPads(window, startPolling, noNotes, shown);
+  window.step();
+  stop();
+  assert.equal(found.length, 1);
+  assert.equal(found[0].state, RED);
+  assert.equal(found[0].words, sentence("H6"));
+});
+
+// One change reports once, however many frames it lasts.
+test("H6 follows no press, a press and a pull, 1 report a change", () => {
+  const window = aWindow(NO_PRESS);
+  const states = [];
+  const shown = (count) => states.push(checkPads(count).state);
+  const stop = followPads(window, startPolling, noNotes, shown);
+  for (const frame of [
+    NO_PRESS,
+    recorded("some buttons"),
+    recorded("pulled"),
+  ]) {
+    window.frame = frame;
+    window.step();
+    window.step();
+  }
+  assert.deepEqual(states, [RED, PASS, RED]);
+  stop();
+  assert.equal(window.step, null);
+});
+
+// A pad only adds: a refusal is no pads, told once, however many frames ask.
+test("H6 is red on a refused read, and it is told once", () => {
+  const window = aWindow(NO_PRESS);
+  window.navigator.getGamepads = () => {
+    throw new Error("refused");
+  };
+  const told = [];
+  const states = [];
+  const stop = followPads(
+    window,
+    startPolling,
+    { info: (...values) => told.push(values) },
+    (count) => states.push(checkPads(count).state),
+  );
+  window.step();
+  window.step();
+  window.step();
+  stop();
+  assert.deepEqual(states, [RED]);
+  assert.equal(told.length, 1);
+});
+
+test("padRows names the pads showing, and a refusal shows none", () => {
+  const pulled = { id: "A pulled pad", connected: false };
+  const shown = { getGamepads: () => [null, ...recorded("rest"), pulled] };
+  assert.deepEqual(padRows(shown), ["A made pad"]);
+  const refusing = {
+    getGamepads: () => {
+      throw new Error("refused");
+    },
+  };
+  assert.deepEqual(padRows(refusing), []);
+  assert.deepEqual(padRows({}), []);
+  assert.deepEqual(padRows(undefined), []);
 });

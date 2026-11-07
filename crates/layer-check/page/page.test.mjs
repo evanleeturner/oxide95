@@ -8,6 +8,7 @@ import {
   mkdirSync,
   mkdtempSync,
   readdirSync,
+  readFileSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -18,7 +19,7 @@ import { deflateSync } from "node:zlib";
 
 import { countMatches, pickCount, planBeeps } from "./beep.mjs";
 import { missingFeatures, peakHz, withinOneBin } from "./computer.mjs";
-import { copyPage, SHIPPED } from "./copy-page.mjs";
+import { BORROWED, copyPage, SHIPPED } from "./copy-page.mjs";
 import { KEYS, keyFaults } from "./key.mjs";
 import {
   BANDS,
@@ -109,13 +110,30 @@ test("the copy holds exactly the shipped files and the logger", () => {
     mkdirSync(join(crates, crate, "page"), { recursive: true });
     writeFileSync(join(crates, crate, "page", "logger.mjs"), "same");
   }
+  const borrowed = BORROWED.map(([crate, name]) => {
+    mkdirSync(join(crates, crate, "page"), { recursive: true });
+    writeFileSync(join(crates, crate, "page", name), "borrowed");
+    return name;
+  });
   const out = join(root, "out");
   copyPage(crates, PAGE_DIR, out);
-  assert.deepEqual(readdirSync(out).sort(), [...SHIPPED, "logger.mjs"].sort());
+  assert.deepEqual(
+    readdirSync(out).sort(),
+    [...SHIPPED, ...borrowed, "logger.mjs"].sort(),
+  );
 });
 
-test("the page ships devices.mjs", () => {
+// One source: the pad script is the joystick crate's own, byte for byte.
+test("the copy's pad script is the joystick crate's, and the page ships devices.mjs", () => {
+  const out = join(mkdtempSync(join(tmpdir(), "layer-check-")), "out");
+  const crates = join(PAGE_DIR, "..", "..");
+  copyPage(crates, PAGE_DIR, out);
   assert.ok(SHIPPED.includes("devices.mjs"));
+  assert.ok(
+    readFileSync(join(out, "gamepads.mjs")).equals(
+      readFileSync(join(crates, "joystick", "page", "gamepads.mjs")),
+    ),
+  );
 });
 
 test("the copy refuses when two loggers differ", () => {
