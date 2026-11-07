@@ -135,8 +135,6 @@ HELD: tuple[Listed, ...] = (
     Listed("the class's atom", "classes", "RegisterClassA", "v", "c02b", "c000"),
     # Translating a `WM_CHAR` answers 1 on the real route, 0 on `Desk`.
     Listed("translating a WM_CHAR", "keys.queue", "TranslateMessage", "v", "1", "0"),
-    # `SetFocus` answers a window on the real route, 0 on `Desk`.
-    Listed("the focus answer", "show", "SetFocus", "v", "H3", "0"),
     # `AdjustWindowRect` grows the rectangle on the real route, leaves it on `Desk`.
     Listed(
         "the adjusted rectangle",

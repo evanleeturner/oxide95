@@ -29,6 +29,10 @@ const HTCLIENT: u32 = 1;
 const PM_REMOVE: u32 = 1;
 /// `ShowWindow`'s `SW_HIDE`; every other command shows.
 const SW_HIDE: i32 = 0;
+/// `ShowWindow`'s commands that leave the focus where it is:
+/// `SW_SHOWNOACTIVATE`, `SW_MINIMIZE`, `SW_SHOWMINNOACTIVE`, `SW_SHOWNA` and
+/// `SW_FORCEMINIMIZE`.
+const SW_LEAVING_FOCUS: [i32; 5] = [4, 6, 7, 8, 11];
 /// `CW_USEDEFAULT`: the host's choice of place or size.
 const CW_USEDEFAULT: i32 = i32::MIN;
 /// The `GetWindowLongA` indexes the window keeps.
@@ -56,6 +60,17 @@ const SM_CXBORDER: i32 = 5;
 const SM_CXDLGFRAME: i32 = 7;
 const SM_CYMENU: i32 = 15;
 const SM_CXFRAME: i32 = 32;
+
+/// The window the focus passes to when its holder hides or goes: the newest
+/// shown window that is no child, but `leaving`; 0 for none.
+fn next_focus(state: &crate::desk::State, leaving: u32) -> u32 {
+    state
+        .windows
+        .iter()
+        .rev()
+        .find(|row| row.handle != leaving && row.shown && row.style & WS_CHILD == 0)
+        .map_or(0, |row| row.handle)
+}
 
 /// What `CreateWindowExA` is given.
 #[derive(Clone, Copy, Debug)]
@@ -198,6 +213,9 @@ impl<'d, S: Screen> Front<'d, S> {
                 parent: create.parent,
                 shown: style & WS_VISIBLE != 0,
             });
+            if style & WS_VISIBLE != 0 && style & WS_CHILD == 0 {
+                state.focus = handle;
+            }
             handle
         });
         drop(state);
@@ -240,7 +258,7 @@ impl<'d, S: Screen> Front<'d, S> {
         state.windows.retain(|kept| kept.handle != window);
         let gone = state.windows.len() < before;
         if gone && state.focus == window {
-            state.focus = 0;
+            state.focus = next_focus(&state, window);
         }
         drop(state);
         if gone {
@@ -291,8 +309,10 @@ impl<'d, S: Screen> Front<'d, S> {
     }
 
     /// `ShowWindow`: 1 when the window was shown before, else 0; hidden
-    /// for `SW_HIDE`, else shown. Callers: the shell, the game file, the
-    /// launcher.
+    /// for `SW_HIDE`, else shown. A window with no parent takes the focus
+    /// as it is shown, but for the commands in [`SW_LEAVING_FOCUS`]; one
+    /// hidden while holding it passes it on. Callers: the shell, the game
+    /// file, the launcher.
     #[must_use]
     pub fn show_window(&self, window: u32, command: i32) -> u32 {
         let shown = command != SW_HIDE;
@@ -307,6 +327,14 @@ impl<'d, S: Screen> Front<'d, S> {
             }
             (before, row.rect)
         });
+        let child = state
+            .window(window)
+            .is_none_or(|row| row.style & WS_CHILD != 0);
+        if !child && shown && !SW_LEAVING_FOCUS.contains(&command) {
+            state.focus = window;
+        } else if !shown && state.focus == window {
+            state.focus = next_focus(&state, window);
+        }
         drop(state);
         if let Some((_, rect)) = before {
             self.desk.screen().place(window, rect, shown);

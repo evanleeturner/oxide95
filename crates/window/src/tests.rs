@@ -97,6 +97,34 @@ fn find_window_answers_the_newest_of_a_class() {
     assert_eq!(front.find_window(Some(&b"Test"[..]), None), first);
 }
 
+/// Showing gives the focus, read back by `SetFocus`' answer: a window made
+/// shown takes it, a hidden one does not, a command that does not activate
+/// leaves it, and a holder hidden or destroyed passes it to the newest shown
+/// window. A child shown leaves it where it is.
+#[test]
+fn showing_a_window_gives_it_the_focus() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let first = window(&front);
+    assert_eq!(front.set_focus(first), first);
+    let second = made(&front, 0x8000_0000, [0, 0, 0x280, 0x1e0]);
+    assert_eq!(front.set_focus(first), first);
+    assert_eq!(front.show_window(second, 5), 0);
+    assert_eq!(front.set_focus(second), second);
+    assert_eq!(front.show_window(second, 0), 1);
+    assert_eq!(front.set_focus(first), first);
+    assert_eq!(front.show_window(second, 8), 0);
+    assert_eq!(front.set_focus(second), first);
+    assert_eq!(front.destroy_window(second), 1);
+    assert_eq!(front.set_focus(first), first);
+    let child = made(&front, 0x5000_0000, [0, 0, 8, 8]);
+    assert_eq!(front.set_focus(first), first);
+    assert_eq!(front.show_window(child, 5), 1);
+    assert_eq!(front.set_focus(first), first);
+    assert_eq!(front.destroy_window(first), 1);
+    assert_eq!(front.set_focus(0), 0);
+}
+
 /// `PeekMessageA` with `PM_REMOVE` takes one message a call, oldest
 /// first, and answers 0 with nothing written on an empty queue.
 #[test]

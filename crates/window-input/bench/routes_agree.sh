@@ -106,10 +106,10 @@ arms() {
   [[ "${wrong}" == 0 ]]
 }
 
-# A copy of a `Desk` log in which step `show`'s `SetFocus` answers another window.
-move_focus() {
+# A copy of a `Desk` log in which step `classes`' first `RegisterClassA` answers another atom.
+move_atom() {
   awk '/^step / { step = $2 }
-    step == "show" && /c=USER32!SetFocus / { sub(/ v=[^ ]* /, " v=1234 ") }
+    step == "classes" && /c=USER32!RegisterClassA / && !moved { sub(/ v=[^ ]* /, " v=1234 "); moved = 1 }
     { print }' "$1" >"$2"
 }
 
@@ -121,10 +121,10 @@ take_one_peek() {
 }
 
 # The moved answer is the one new `past`, and its hold goes `stale`.
-focus_went_past() {
+atom_went_past() {
   local clean=$1 planted=$2
-  one_new_past "${clean}" "${planted}" '^past SetFocus v H3 H[0-9]+ step=show$' &&
-    grep -q '^stale the focus answer$' "${planted}"
+  one_new_past "${clean}" "${planted}" '^past RegisterClassA v c02b 1234 step=classes$' &&
+    grep -q "^stale the class's atom$" "${planted}"
 }
 
 # A hold is a difference let through, so these read that it lets through nothing else: the scorer
@@ -132,11 +132,11 @@ focus_went_past() {
 holds() {
   local out=$1
   local wrong=0
-  move_focus "${out}/desk.log" "${out}/desk-focus-moved.log"
+  move_atom "${out}/desk.log" "${out}/desk-atom-moved.log"
   take_one_peek "${out}/thin.log" "${out}/thin-one-peek-less.log"
-  score "${out}" focus-moved "${out}/thin.log" "${out}/desk-focus-moved.log" || true
+  score "${out}" atom-moved "${out}/thin.log" "${out}/desk-atom-moved.log" || true
   score "${out}" peek-less "${out}/thin-one-peek-less.log" "${out}/desk.log" || true
-  told focus-moved focus_went_past "${out}/clean.txt" "${out}/focus-moved.txt"
+  told atom-moved atom_went_past "${out}/clean.txt" "${out}/atom-moved.txt"
   told peek-less one_new_past "${out}/clean.txt" "${out}/peek-less.txt" \
     '^past PeekMessageA lines 62 63 step=queue$'
   printf '%s hold arms not as expected\n' "${wrong}"
