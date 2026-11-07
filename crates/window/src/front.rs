@@ -249,14 +249,16 @@ impl<'d, S: Screen> Front<'d, S> {
         u32::from(gone)
     }
 
-    /// `FindWindowA`: the first window of the class and title asked, each
-    /// `None` for any; 0 for none. Callers: the launcher.
+    /// `FindWindowA`: the newest window of the class and title asked, each
+    /// `None` for any, as a new window goes on top of its type; 0 for none.
+    /// Callers: the launcher.
     #[must_use]
     pub fn find_window(&self, class: Option<&[u8]>, title: Option<&[u8]>) -> u32 {
         let state = self.desk.state();
         let found = state
             .windows
             .iter()
+            .rev()
             .find(|window| {
                 class.is_none_or(|class| window.class.eq_ignore_ascii_case(class))
                     && title.is_none_or(|title| window.title == title)

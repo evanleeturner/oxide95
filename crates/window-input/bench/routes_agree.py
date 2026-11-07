@@ -133,8 +133,6 @@ LISTED = (
 HELD: tuple[Listed, ...] = (
     # `RegisterClassA` answers another atom.
     Listed("the class's atom", "classes", "RegisterClassA", "v", "c02b", "c000"),
-    # 2 windows of one class: the real route finds the second made, `Desk` the first.
-    Listed("which window of 2", "find", "FindWindowA", "v", "H4", "H3"),
     # Translating a `WM_CHAR` answers 1 on the real route, 0 on `Desk`.
     Listed("translating a WM_CHAR", "keys.queue", "TranslateMessage", "v", "1", "0"),
     # `SetFocus` answers a window on the real route, 0 on `Desk`.

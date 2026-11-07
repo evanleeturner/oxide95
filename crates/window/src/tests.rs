@@ -69,6 +69,34 @@ fn window(front: &Front<'_, Page>) -> u32 {
     })
 }
 
+/// One more window of the test class, as `style` and `place` say, its handle.
+fn made(front: &Front<'_, Page>, style: u32, place: [i32; 4]) -> u32 {
+    front.create_window(&Create {
+        ex_style: 0,
+        class: b"Test",
+        title: b"Test",
+        style,
+        place,
+        parent: 0,
+        menu: 0,
+        param: 0,
+    })
+}
+
+/// `FindWindowA` with 2 windows of one class answers the newest, and the
+/// older once the newest is gone.
+#[test]
+fn find_window_answers_the_newest_of_a_class() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let first = window(&front);
+    let second = made(&front, 0x8000_0000, [0, 0, 0x280, 0x1e0]);
+    assert_ne!(first, second);
+    assert_eq!(front.find_window(Some(&b"Test"[..]), None), second);
+    assert_eq!(front.destroy_window(second), 1);
+    assert_eq!(front.find_window(Some(&b"Test"[..]), None), first);
+}
+
 /// `PeekMessageA` with `PM_REMOVE` takes one message a call, oldest
 /// first, and answers 0 with nothing written on an empty queue.
 #[test]
