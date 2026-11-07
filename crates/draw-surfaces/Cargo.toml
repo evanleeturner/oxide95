@@ -54,6 +54,13 @@ name = "surfaces_wine"
 path = "bench/surfaces_wine.rs"
 required-features = ["user32"]
 
+# Every slot of the three tables, called by offset with `esp` read on each side: built
+# for `i686-pc-windows-gnu`, as a stack of this shape is a 32-bit target's alone.
+[[example]]
+name = "surfaces_stack"
+path = "bench/surfaces_stack.rs"
+required-features = ["user32"]
+
 [dependencies]
 draw = { path = "../draw" }
 window = { path = "../window" }
