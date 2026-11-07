@@ -334,7 +334,7 @@ pub unsafe fn translate_message(from: u32, message: u32) -> u32 {
 /// This is the name that makes a timer's procedure run: Wine's `WM_TIMER`
 /// carries a number of its own in `l`, not the address `SetTimer` was
 /// given, so only the real `DispatchMessageA` can call it. Measured under
-/// Wine 9.0: `l` read `ffff000e`.
+/// Wine 9.0: `l` read `ffff000e` in one program and `ffff000f` in another.
 ///
 /// # Safety
 /// `message` is a `MSG`; its window's procedure runs inside this call.
