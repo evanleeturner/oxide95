@@ -170,9 +170,47 @@ mod real {
         format!("{value} error {}", unsafe { GetLastError() })
     }
 
-    /// The target's handle as the row's number, 0 kept 0.
+    /// The target's handle as the row's number, 0 kept 0. A handle past 32 bits answers -1, which
+    /// no row wants.
     pub fn number(handle: H) -> i64 {
-        i64::from(handle as usize as u32)
+        u32::try_from(handle as usize).map_or(-1, i64::from)
+    }
+
+    /// An enumeration's argument as its number, when it is one: a name's pointer answers nothing.
+    fn id(argument: *const u8) -> Option<u32> {
+        u32::try_from(argument as usize)
+            .ok()
+            .filter(|id| *id < 0x1_0000)
+    }
+
+    /// Takes each numbered kind into the list behind `state`.
+    pub extern "system" fn kind(_: H, kind: *const u8, state: isize) -> i32 {
+        // SAFETY: the state is the list the caller hands in.
+        let list = unsafe { &mut *(state as *mut Vec<u32>) };
+        list.extend(id(kind));
+        1
+    }
+
+    /// Takes each numbered name into the list behind `state`.
+    pub extern "system" fn name(_: H, _: *const u8, name: *const u8, state: isize) -> i32 {
+        // SAFETY: as above.
+        let list = unsafe { &mut *(state as *mut Vec<u32>) };
+        list.extend(id(name));
+        1
+    }
+
+    /// Takes each language into the list behind `state`.
+    pub extern "system" fn language(
+        _: H,
+        _: *const u8,
+        _: *const u8,
+        language: u16,
+        state: isize,
+    ) -> i32 {
+        // SAFETY: as above.
+        let list = unsafe { &mut *(state as *mut Vec<u16>) };
+        list.push(language);
+        1
     }
 }
 
@@ -229,7 +267,7 @@ fn the_start_up_answers_are_the_row() {
 fn wine_start() {
     let mut info = [0u32; 17];
     // SAFETY: the record is the 68 bytes the call writes.
-    unsafe { real::GetStartupInfoA(&mut info) };
+    unsafe { real::GetStartupInfoA(&raw mut info) };
     check("wine.start.cb", 68, info[0]);
     println!("MEASURE w wine.start.flags = {:#x}", info[11]);
     println!("MEASURE w wine.start.show = {}", info[12] & 0xFFFF);
@@ -373,21 +411,21 @@ fn wine_names() {
     use real::{GetModuleHandleA, GetProcAddress, LoadLibraryA, both, number};
     // SAFETY: each name is NUL-ended; each call answers a handle, kept as a number.
     unsafe {
-        let kernel = GetModuleHandleA(b"KERNEL32.DLL\0".as_ptr());
+        let kernel = GetModuleHandleA(c"KERNEL32.DLL".as_ptr().cast());
         check(
             "wine.names.load_miss",
             "0 error 126",
-            both(|| number(LoadLibraryA(b"NO-SUCH.DLL\0".as_ptr()))),
+            both(|| number(LoadLibraryA(c"NO-SUCH.DLL".as_ptr().cast()))),
         );
         check(
             "wine.names.handle_miss",
             "0 error 126",
-            both(|| number(GetModuleHandleA(b"NO-SUCH.DLL\0".as_ptr()))),
+            both(|| number(GetModuleHandleA(c"NO-SUCH.DLL".as_ptr().cast()))),
         );
         check(
             "wine.names.proc_miss",
             "0 error 127",
-            both(|| number(GetProcAddress(kernel, b"NoSuchEntry\0".as_ptr()))),
+            both(|| number(GetProcAddress(kernel, c"NoSuchEntry".as_ptr().cast()))),
         );
         for (name, asked) in [
             ("wine.names.load_full", &b"KERNEL32.DLL\0"[..]),
@@ -439,7 +477,7 @@ fn a_bad_handle_is_answered_as_the_target_does() {
             check(
                 "wine.names.proc_bad",
                 "0 error 126",
-                both(|| number(GetProcAddress(module, b"Sleep\0".as_ptr()))),
+                both(|| number(GetProcAddress(module, c"Sleep".as_ptr().cast()))),
             );
             check(
                 "wine.names.free_bad",
@@ -474,9 +512,11 @@ fn a_path_to_no_file_is_answered_as_the_target_does() {
     );
     #[cfg(windows)]
     {
-        // SAFETY: the name is NUL-ended.
         let answer = real::both(|| {
-            real::number(unsafe { real::LoadLibraryA(b"C:\\NO-SUCH\\KERNEL32.DLL\0".as_ptr()) })
+            // SAFETY: the name is NUL-ended.
+            real::number(unsafe {
+                real::LoadLibraryA(c"C:\\NO-SUCH\\KERNEL32.DLL".as_ptr().cast())
+            })
         });
         check("wine.names.path_miss", "0 error 126", answer);
     }
@@ -579,8 +619,8 @@ fn the_host_back_reads_the_memory_map() {
         // SAFETY: each name is NUL-ended.
         let sleep = unsafe {
             GetProcAddress(
-                GetModuleHandleA(b"KERNEL32.DLL\0".as_ptr()),
-                b"Sleep\0".as_ptr(),
+                GetModuleHandleA(c"KERNEL32.DLL".as_ptr().cast()),
+                c"Sleep".as_ptr().cast(),
             )
         };
         // SAFETY: the target's own checkers touch nothing that faults.
@@ -606,36 +646,7 @@ fn the_host_back_reads_the_memory_map() {
 #[test]
 fn a_resource_reads_as_the_target_reads_it() {
     use real::*;
-    use std::ptr::{null, null_mut};
-
-    extern "system" fn kind(_: H, kind: *const u8, state: isize) -> i32 {
-        // SAFETY: the state is the list this test hands in.
-        let list = unsafe { &mut *(state as *mut Vec<u32>) };
-        if (kind as usize) < 0x1_0000 {
-            list.push(kind as usize as u32);
-        }
-        1
-    }
-    extern "system" fn name(_: H, _: *const u8, name: *const u8, state: isize) -> i32 {
-        // SAFETY: as above.
-        let list = unsafe { &mut *(state as *mut Vec<u32>) };
-        if (name as usize) < 0x1_0000 {
-            list.push(name as usize as u32);
-        }
-        1
-    }
-    extern "system" fn language(
-        _: H,
-        _: *const u8,
-        _: *const u8,
-        language: u16,
-        state: isize,
-    ) -> i32 {
-        // SAFETY: as above.
-        let list = unsafe { &mut *(state as *mut Vec<u16>) };
-        list.push(language);
-        1
-    }
+    use std::ptr::null_mut;
 
     const DLL: &str = "comdlg32.dll";
     let mut folder = [0u8; 260];
@@ -676,7 +687,7 @@ fn a_resource_reads_as_the_target_reads_it() {
                 let read = |found: H| -> &[u8] {
                     let size = SizeofResource(module, found) as usize;
                     let at = LockResource(LoadResource(module, found));
-                    if at == null() {
+                    if at.is_null() {
                         &[]
                     } else {
                         std::slice::from_raw_parts(at, size)
@@ -846,12 +857,12 @@ fn wine_ends() {
                 0,
                 null_mut(),
                 null(),
-                &mut startup,
-                &mut information,
+                &raw mut startup,
+                &raw mut information,
             ))
         });
         check("wine.ends.create.miss", "0 error 2", answer);
-        let answer = both(|| i64::from(LoadModule(b"NO-SUCH.EXE\0".as_ptr(), null())));
+        let answer = both(|| i64::from(LoadModule(c"NO-SUCH.EXE".as_ptr().cast(), null())));
         check("wine.ends.load_module.miss", "2 error 2", answer);
     }
 }
@@ -899,13 +910,13 @@ fn real_child(which: &str) {
                     0,
                     null_mut(),
                     null(),
-                    &mut startup,
-                    &mut information,
+                    &raw mut startup,
+                    &raw mut information,
                 );
                 let process = information[0] as H;
                 WaitForSingleObject(process, 30_000);
                 let mut code = 0;
-                GetExitCodeProcess(process, &mut code);
+                GetExitCodeProcess(process, &raw mut code);
                 CloseHandle(process);
                 CloseHandle(information[1] as H);
                 println!("REAL create own={started} code={code}");
