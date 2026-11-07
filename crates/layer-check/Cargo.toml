@@ -1,6 +1,7 @@
 # Checks of the computer under the other crates, using none of their code, so a
 # later fault can name its suspect. It names no game. The checks that run in a
-# browser sit in `page/`; this crate holds no code of its own yet.
+# browser sit in `page/`, the ones under Wine in `bench/`; the library makes a tone
+# and judges what came back. `cpal` is built only when asked for.
 [package]
 name = "layer-check"
 version = "0.1.0"
@@ -8,6 +9,19 @@ edition = "2024"
 rust-version = "1.85"
 license = "MIT"
 publish = false
+
+[features]
+# The native checks in `examples/computer_check.rs`, on Linux and macOS. It turns
+# nothing on elsewhere, and on Linux it needs ALSA's headers to build.
+native = ["dep:cpal", "dep:log"]
+
+[target.'cfg(not(any(target_arch = "wasm32", windows)))'.dependencies]
+cpal = { version = "=0.18.2", optional = true }
+log = { version = "0.4", features = ["kv"], optional = true }
+
+[[example]]
+name = "computer_check"
+required-features = ["native"]
 
 [lints.rust]
 rust_2018_idioms = { level = "warn", priority = -1 }

@@ -392,6 +392,36 @@
       "level": "D",
       "fields": { "count": "the beeps chosen at random", "hz": "their pitch" },
       "template": "playing {count} beeps at {hz}"
+    },
+    {
+      "id": "check.computer.result",
+      "level": "I",
+      "fields": { "check": "the check's short name", "state": "what it read: pass or red" },
+      "template": "check {check} read {state}"
+    },
+    {
+      "id": "check.computer.done",
+      "level": "I",
+      "fields": { "results": "the results this run gave", "reds": "how many of them read red" },
+      "template": "the run ended with {results} results, {reds} red"
+    },
+    {
+      "id": "check.computer.device",
+      "level": "D",
+      "fields": { "rate": "the default output's samples per second", "channels": "its channels", "format": "its sample format" },
+      "template": "the default output offers {rate} at {channels} channels in {format}"
+    },
+    {
+      "id": "check.computer.refused",
+      "level": "D",
+      "fields": { "why": "the system's own words" },
+      "template": "the system refused: {why}"
+    },
+    {
+      "id": "check.computer.heard",
+      "level": "D",
+      "fields": { "samples": "the samples recorded", "peak": "the largest distance from zero", "share": "the share of the sound's power at the tone's pitch, 0 to 1" },
+      "template": "{samples} samples recorded, peak {peak}, {share} of the power at the tone's pitch"
     }
   ]
 }

@@ -772,6 +772,10 @@ dependencies = [
 [[package]]
 name = "layer-check"
 version = "0.1.0"
+dependencies = [
+ "cpal",
+ "log",
+]
 
 [[package]]
 name = "lewton"
