@@ -97,6 +97,9 @@ start_wine() {
   done
   screen=$(<"${display_file}")
   export DISPLAY=":${screen}"
+  # A native program takes a Wayland name before `DISPLAY`: left set, it would open on the
+  # computer's real desktop and not on this private screen.
+  unset WAYLAND_DISPLAY WAYLAND_SOCKET
   rm -f "${display_file}"
 }
 
