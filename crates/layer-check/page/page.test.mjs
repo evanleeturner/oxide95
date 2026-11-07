@@ -1,0 +1,108 @@
+// SPDX-License-Identifier: MIT
+// The page's pure logic, under `node --test`. The browser half is `browser.mjs`.
+import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { test } from "node:test";
+import { fileURLToPath } from "node:url";
+
+import { countMatches, pickCount, planBeeps } from "./beep.mjs";
+import { missingFeatures, peakHz, withinOneBin } from "./computer.mjs";
+import { copyPage, SHIPPED } from "./copy-page.mjs";
+import { buildReport, passSentence, reportHoldsName, sentence } from "./report.mjs";
+
+const PAGE_DIR = fileURLToPath(new URL(".", import.meta.url));
+
+test("missingFeatures names what the scope lacks, and nothing when whole", () => {
+  const whole = {
+    AudioContext: 1,
+    AnalyserNode: 1,
+    OscillatorNode: 1,
+    WebAssembly: 1,
+  };
+  assert.deepEqual(missingFeatures(whole), []);
+  assert.deepEqual(missingFeatures({ ...whole, AudioContext: undefined }), [
+    "AudioContext",
+  ]);
+});
+
+test("sentence fills its feature and refuses an unknown check", () => {
+  assert.match(sentence("C2", { feature: "AudioContext" }), /no AudioContext,/);
+  assert.throws(() => sentence("C2"), /needs a feature/);
+  assert.throws(() => sentence("Z9"), /no sentence/);
+});
+
+test("C4's pass never claims a device or a speaker works", () => {
+  assert.doesNotMatch(passSentence("C4"), /device/i);
+  assert.match(passSentence("C4"), /does not show/);
+});
+
+test("the beeps run under 3 seconds at the largest count", () => {
+  const beeps = planBeeps(4, 10);
+  assert.equal(beeps.length, 4);
+  assert.ok(beeps.at(-1).stop - 10 < 3);
+  for (const { start, stop } of beeps) assert.ok(stop > start);
+});
+
+test("pickCount answers only 2, 3 or 4 across its range", () => {
+  const seen = new Set();
+  for (let byte = 0; byte < 256; byte += 1) seen.add(pickCount(byte / 256));
+  assert.deepEqual([...seen].sort(), [2, 3, 4]);
+});
+
+test("countMatches is true only for the count played", () => {
+  assert.equal(countMatches(3, 3), true);
+  assert.equal(countMatches(2, 3), false);
+});
+
+test("one bin either way passes, further does not", () => {
+  const bin = 44100 / 2048;
+  assert.equal(withinOneBin(440 + bin, 440, 44100, 2048), true);
+  assert.equal(withinOneBin(440 + 2 * bin, 440, 44100, 2048), false);
+});
+
+test("peakHz reads the loudest bin, and null from silence", () => {
+  assert.equal(peakHz(new Uint8Array(8), 44100, 2048), null);
+  const bins = new Uint8Array(8);
+  bins[2] = 200;
+  assert.equal(peakHz(bins, 2048, 2048), 2);
+});
+
+test("a report holds no label, and a leak is caught", () => {
+  const label = "A Person's Headphones";
+  const devices = [{ kind: "audiooutput", label }];
+  const text = buildReport([{ check: "C1", state: "pass" }], devices);
+  assert.match(text, /Speaker 1/);
+  assert.equal(reportHoldsName(text, [label]), false);
+  assert.equal(reportHoldsName(`${text}\n${label}`, [label]), true);
+  assert.equal(reportHoldsName(text, [""]), false);
+});
+
+test("the copy holds exactly the shipped files and the logger", () => {
+  const root = mkdtempSync(join(tmpdir(), "layer-check-"));
+  const crates = join(root, "crates");
+  for (const crate of ["one", "two"]) {
+    mkdirSync(join(crates, crate, "page"), { recursive: true });
+    writeFileSync(join(crates, crate, "page", "logger.mjs"), "same");
+  }
+  const out = join(root, "out");
+  copyPage(crates, PAGE_DIR, out);
+  assert.deepEqual(
+    readdirSync(out).sort(),
+    [...SHIPPED, "logger.mjs"].sort(),
+  );
+});
+
+test("the copy refuses when two loggers differ", () => {
+  const root = mkdtempSync(join(tmpdir(), "layer-check-"));
+  const crates = join(root, "crates");
+  for (const crate of ["one", "two"]) {
+    mkdirSync(join(crates, crate, "page"), { recursive: true });
+    writeFileSync(join(crates, crate, "page", "logger.mjs"), crate);
+  }
+  assert.throws(
+    () => copyPage(crates, PAGE_DIR, join(root, "out")),
+    /loggers differ/,
+  );
+});

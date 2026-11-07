@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; style-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sound check for this computer</title>
+    <link href="layer-check.css" rel="stylesheet" />
+    <script src="layer-check.mjs" type="module"></script>
+  </head>
+  <body>
+    <main>
+      <h1>Sound check for this computer</h1>
+      <p>
+        If an old game's sound fails in your browser, the fault could be your
+        computer or the code running the game. This page tests your browser's
+        sound without running any of that code. Nothing you do here is sent
+        anywhere.
+      </p>
+      <p>
+        No sound plays until you press the button. Then you hear a few quiet
+        beeps, for under 3 seconds.
+      </p>
+      <button class="js-start" type="button">Start the check</button>
+      <p class="js-status" role="status"></p>
+
+      <section class="js-count" hidden>
+        <h2>How many beeps did you hear?</h2>
+        <button class="js-beeps" type="button">Play the beeps</button>
+        <div class="choices">
+          <button class="js-count-2" type="button">2 beeps</button>
+          <button class="js-count-3" type="button">3 beeps</button>
+          <button class="js-count-4" type="button">4 beeps</button>
+          <button class="js-count-skip" type="button">Skip this check</button>
+        </div>
+      </section>
+
+      <section class="js-mic" hidden>
+        <h2>Listen with the microphone (you can leave this out)</h2>
+        <p>
+          The page plays the beeps again and listens for them. Your browser
+          asks you first. Nothing is recorded or sent.
+        </p>
+        <button class="js-mic-start" type="button">Use the microphone</button>
+      </section>
+
+      <h2>Results</h2>
+      <ul class="results js-results"></ul>
+
+      <section class="js-report" hidden>
+        <h2>Your report</h2>
+        <p>It holds no device names. You choose whether to pass it on.</p>
+        <button class="js-copy" type="button">Copy the report</button>
+        <pre class="report-text js-report-text"></pre>
+      </section>
+    </main>
+  </body>
+</html>

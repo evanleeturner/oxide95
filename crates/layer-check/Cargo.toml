@@ -1,0 +1,22 @@
+# Checks of the computer under the other crates, using none of their code, so a
+# later fault can name its suspect. It names no game. The checks that run in a
+# browser sit in `page/`; this crate holds no code of its own yet.
+[package]
+name = "layer-check"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
