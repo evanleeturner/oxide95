@@ -7,6 +7,7 @@ so a fault in the crate's own line cannot hide from its reader.
 Call:
     parse_bytes(data) -> Parsed
     parse_file(path) -> Parsed
+    python3 logline_grammar.py <file>: one JSON line of counts, for the page's driver
 
 Parsed holds the header's values, the events and the violations. A Violation is a rule
 and a line number and never the line, as a log can hold a token. Line 0 means the file
@@ -17,8 +18,10 @@ holds those. An event id's characters and the two escapes are not in the head's 
 the workspace's id rule and `body`'s code supply them, each its own rule name.
 """
 
+import json
 import logging
 import re
+import sys
 from collections import Counter
 from dataclasses import dataclass
 from dataclasses import field
@@ -211,3 +214,15 @@ def parse_bytes(data: bytes) -> Parsed:
 def parse_file(path: Path) -> Parsed:
     """Reads `path` and judges it. Raises OSError when it cannot be read."""
     return parse_bytes(path.read_bytes())
+
+
+def main() -> int:
+    """Prints a file's counts, never a line of it; exits 0 whatever the file holds."""
+    parsed = parse_file(Path(sys.argv[1]))
+    counts = {"events": len(parsed.events), "rules": dict(parsed.rule_counts())}
+    print(json.dumps(counts, sort_keys=True))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
