@@ -2,20 +2,25 @@
 //! Wine's own sound layer, asked by a 32-bit program with no crate of ours, its calls
 //! declared by hand. One file, built by `wine.sh link`; no Cargo target.
 //!
-//! - `query <rate> <channels> <bits>`: C8. Does Wine offer a device for that format? It
-//!   asks and opens nothing, so nothing plays. Calling it with CD's format is the check.
+//! - `query <rate> <channels> <bits> [device]`: C8. Does Wine offer a device for that
+//!   format? It asks and opens nothing, so nothing plays. Calling it with CD's format is
+//!   the check. With no device it asks the mapper. Measured on Wine: the mapper and device
+//!   0 both say yes to formats that cannot play, such as 9 channels. So a yes shows the
+//!   call answers and a device is listed; it takes C9's tone to show CD's format plays.
 //! - `tone <hz> <ms> <amplitude>`: plays a tone in CD's format, for C9's recording.
 //!
 //! Lines take the log's `imp.call` form, printed as this file links no logger. Exits 0
 //! on a pass, 1 on red, 2 on a call it cannot read.
 use std::process::ExitCode;
+use std::sync::mpsc;
 use std::time::{Duration, Instant};
 
 const WAVE_MAPPER: u32 = 0xFFFF_FFFF;
 const WAVE_FORMAT_QUERY: u32 = 1;
 const WHDR_DONE: u32 = 1;
 const CD_RATE: u32 = 44_100;
-const C8_PASS: &str = "Wine offers a device for CD-quality sound.";
+const GATE_LIMIT: Duration = Duration::from_secs(20);
+const C8_PASS: &str = "Wine lists a sound device and says yes to CD-quality sound.";
 const C8_RED: &str = "Wine offers no device for CD-quality sound. The bench is at fault, and the project's code is cleared.";
 
 /// Windows' `WAVEFORMATEX`.
@@ -75,7 +80,7 @@ unsafe extern "system" {
     fn waveOutClose(handle: usize) -> u32;
 }
 
-fn query(rate: u32, channels: u16, bits: u16) -> ExitCode {
+fn query(device: u32, rate: u32, channels: u16, bits: u16) -> ExitCode {
     let format = Format::pcm(rate, channels, bits);
     // SAFETY: the call takes no arguments and only counts devices.
     let devices = unsafe { waveOutGetNumDevs() };
@@ -85,7 +90,7 @@ fn query(rate: u32, channels: u16, bits: u16) -> ExitCode {
     let answer = unsafe {
         waveOutOpen(
             std::ptr::null_mut(),
-            WAVE_MAPPER,
+            device,
             &raw const format,
             0,
             0,
@@ -93,7 +98,7 @@ fn query(rate: u32, channels: u16, bits: u16) -> ExitCode {
         )
     };
     println!(
-        "imp.call c=WINMM!waveOutOpen a={rate},{channels},{bits},query v={answer} by=layer-check"
+        "imp.call c=WINMM!waveOutOpen a={rate},{channels},{bits},query,{device} v={answer} by=layer-check"
     );
     println!(
         "pointer_bytes={} devices={devices} format_query={answer}",
@@ -121,6 +126,18 @@ fn samples(hz: f64, ms: u32, amplitude: i16) -> Vec<u8> {
         .collect()
 }
 
+/// Waits for `null_sink.sh`'s one line, sent once it has read this stream on its private
+/// output. Only that line opens the gate: a closed stdin or the limit keeps the tone unplayed.
+fn gate_opens() -> bool {
+    let (sender, receiver) = mpsc::channel();
+    std::thread::spawn(move || {
+        let mut line = String::new();
+        let read = std::io::stdin().read_line(&mut line);
+        let _ = sender.send(read.is_ok() && line.trim() == "go");
+    });
+    receiver.recv_timeout(GATE_LIMIT).unwrap_or(false)
+}
+
 fn tone(hz: f64, ms: u32, amplitude: i16) -> ExitCode {
     let format = Format::pcm(CD_RATE, 2, 16);
     let mut sound = samples(hz, ms, amplitude);
@@ -132,6 +149,13 @@ fn tone(hz: f64, ms: u32, amplitude: i16) -> ExitCode {
     let opened = unsafe { waveOutOpen(&raw mut handle, WAVE_MAPPER, &raw const format, 0, 0, 0) };
     println!("imp.call c=WINMM!waveOutOpen a={CD_RATE},2,16 v={opened} by=layer-check");
     if opened != 0 {
+        return ExitCode::FAILURE;
+    }
+    if !gate_opens() {
+        println!("tone unplayed: the bench never read this stream on its private output");
+        // SAFETY: the handle is open and nothing uses it after this.
+        let closed = unsafe { waveOutClose(handle) };
+        println!("imp.call c=WINMM!waveOutClose v={closed} by=layer-check");
         return ExitCode::FAILURE;
     }
     let mut header = Header {
@@ -175,6 +199,13 @@ fn tone(hz: f64, ms: u32, amplitude: i16) -> ExitCode {
 fn run(args: &[&str]) -> Option<ExitCode> {
     Some(match *args {
         ["query", rate, channels, bits] => query(
+            WAVE_MAPPER,
+            rate.parse().ok()?,
+            channels.parse().ok()?,
+            bits.parse().ok()?,
+        ),
+        ["query", rate, channels, bits, device] => query(
+            device.parse().ok()?,
             rate.parse().ok()?,
             channels.parse().ok()?,
             bits.parse().ok()?,
@@ -190,7 +221,9 @@ fn main() -> ExitCode {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     run(&args).unwrap_or_else(|| {
-        eprintln!("usage: waveprobe query <rate> <channels> <bits> | tone <hz> <ms> <amplitude>");
+        eprintln!(
+            "usage: waveprobe query <rate> <channels> <bits> [device] | tone <hz> <ms> <amplitude>"
+        );
         ExitCode::from(2)
     })
 }
