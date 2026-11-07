@@ -30,6 +30,14 @@ std = []
 # with none, and links `kernel_threads` through a game's rows crate.
 page = []
 
+# The thin export the page's check runs: `cargo build --example page_threads --features page
+# --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_threads"
+path = "page/threads.rs"
+crate-type = ["cdylib"]
+required-features = ["page"]
+
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }

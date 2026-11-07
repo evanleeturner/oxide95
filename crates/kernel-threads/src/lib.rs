@@ -32,6 +32,8 @@
 #[cfg(any(test, feature = "page"))]
 extern crate alloc;
 
+#[cfg(test)]
+mod checks;
 #[cfg(any(test, feature = "std"))]
 pub mod host;
 #[cfg(any(test, feature = "page"))]
