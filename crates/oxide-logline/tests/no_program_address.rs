@@ -14,7 +14,7 @@ const THIS_FILE: &str = "crates/oxide-logline/tests/no_program_address.rs";
 /// The runs the rule takes that are no program's address: the exact path, the
 /// exact value, the lines holding it, and what the value is. Anything else is
 /// a failure, the same value on a new path or a new line included.
-const KNOWN: [(&str, &str, usize, &str); 7] = [
+const KNOWN: [(&str, &str, usize, &str); 8] = [
     (
         "crates/kernel-time/src/lib.rs",
         "10000000",
@@ -46,6 +46,12 @@ const KNOWN: [(&str, &str, usize, &str); 7] = [
         "106aa070",
         1,
         "a SHA-256 round constant in the test's own table",
+    ),
+    (
+        "crates/layer-check/bench/worked_picture.rs",
+        "0045d927",
+        1,
+        "a colour of the worked picture",
     ),
 ];
 
