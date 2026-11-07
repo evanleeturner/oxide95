@@ -94,11 +94,17 @@ fn the_lines_each_call_writes() {
     let _ = no_counter.decrement(LINE_FROM, &counter);
     let mut answers = Answers::default();
     let lines = LINES.lock().unwrap_or_else(PoisonError::into_inner);
-    // A thread's number is its order of asking, so it is read here and not kept.
+    // A thread's number is its order of asking, so the one line that answers with
+    // it reads it here and does not keep it. Only that line: a number of 1 would
+    // also rewrite another call's answer of 1.
     let own = format!("v={id:x} ");
     for (at, line) in lines.iter().enumerate() {
         let name = LINES_WANT.get(at).map_or("line.more", |want| want.0);
-        answers.row(name, line.replacen(&own, "v=<id> ", 1));
+        if at == 0 {
+            answers.row(name, line.replacen(&own, "v=<id> ", 1));
+        } else {
+            answers.row(name, line);
+        }
     }
     answers.print("LINES", "crate");
     assert_eq!(answers.named(), LINES_WANT);
