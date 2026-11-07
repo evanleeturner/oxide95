@@ -35,3 +35,6 @@ log = { version = "0.4", features = ["kv"] }
 
 [dev-dependencies]
 oxide_logline = { path = "../oxide-logline" }
+# The checks under tests/ read the host back and the planted file: a feature cannot be turned on
+# for one integration test, and `required-features` would skip them silently.
+kernel_process = { path = ".", features = ["plant", "std"] }
