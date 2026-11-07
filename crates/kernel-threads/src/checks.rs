@@ -49,8 +49,6 @@ const BAD_ARGUMENT: u32 = 87;
 const HELD_LOCK: u32 = 0;
 /// The lock the rounds use.
 const ROUNDS_LOCK: u32 = 1;
-/// The address the lines' test calls from, so its lines can be told apart.
-const LINE_FROM: u32 = 0xC2;
 
 const ROW: Row = Row {
     file: "check",
@@ -70,144 +68,14 @@ const ROW: Row = Row {
     bad_argument: BAD_ARGUMENT,
 };
 
-const NO_COUNTER: Row = Row {
-    calls: Calls {
-        increment: None,
-        decrement: None,
-        ..ROW.calls
-    },
-    ..ROW
-};
+mod want;
+use want::{COUNTER_WANT, FREED_WANT, LOCK_WANT, OUT_WANT, SLOTS_WANT};
 
-const LOCK_WANT: &[(&str, &str)] = &[
-    ("id.nonzero", "true"),
-    ("id.stable", "true"),
-    ("free.other_in", "in"),
-    ("twice.returned", "true"),
-    ("id.two_differ", "true"),
-    ("held.second.inside", "0"),
-    ("one_left.second.inside", "0"),
-    ("both_left.second.inside", "1"),
-    ("handed.third.inside", "0"),
-    ("handed.third.in_on_release", "1"),
-    ("left.other_in", "in"),
-    ("reborn.other_in", "in"),
-    ("rounds.2.count", "exact"),
-    ("rounds.2.overlap", "0"),
-    ("rounds.4.count", "exact"),
-    ("rounds.4.overlap", "0"),
-];
+mod lines;
 
-const SLOTS_WANT: &[(&str, &str)] = &[
-    ("slot.taken", "true"),
-    ("first.unset", "0 error 0"),
-    ("first.set", "1 error 0"),
-    ("first.get", "7 error 0"),
-    ("value.full_width", "4294967295 error 0"),
-    ("value.zero", "0 error 0"),
-    ("keeps.get", "0 error 0"),
-    ("keeps.set", "1 error 4660"),
-    ("cross.b.unset", "0 error 0"),
-    ("cross.b.set", "1 error 0"),
-    ("cross.b.get", "9 error 0"),
-    ("cross.a.get", "7 error 0"),
-    ("error.second", "0 error 87"),
-    ("error.first", "4660"),
-    ("keeps.free", "1 error 4660"),
-    ("again.index", "same"),
-    ("again.a.unset", "0 error 0"),
-    ("again.b.unset", "0 error 0"),
-    ("bad.get", "0 error 87"),
-    ("bad.set", "0 error 87"),
-    ("bad.free", "0 error 87"),
-];
-
-/// The judge's answers. The crate refuses the read and the write, so its
-/// test is ignored with that reason; what Windows 95 answers is not read here.
-const FREED_WANT: &[(&str, &str)] = &[
-    ("freed.get", "0 error 0"),
-    ("freed.set", "1 error 0"),
-    ("freed.free", "0 error 87"),
-];
-
-const OUT_WANT: &[(&str, &str)] = &[
-    ("out.count", "64"),
-    ("out.answer", "4294967295"),
-    ("out.one_freed", "comes back"),
-];
-
-const COUNTER_WANT: &[(&str, &str)] = &[
-    ("inc.5", "6 held 6"),
-    ("dec.6", "5 held 5"),
-    ("inc.max", "-2147483648 held -2147483648"),
-    ("dec.min", "2147483647 held 2147483647"),
-    ("inc.m1", "0 held 0"),
-    ("dec.1", "0 held 0"),
-    ("dec.0", "-1 held -1"),
-    ("rounds.answers", "each once"),
-    ("rounds.sum", "exact"),
-];
-
-/// The lines' own answers, harvested from the first clean run: they say the
-/// lines are unchanged, and judge nothing beyond that.
-const LINES_WANT: &[(&str, &str)] = &[
-    (
-        "line.id",
-        "imp.call c=id a= v=<id> from=c2 by=kernel-threads",
-    ),
-    (
-        "line.initialize",
-        "imp.call c=initialize a=10 v=0 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.enter",
-        "imp.call c=enter a=10 v=0 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.leave",
-        "imp.call c=leave a=10 v=0 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.delete",
-        "imp.call c=delete a=10 v=0 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.slot_alloc",
-        "imp.call c=slot_alloc a= v=0 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.slot_set",
-        "imp.call c=slot_set a=0,7 v=1 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.slot_get",
-        "imp.call c=slot_get a=0 v=7 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.slot_free",
-        "imp.call c=slot_free a=0 v=1 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.slot_free.refused",
-        "imp.call c=slot_free a=0 v=0 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.increment",
-        "imp.call c=increment a= v=6 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.decrement",
-        "imp.call c=decrement a= v=5 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.increment.unimported",
-        "imp.call c=unimported a= v=6 from=c2 by=kernel-threads",
-    ),
-    (
-        "line.decrement.unimported",
-        "imp.call c=unimported a= v=5 from=c2 by=kernel-threads",
-    ),
-];
+#[cfg(all(windows, target_arch = "x86"))]
+#[allow(unsafe_code, reason = "the judge is the target's own calls, by hand")]
+mod judge;
 
 /// What each check asks, of the crate and of the judge alike.
 trait Back {
@@ -267,123 +135,6 @@ impl Back for ThreadCalls<Host> {
     }
     fn decrement(&self, counter: &AtomicI32) -> i32 {
         ThreadCalls::decrement(self, 0, counter)
-    }
-}
-
-/// The target's own answers, by calls declared here.
-#[cfg(all(windows, target_arch = "x86"))]
-#[allow(unsafe_code, reason = "the judge is the target's own calls, by hand")]
-mod judge {
-    use super::Back;
-    use std::cell::UnsafeCell;
-    use std::ffi::c_void;
-    use std::sync::atomic::AtomicI32;
-
-    /// `CRITICAL_SECTION`'s record; only the target reads its fields.
-    #[repr(C)]
-    #[derive(Default)]
-    struct Section {
-        debug: usize,
-        lock_count: i32,
-        recursion_count: i32,
-        owning_thread: usize,
-        lock_semaphore: usize,
-        spin_count: usize,
-    }
-
-    #[link(name = "kernel32")]
-    unsafe extern "system" {
-        fn GetCurrentThreadId() -> u32;
-        fn InitializeCriticalSection(section: *mut Section);
-        fn EnterCriticalSection(section: *mut Section);
-        fn LeaveCriticalSection(section: *mut Section);
-        fn DeleteCriticalSection(section: *mut Section);
-        fn TlsAlloc() -> u32;
-        fn TlsFree(index: u32) -> i32;
-        fn TlsGetValue(index: u32) -> *mut c_void;
-        fn TlsSetValue(index: u32, value: *mut c_void) -> i32;
-        fn GetLastError() -> u32;
-        fn SetLastError(code: u32);
-        fn InterlockedIncrement(value: *mut i32) -> i32;
-        fn InterlockedDecrement(value: *mut i32) -> i32;
-    }
-
-    /// The judge's own records, one a lock the checks name.
-    pub struct Kernel32 {
-        sections: [UnsafeCell<Section>; 2],
-    }
-
-    // SAFETY: only the target's calls touch a record, and sharing a critical
-    // section between threads is what those calls are for.
-    unsafe impl Sync for Kernel32 {}
-
-    impl Kernel32 {
-        pub fn new() -> Self {
-            Self {
-                sections: std::array::from_fn(|_| UnsafeCell::default()),
-            }
-        }
-
-        fn section(&self, lock: u32) -> *mut Section {
-            self.sections[usize::try_from(lock).expect("a lock's number fits")].get()
-        }
-    }
-
-    impl Back for Kernel32 {
-        fn id(&self) -> u32 {
-            // SAFETY: takes nothing.
-            unsafe { GetCurrentThreadId() }
-        }
-        fn initialize(&self, lock: u32) {
-            // SAFETY: the record is this judge's and does not move.
-            unsafe { InitializeCriticalSection(self.section(lock)) }
-        }
-        fn enter(&self, lock: u32) {
-            // SAFETY: the checks initialize a lock before they enter it.
-            unsafe { EnterCriticalSection(self.section(lock)) }
-        }
-        fn leave(&self, lock: u32) {
-            // SAFETY: the checks leave only what this thread entered.
-            unsafe { LeaveCriticalSection(self.section(lock)) }
-        }
-        fn delete(&self, lock: u32) {
-            // SAFETY: the checks delete a lock only when nothing holds it.
-            unsafe { DeleteCriticalSection(self.section(lock)) }
-        }
-        fn slot_alloc(&self) -> u32 {
-            // SAFETY: takes nothing.
-            unsafe { TlsAlloc() }
-        }
-        fn slot_free(&self, slot: u32) -> u32 {
-            // SAFETY: a bad index is refused, which is the question.
-            u32::from(unsafe { TlsFree(slot) } != 0)
-        }
-        fn slot_get(&self, slot: u32) -> u32 {
-            // SAFETY: a bad index is refused, which is the question.
-            let value = unsafe { TlsGetValue(slot) };
-            u32::try_from(value as usize).expect("a pointer is 32 bits here")
-        }
-        fn slot_set(&self, slot: u32, value: u32) -> u32 {
-            let value = usize::try_from(value).expect("a pointer holds 32 bits");
-            // SAFETY: the value is kept and never read through.
-            u32::from(unsafe { TlsSetValue(slot, value as *mut c_void) } != 0)
-        }
-        fn last_error(&self) -> u32 {
-            // SAFETY: takes nothing.
-            unsafe { GetLastError() }
-        }
-        fn set_last_error(&self, code: u32) {
-            // SAFETY: takes a number.
-            unsafe { SetLastError(code) }
-        }
-        fn increment(&self, counter: &AtomicI32) -> i32 {
-            // SAFETY: the pointer is the atomic's own, live for the call.
-            unsafe { InterlockedIncrement(counter.as_ptr()) }
-        }
-        fn decrement(&self, counter: &AtomicI32) -> i32 {
-            // SAFETY: the pointer is the atomic's own, live for the call.
-            unsafe { InterlockedDecrement(counter.as_ptr()) }
-        }
     }
 }
 
@@ -875,8 +626,8 @@ fn freed_answers(back: &Shared) -> Answers {
 /// The counters at each edge, each answer beside what the counter then holds,
 /// then 2 threads on one counter.
 fn counter_answers(back: &Shared) -> Answers {
-    let mut answers = Answers::default();
     type Step = fn(&(dyn Back + Send + Sync), &AtomicI32) -> i32;
+    let mut answers = Answers::default();
     let up: Step = |back, counter| back.increment(counter);
     let down: Step = |back, counter| back.decrement(counter);
     let steps: [(&'static str, i32, Step); 7] = [
@@ -997,88 +748,4 @@ fn th2_the_slots_run_out() {
 #[test]
 fn th3_the_counters_against_the_judge() {
     judged("TH3", COUNTER_WANT, counter_answers);
-}
-
-/// One line a call, caught. A line is told apart by its `from`.
-static LINES: Mutex<Vec<String>> = Mutex::new(Vec::new());
-
-struct Catch;
-
-#[derive(Default)]
-struct Fields(Vec<(String, String)>);
-
-impl<'kvs> log::kv::VisitSource<'kvs> for Fields {
-    fn visit_pair(
-        &mut self,
-        key: log::kv::Key<'kvs>,
-        value: log::kv::Value<'kvs>,
-    ) -> Result<(), log::kv::Error> {
-        self.0.push((key.to_string(), value.to_string()));
-        Ok(())
-    }
-}
-
-impl log::Log for Catch {
-    fn enabled(&self, _: &log::Metadata<'_>) -> bool {
-        true
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        let mut fields = Fields::default();
-        record.key_values().visit(&mut fields).ok();
-        let wanted = format!("{LINE_FROM:x}");
-        if fields
-            .0
-            .iter()
-            .any(|(key, value)| key == "from" && *value == wanted)
-        {
-            let shown: Vec<String> = fields
-                .0
-                .iter()
-                .map(|(key, value)| format!("{key}={value}"))
-                .collect();
-            LINES
-                .lock()
-                .unwrap_or_else(PoisonError::into_inner)
-                .push(format!("{} {}", record.args(), shown.join(" ")));
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static CATCH: Catch = Catch;
-
-#[test]
-fn the_lines_each_call_writes() {
-    let _one = ONE_AT_A_TIME.lock().unwrap_or_else(PoisonError::into_inner);
-    log::set_logger(&CATCH).expect("this test alone sets the logger");
-    log::set_max_level(log::LevelFilter::Debug);
-    let counter = AtomicI32::new(5);
-    let calls = ThreadCalls::new(&ROW, Host::new());
-    let id = calls.current_thread_id(LINE_FROM);
-    calls.initialize(LINE_FROM, 0x10);
-    calls.enter(LINE_FROM, 0x10);
-    calls.leave(LINE_FROM, 0x10);
-    calls.delete(LINE_FROM, 0x10);
-    let slot = calls.slot_alloc(LINE_FROM);
-    let _ = calls.slot_set(LINE_FROM, slot, 7);
-    let _ = calls.slot_get(LINE_FROM, slot);
-    let _ = calls.slot_free(LINE_FROM, slot);
-    let _ = calls.slot_free(LINE_FROM, slot);
-    let _ = calls.increment(LINE_FROM, &counter);
-    let _ = calls.decrement(LINE_FROM, &counter);
-    let no_counter = ThreadCalls::new(&NO_COUNTER, Host::new());
-    let _ = no_counter.increment(LINE_FROM, &counter);
-    let _ = no_counter.decrement(LINE_FROM, &counter);
-    let mut answers = Answers::default();
-    let lines = LINES.lock().unwrap_or_else(PoisonError::into_inner);
-    // A thread's number is its order of asking, so it is read here and not kept.
-    let own = format!("v={id:x} ");
-    for (at, line) in lines.iter().enumerate() {
-        let name = LINES_WANT.get(at).map_or("line.more", |want| want.0);
-        answers.row(name, line.replacen(&own, "v=<id> ", 1));
-    }
-    answers.print("LINES", "crate");
-    assert_eq!(answers.named(), LINES_WANT);
 }
