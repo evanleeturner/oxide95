@@ -14,71 +14,20 @@
     reason = "the judge reaches the target's calls by hand-declared names"
 )]
 
+#[allow(dead_code, reason = "each file reads only some of the shared rows")]
+#[path = "common/rows.rs"]
+mod rows;
+
 use kernel_process::host::Host;
 use kernel_process::page::Page;
-use kernel_process::table::{Calls, Errors, Module, Row, Startup};
+use kernel_process::table::Module;
+#[cfg(windows)]
+use kernel_process::table::{Row, Startup};
 use kernel_process::{Access, Front, Process};
+use rows::ROW;
 use std::cell::Cell;
-use std::fmt::Display;
+use std::fmt::{Display, Write as _};
 use std::process::Command;
-
-static ROW: Row = Row {
-    file: "checks",
-    calls: Calls {
-        command_line: "K!GetCommandLineA",
-        module_handle: "K!GetModuleHandleA",
-        module_file_name: "K!GetModuleFileNameA",
-        version: "K!GetVersion",
-        current_process: "K!GetCurrentProcess",
-        load_library: "K!LoadLibraryA",
-        proc_address: "K!GetProcAddress",
-        free_library: "K!FreeLibrary",
-        last_error: "K!GetLastError",
-        set_last_error: "K!SetLastError",
-        exit: "K!ExitProcess",
-        environment: "K!GetEnvironmentStrings",
-        environment_w: "K!GetEnvironmentStringsW",
-        free_environment: "K!FreeEnvironmentStringsA",
-        free_environment_w: "K!FreeEnvironmentStringsW",
-        startup_info: "K!GetStartupInfoA",
-        set_environment: "K!SetEnvironmentVariableA",
-        terminate: "K!TerminateProcess",
-        load_module: "K!LoadModule",
-        create_process: "K!CreateProcessA",
-        debug_string: "K!OutputDebugStringA",
-        debug_break: "K!DebugBreak",
-        raise: "K!RaiseException",
-        set_filter: "K!SetUnhandledExceptionFilter",
-        unhandled_filter: "K!UnhandledExceptionFilter",
-        bad_read: "K!IsBadReadPtr",
-        bad_write: "K!IsBadWritePtr",
-        bad_code: "K!IsBadCodePtr",
-        unwind: "K!RtlUnwind",
-    },
-    command_line: "PROG.EXE -x",
-    own: 0x0200_0000,
-    path: "C:\\DIR\\PROG.EXE",
-    version: 0x23f0_0206,
-    current_process: 0xffff_ffff,
-    environment: b"A=1\0PATH=C:\\\0\0",
-    startup: Startup {
-        flags: 0,
-        show_window: 1,
-        reserved_count: 0,
-        reserved: 0,
-    },
-    modules: &[Module {
-        name: "KERNEL32.DLL",
-        handle: 0x2000_0000,
-        entries: &["Sleep"],
-    }],
-    errors: Errors {
-        module_not_found: 126,
-        name_not_found: 127,
-        bad_handle: 6,
-        file_not_found: 2,
-    },
-};
 
 /// A handle no table gave and no module holds.
 const NO_MODULE: u32 = 0x3000_0000;
@@ -982,7 +931,7 @@ impl log::Log for Lines {
                 key: log::kv::Key<'kvs>,
                 value: log::kv::Value<'kvs>,
             ) -> Result<(), log::kv::Error> {
-                self.0.push_str(&format!(" {key}={value}"));
+                write!(self.0, " {key}={value}").ok();
                 Ok(())
             }
         }

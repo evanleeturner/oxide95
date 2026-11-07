@@ -29,6 +29,13 @@ plant = []
 # The host back, `host::Host`: Linux, macOS and Windows through `std` alone.
 std = []
 
+# The thin export the page's check runs: `cargo build -p kernel_process --example page_process
+# --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_process"
+path = "page/process.rs"
+crate-type = ["cdylib"]
+
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }
