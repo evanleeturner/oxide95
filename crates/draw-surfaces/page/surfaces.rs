@@ -6,13 +6,14 @@
 //!
 //! Beside the script stands a second desk with the keys over it, leaked at first use: a page's
 //! listener hands it what the browser raised, and the script reads the front's answers from
-//! outside. It shares nothing with [`setup`], which a key's read never calls.
+//! outside. It shares nothing with [`setup`], which a key's read never calls. Beside those, the
+//! pace's own desk, and a copy of the keys a tap's plant reads.
 #![expect(
     unsafe_code,
     reason = "`#[unsafe(no_mangle)]` is how a wasm export keeps its name"
 )]
 
-use core::cell::RefCell;
+use core::cell::{Cell, RefCell};
 
 use draw::easel::Easel;
 use draw::page::Page;
@@ -27,6 +28,11 @@ use window_input::table::{Calls, Row};
 #[path = "../bench/worked_script.rs"]
 mod worked_script;
 
+#[path = "../../window-input/bench/loop_checks.rs"]
+#[allow(dead_code, reason = "each route's program takes what its route needs")]
+mod loop_checks;
+
+use loop_checks::{Fronts, Slowed, TapKeys, bodies_on, lines, spin, timer_reach};
 use worked_script::{CELLS, Check, HEIGHT, Plant, Script, Terms, WIDTH};
 
 const WINDOW: u32 = 1;
@@ -85,6 +91,14 @@ thread_local! {
             Box::leak(Box::new(Desk::new(Input::new(Host::new(640, 480)))));
         KeyDesk { desk, front: Front::new(&ROW, desk) }
     };
+    static TAP: RefCell<TapKeys> = const { RefCell::new(TapKeys::new()) };
+    static PACE: Fronts<'static, Slowed<Host>> = {
+        let back = Slowed::new(Host::new(640, 480));
+        let desk: &'static Desk<Input<Slowed<Host>>> =
+            Box::leak(Box::new(Desk::new(Input::new(back))));
+        Fronts::new(desk)
+    };
+    static SPIN: Cell<u32> = const { Cell::new(0) };
 }
 
 /// A virtual key as an event holds it; a script's number past a byte is a fault of the script.
@@ -192,6 +206,7 @@ pub extern "C" fn key_hand(key: u32, down: u32) {
         key: key_byte(key),
         down: down != 0,
     };
+    TAP.with_borrow_mut(|tap| tap.apply(event));
     KEYS.with(|keys| keys.desk.screen().back().hand(event));
 }
 
@@ -222,6 +237,51 @@ pub extern "C" fn key_answer(key: u32) -> u32 {
 pub extern "C" fn key_toggled(key: u32) -> u32 {
     let at = usize::from(key_byte(key));
     KEYS.with(|keys| u32::from(keys.desk.screen().keys().toggled[at]))
+}
+
+/// A tap's planted read: the copy that holds a pressed-since bit, handed what `key_hand` was.
+#[unsafe(no_mangle)]
+pub extern "C" fn tap_read(key: u32) -> u32 {
+    TAP.with_borrow_mut(|tap| tap.answer(key_byte(key)))
+}
+
+/// A timer's message from the queue to the dispatch, by the front or, when `handed_on` is not 0,
+/// the planted copy: whether it was peeked at bit 0, reached at bit 1, the answer above them.
+#[unsafe(no_mangle)]
+pub extern "C" fn timer_answer(handed_on: u32) -> u32 {
+    let timer = PACE.with(|fronts| timer_reach(fronts.desk(), handed_on != 0));
+    u32::from(timer.peeked) | u32::from(timer.reached) << 1 | timer.answer << 2
+}
+
+/// `count` calls of the one `call` numbers, for the script to time, as a wasm export has no clock.
+#[unsafe(no_mangle)]
+pub extern "C" fn pace_loop(call: u32, count: u32) {
+    PACE.with(|fronts| fronts.run(call as usize, count));
+}
+
+/// The pace's logger on, at every line.
+#[unsafe(no_mangle)]
+pub extern "C" fn pace_logger() {
+    bodies_on();
+}
+
+/// The log lines rendered since the page began.
+#[unsafe(no_mangle)]
+pub extern "C" fn pace_lines() -> u32 {
+    u32::try_from(lines()).unwrap_or(u32::MAX)
+}
+
+/// `count` turns of nothing, for the script to time.
+#[unsafe(no_mangle)]
+pub extern "C" fn pace_spin(count: u32) {
+    spin(count);
+}
+
+/// The pace's planted wait: `count` turns at the head of each pump.
+#[unsafe(no_mangle)]
+pub extern "C" fn pace_plant(count: u32) {
+    SPIN.set(count);
+    PACE.with(|fronts| fronts.desk().screen().back().plant(|| spin(SPIN.get())));
 }
 
 /// The chord [`remap::read`] gives for the one pressed, under the row `plant` names: the key,

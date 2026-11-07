@@ -9,9 +9,18 @@
 // the front, one JSON row a read, then a last `done` row. The rewrite of a key by a remap row
 // stands in that listener alone, as no crate writes it yet.
 //
+// What each key check's word reads:
+//   WD2  a key's browser code to its number, on its down and its up
+//   WD3  a key held when the page loses the focus reads up, its toggle kept
+//   WD4  a tap between 2 reads, no pump between them
+//   WD5  a timer's message with no window, from the queue to the dispatch
+//   WD6  each of 3 calls a second, the logger off and on
+//   WD8  a pressed chord reads as the chord its remap row keeps
+// WD1 and WD7 are a host's alone: `native_keys.rs` reads them.
+//
 // Call: PLAYWRIGHT=<playwright's index.mjs> \
 //   node surfaces-browser.mjs <wasm> <chromium|firefox> <DS1|DS2|DS3> <plant> <frames>
-//   node surfaces-browser.mjs <wasm> <chromium|firefox> <WD2|WD3|WD8> <plant>
+//   node surfaces-browser.mjs <wasm> <chromium|firefox> <WD2|WD3|WD4|WD5|WD6|WD8> <plant>
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
@@ -28,7 +37,21 @@ const SETTLE_MS = 150;
 const CHECKS = ["DS1", "DS2", "DS3"];
 const PLANTS = ["none", "palette", "copy", "flip-stops", "leak"];
 /// A key check's one plant, by check. These indexes are not the script's.
-const KEY_PLANTS = { WD2: "map-keya-b", WD3: "active-unwired", WD8: "row-swapped" };
+const KEY_PLANTS = {
+  WD2: "map-keya-b",
+  WD3: "active-unwired",
+  WD4: "holds-bit",
+  WD5: "hands-timer",
+  WD6: "slow-pump",
+  WD8: "row-swapped",
+};
+const PACE_CALLS = ["GetAsyncKeyState", "PeekMessageA", "GetCursorPos"];
+const PACE_FIRST_COUNT = 1024;
+const PACE_LEAST_MS = 200;
+const SPIN_FIRST_COUNT = 1 << 16;
+const SPIN_LEAST_MS = 50;
+const SPIN_READS = 100;
+const MS_PER_SECOND = 1000;
 const PRESSED_CODES = ["KeyA", "Digit1", "ArrowUp", "ShiftLeft", "F1"];
 const CHORDS = [
   ["Ctrl+E", "KeyE"],
@@ -170,6 +193,7 @@ async function keyRig(page, wasmPath, map, blurWired, rewrite, rowPlant) {
         fresh: () => {
           seen = [];
         },
+        arrived: () => ({ seen, handed }),
         read: () => {
           const down = [];
           const toggled = [];
@@ -192,8 +216,57 @@ async function keyRig(page, wasmPath, map, blurWired, rewrite, rowPlant) {
   );
 }
 
+/** The planted wait in each pump, a wasm thread having no sleep: a count of turns timed here to
+ * last 1 ms, then read again at the count it set. */
+async function plantSpin(page) {
+  return page.evaluate(
+    ({ first, least, reads }) => {
+      let count = first;
+      for (;;) {
+        const started = performance.now();
+        window.e.pace_spin(count);
+        const ms = performance.now() - started;
+        if (ms >= least) {
+          count = Math.ceil(count / ms);
+          break;
+        }
+        count *= 2;
+      }
+      window.e.pace_plant(count);
+      const started = performance.now();
+      for (let read = 0; read < reads; read++) window.e.pace_spin(count);
+      return { count, ms: (performance.now() - started) / reads };
+    },
+    { first: SPIN_FIRST_COUNT, least: SPIN_LEAST_MS, reads: SPIN_READS },
+  );
+}
+
+/** Each call's row, the logger off and then on, timed in the page as a wasm export has no clock. */
+async function paceRows(page, plant, row) {
+  if (plant !== "none") row({ row: "spin", ...(await plantSpin(page)) });
+  for (const logger of ["off", "on"]) {
+    if (logger === "on") await page.evaluate(() => window.e.pace_logger());
+    for (const [call, name] of PACE_CALLS.entries()) {
+      const { count, ms, lines } = await page.evaluate(
+        ({ call, first, least }) => {
+          for (let count = first; ; count *= 2) {
+            const before = window.e.pace_lines();
+            const started = performance.now();
+            window.e.pace_loop(call, count);
+            const ms = performance.now() - started;
+            if (ms >= least) return { count, ms, lines: window.e.pace_lines() - before };
+          }
+        },
+        { call, first: PACE_FIRST_COUNT, least: PACE_LEAST_MS },
+      );
+      const seconds = ms / MS_PER_SECOND;
+      row({ row: "rate", call: name, logger, count, seconds, per_second: count / seconds, lines });
+    }
+  }
+}
+
 /** One key check, one JSON row a read. A plant is this script's wrong number, its listener left
- * off, or the wasm's wrong row: none is in a crate's own code. */
+ * off, or the wasm's wrong row, copy or wait: none is in a crate's own code. */
 async function keyCheck(page, wasmPath, check, plant) {
   if (plant !== "none" && plant !== KEY_PLANTS[check]) {
     throw new Error(`no plant ${plant} on ${check}`);
@@ -207,7 +280,24 @@ async function keyCheck(page, wasmPath, check, plant) {
   await keyRig(page, wasmPath, map, blurWired, rewrite, rowPlant);
   const read = () => page.evaluate(() => window.rig.read());
   const row = (fields) => console.log(JSON.stringify(fields));
-  if (check === "WD2") {
+  if (check === "WD4") {
+    const name = plant === "none" ? "key_answer" : "tap_read";
+    const answer = () => page.evaluate(([name, key]) => window.e[name](key), [name, map.KeyA]);
+    row({ row: "read", stage: "before", answer: await answer() });
+    await page.evaluate(() => window.rig.fresh());
+    await page.keyboard.press("KeyA");
+    const after = await answer();
+    const { seen, handed } = await page.evaluate(() => window.rig.arrived());
+    row({ row: "read", stage: "after", answer: after, seen, handed });
+  } else if (check === "WD5") {
+    const packed = await page.evaluate(
+      (handedOn) => window.e.timer_answer(handedOn),
+      Number(plant !== "none"),
+    );
+    row({ row: "timer", peeked: (packed & 1) !== 0, reached: (packed & 2) !== 0, answer: packed >>> 2 });
+  } else if (check === "WD6") {
+    await paceRows(page, plant, row);
+  } else if (check === "WD2") {
     for (const code of PRESSED_CODES) {
       await page.evaluate(() => window.rig.fresh());
       await page.keyboard.down(code);

@@ -154,6 +154,29 @@ fn post_quit_leaves_wm_quit_with_its_code() {
     );
 }
 
+/// A timer's message names no window and holds its procedure in `l`: USER32
+/// calls that procedure. This front calls nothing and answers 0.
+#[test]
+#[ignore = "red by design: a timer's message with no window reaches no procedure here, a named difference not fixed here"]
+fn a_timer_message_with_no_window_reaches_its_procedure() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let timer = Message {
+        window: 0,
+        message: 0x113,
+        w: 7,
+        l: PROCEDURE,
+        ..Message::default()
+    };
+    let mut called = Vec::new();
+    let answer = front.dispatch_message(&timer, |procedure, _| {
+        called.push(procedure);
+        1
+    });
+    assert_eq!(called, [PROCEDURE]);
+    assert_eq!(answer, 1);
+}
+
 /// `DispatchMessageA` hands the call its window's class's procedure and
 /// answers what it answers; a window not here calls nothing and answers 0.
 #[test]

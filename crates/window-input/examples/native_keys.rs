@@ -1,11 +1,22 @@
 // SPDX-License-Identifier: MIT
-//! The native back's keys and its grab through `Desk` and `Input`, one check a run: each
-//! event the host raised, then what the front, the queue and the keys answer, one JSON line
-//! each. It judges nothing. A `need` line asks the script outside to act by `xdotool`: the
-//! program never presses a key of its own. A bounded run, and never a test: Linux turns the
-//! loop on the main thread alone.
+//! The native back's keys, its grab, a tap, a timer and the loop's pace through `Desk` and
+//! `Input`, one check a run: each event the host raised, then what the front, the queue and
+//! the keys answer, one JSON line each. It judges nothing. A `need` line asks the script
+//! outside to act by `xdotool`: the program never presses a key of its own. A bounded run, and
+//! never a test: Linux turns the loop on the main thread alone.
 //!
-//! `DISPLAY=<a private screen> timeout 60 native_keys <WD1|WD3|WD7> <plant>`
+//! `DISPLAY=<a private screen> timeout 60 native_keys <check> <plant>`
+//!
+//! What each check word reads:
+//!
+//! - `WD1`: a key down and up, from the host's event to the front's answer.
+//! - `WD3`: a key held when the focus goes reads up, its toggle kept.
+//! - `WD4`: a tap between 2 reads, no pump between them.
+//! - `WD5`: a timer's message with no window, from the queue to the dispatch.
+//! - `WD6`: each of 3 calls a second, the logger off and on.
+//! - `WD7`: the pointer's grab: each hold, the fallback, the hidden cursor.
+//!
+//! `WD2` and `WD8` are a browser's alone: `surfaces-browser.mjs` reads them.
 //!
 //! It exits 0 once the host made both windows, 1 otherwise, 2 on a word it does not know.
 use std::cell::RefCell;
@@ -20,6 +31,12 @@ use window_input::Input;
 use window_input::front::Front;
 use window_input::table::{Calls, Row};
 
+#[path = "../bench/loop_checks.rs"]
+#[allow(dead_code, reason = "each route's program takes what its route needs")]
+mod loop_checks;
+
+use loop_checks::{TapKeys, pace, print_read, print_timer, timer_reach};
+
 const SCREEN: (i32, i32) = (640, 480);
 const FIRST: u32 = 1;
 const SECOND: u32 = 2;
@@ -29,6 +46,10 @@ const PUMP_GAP: Duration = Duration::from_millis(20);
 const MADE_TURNS: u32 = 25;
 /// 5 s of pumps: what an outside act is given to arrive.
 const AWAIT_TURNS: u32 = 250;
+/// What a tap asked of the script outside is given to arrive, with no pump.
+const TAP_WAIT: Duration = Duration::from_millis(500);
+/// The planted wait in each pump.
+const PUMP_WAIT: Duration = Duration::from_millis(1);
 const KEY_A: u8 = 0x41;
 const KEY_B: u8 = 0x42;
 const ASYNC_DOWN: u32 = 0x8000;
@@ -61,6 +82,12 @@ enum Plant {
     ActiveUnwired,
     /// A grab that asks `Locked` and has no fallback.
     LockedAlone,
+    /// A tap read from a copy of the keys that holds a pressed-since bit.
+    HoldsBit,
+    /// A timer's message handed to its procedure by a copy of the dispatch.
+    HandsTimer,
+    /// Each pump sleeps first.
+    SlowPump,
 }
 
 impl Plant {
@@ -70,6 +97,9 @@ impl Plant {
             "index-off" => Some(Self::IndexOff),
             "active-unwired" => Some(Self::ActiveUnwired),
             "locked-alone" => Some(Self::LockedAlone),
+            "holds-bit" => Some(Self::HoldsBit),
+            "hands-timer" => Some(Self::HandsTimer),
+            "slow-pump" => Some(Self::SlowPump),
             _ => None,
         }
     }
@@ -81,6 +111,7 @@ struct Seen<S> {
     back: S,
     plant: Plant,
     events: RefCell<Vec<Event>>,
+    tap: RefCell<TapKeys>,
 }
 
 impl<S: Screen> Screen for Seen<S> {
@@ -97,6 +128,9 @@ impl<S: Screen> Screen for Seen<S> {
     }
 
     fn pump(&self, into: &mut dyn FnMut(Event)) {
+        if self.plant == Plant::SlowPump {
+            thread::sleep(PUMP_WAIT);
+        }
         self.back.pump(&mut |event| {
             println!(
                 r#"{{"row":"event","ms":{},"event":{:?}}}"#,
@@ -104,6 +138,7 @@ impl<S: Screen> Screen for Seen<S> {
                 format!("{event:?}")
             );
             self.events.borrow_mut().push(event);
+            self.tap.borrow_mut().apply(event);
             match (self.plant, event) {
                 (Plant::IndexOff, Event::Key { window, key, down }) => into(Event::Key {
                     window,
@@ -265,6 +300,34 @@ fn blur_check(rig: &Rig, front: &Front<'_, Seen<Native>>) {
     read("let-go", rig, front);
 }
 
+/// One answer for the key under a tap: the front's, or the planted copy's after the same pump.
+fn tap_answer(rig: &Rig, front: &Front<'_, Seen<Native>>, plant: Plant) -> u32 {
+    if plant == Plant::HoldsBit {
+        rig.pump();
+        rig.screen().back().tap.borrow_mut().answer(KEY_A)
+    } else {
+        front.get_async_key_state(u32::from(KEY_A))
+    }
+}
+
+/// A key pressed and let go from outside between 2 reads, the program not pumping: both events
+/// reach the second read's one pump.
+fn tap_check(rig: &Rig, front: &Front<'_, Seen<Native>>, plant: Plant) {
+    focus(rig, FIRST, FIRST_PLACE, |event| {
+        matches!(
+            event,
+            Event::Active {
+                window: FIRST,
+                active: true
+            }
+        )
+    });
+    print_read("before", tap_answer(rig, front, plant));
+    println!(r#"{{"need":"key","key":{LETTER_A:?}}}"#);
+    thread::sleep(TAP_WAIT);
+    print_read("after", tap_answer(rig, front, plant));
+}
+
 /// Each hold asked, then the program's lock as the back takes it, the cursor hidden, the
 /// lock let go.
 fn grab_check(rig: &Rig, plant: Plant) {
@@ -310,7 +373,7 @@ fn grab_check(rig: &Rig, plant: Plant) {
 fn main() -> ExitCode {
     let words: Vec<String> = std::env::args().skip(1).collect();
     let [check, plant] = words.as_slice() else {
-        println!("call: native_keys <WD1|WD3|WD7> <plant>");
+        println!("call: native_keys <WD1|WD3|WD4|WD5|WD6|WD7> <plant>");
         return ExitCode::from(2);
     };
     let Some(plant) = Plant::named(plant) else {
@@ -328,6 +391,7 @@ fn main() -> ExitCode {
         back,
         plant,
         events: RefCell::new(Vec::new()),
+        tap: RefCell::new(TapKeys::new()),
     }));
     let front = Front::new(&ROW, &rig);
     rig.screen().place(FIRST, FIRST_PLACE, true);
@@ -346,6 +410,9 @@ fn main() -> ExitCode {
     match check.as_str() {
         "WD1" => keys_check(&rig, &front),
         "WD3" => blur_check(&rig, &front),
+        "WD4" => tap_check(&rig, &front, plant),
+        "WD5" => print_timer(timer_reach(&rig, plant == Plant::HandsTimer)),
+        "WD6" => pace(&rig),
         "WD7" => grab_check(&rig, plant),
         _ => {
             println!("no check {check}");

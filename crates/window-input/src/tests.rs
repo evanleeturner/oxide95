@@ -450,3 +450,22 @@ fn a_repeat_sets_bit_30_and_shift_types_the_capital() {
         [(0x100, 0x10, 1), (0x100, 0x41, 1), (0x102, 0x41, 1)]
     );
 }
+
+/// A key pressed and let go between 2 reads: USER32 answers 1 at the second,
+/// its pressed-since bit. `Keys` holds what is down now and no such bit, so
+/// this front answers 0.
+#[test]
+#[ignore = "red by design: a tap between 2 reads answers 0 here and 1 on USER32, a named difference not fixed here"]
+fn a_tap_between_two_reads_answers_1() {
+    let desk = Desk::new(Input::new(Page::new(0x280, 0x1e0)));
+    let front = Front::new(&ROW, &desk);
+    assert_eq!(front.get_async_key_state(0x41), 0);
+    for down in [true, false] {
+        desk.screen().back().hand(Event::Key {
+            window: 1,
+            key: 0x41,
+            down,
+        });
+    }
+    assert_eq!(front.get_async_key_state(0x41), 1);
+}

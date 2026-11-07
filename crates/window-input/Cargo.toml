@@ -43,6 +43,12 @@ native = ["desk", "window/native"]
 name = "native_keys"
 required-features = ["native"]
 
+# A tap, a timer and the loop's pace under Wine, on the desk and on the direct back: built for
+# `i686-pc-windows-gnu`, `-lgdi32 -luser32` last on the link line.
+[[example]]
+name = "wine_loop"
+required-features = ["desk", "user32"]
+
 [dependencies]
 window = { path = "../window" }
 oxide_trace = { path = "../oxide-trace" }
