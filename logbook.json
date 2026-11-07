@@ -512,6 +512,54 @@
       "level": "E",
       "fields": { "panic": "the panic's message and place" },
       "template": "the track's program panicked: {panic}"
+    },
+    {
+      "id": "logline.check.error",
+      "level": "E",
+      "fields": {},
+      "template": "the log check's error line"
+    },
+    {
+      "id": "logline.check.warn",
+      "level": "W",
+      "fields": {},
+      "template": "the log check's warning line"
+    },
+    {
+      "id": "logline.check.info",
+      "level": "I",
+      "fields": {},
+      "template": "the log check's info line"
+    },
+    {
+      "id": "logline.check.debug",
+      "level": "D",
+      "fields": {},
+      "template": "the log check's debug line"
+    },
+    {
+      "id": "logline.check.trace",
+      "level": "T",
+      "fields": {},
+      "template": "the log check's trace line"
+    },
+    {
+      "id": "logline.check.text",
+      "level": "I",
+      "fields": { "v": "a text value from the check's table" },
+      "template": "the log check wrote the text {v}"
+    },
+    {
+      "id": "logline.check.typed",
+      "level": "I",
+      "fields": { "count": "a whole number", "below": "a negative number", "ratio": "a float", "ok": "a truth value", "letter": "one character" },
+      "template": "the log check wrote the typed values {count} {below} {ratio} {ok} {letter}"
+    },
+    {
+      "id": "logline.check.million",
+      "level": "I",
+      "fields": { "t": "the writing thread's number", "n": "the line's number in that thread, 6 digits" },
+      "template": "thread {t} wrote its line {n}"
     }
   ]
 }
