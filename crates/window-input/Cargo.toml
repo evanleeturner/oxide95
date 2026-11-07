@@ -33,6 +33,15 @@ desk = ["window/desk"]
 # The direct back, `user32`, on the Win32 target alone: each front asks the
 # real USER32. No allocator, no desk, so it links into the swap.
 user32 = ["window/user32"]
+# A host's back, for the program below, which no game's build takes.
+native = ["desk", "window/native"]
+
+# The native back's keys and grab through the desk and the keys, on a private screen, its
+# keys given from outside: run under a time limit, never a test, as Linux turns the loop on
+# the main thread alone.
+[[example]]
+name = "native_keys"
+required-features = ["native"]
 
 [dependencies]
 window = { path = "../window" }

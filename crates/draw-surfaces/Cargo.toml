@@ -70,4 +70,5 @@ log = { version = "0.4", features = ["kv"] }
 [dev-dependencies]
 draw = { path = "../draw", features = ["page"] }
 window = { path = "../window", features = ["desk", "page"] }
+window-input = { path = "../window-input", features = ["desk"] }
 oxide_logline = { path = "../oxide-logline" }

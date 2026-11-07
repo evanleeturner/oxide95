@@ -5,11 +5,18 @@
 // be. It prints one JSON line a link and judges nothing; a separate script scores them.
 // The page plays no sound and holds no element that could.
 //
+// A key check goes its own way: the browser's own key presses through a listener, the keys and
+// the front, one JSON row a read, then a last `done` row. The rewrite of a key by a remap row
+// stands in that listener alone, as no crate writes it yet.
+//
 // Call: PLAYWRIGHT=<playwright's index.mjs> \
 //   node surfaces-browser.mjs <wasm> <chromium|firefox> <DS1|DS2|DS3> <plant> <frames>
+//   node surfaces-browser.mjs <wasm> <chromium|firefox> <WD2|WD3|WD8> <plant>
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { inflateSync } from "node:zlib";
+
+import { virtualKey } from "../../web-shell/page/keys.mjs";
 
 const WIDTH = 320;
 const HEIGHT = 200;
@@ -20,6 +27,15 @@ const FIRST_READ = 101;
 const SETTLE_MS = 150;
 const CHECKS = ["DS1", "DS2", "DS3"];
 const PLANTS = ["none", "palette", "copy", "flip-stops", "leak"];
+/// A key check's one plant, by check. These indexes are not the script's.
+const KEY_PLANTS = { WD2: "map-keya-b", WD3: "active-unwired", WD8: "row-swapped" };
+const PRESSED_CODES = ["KeyA", "Digit1", "ArrowUp", "ShiftLeft", "F1"];
+const CHORDS = [
+  ["Ctrl+E", "KeyE"],
+  ["Ctrl+K", "KeyK"],
+];
+const CTRL_CODE = "ControlLeft";
+const KEY_B = 0x42;
 /// The wasm's `OUTSIDE_LINKS`, by index.
 const SCREENSHOT = 2;
 const MEMORY_BYTES = 3;
@@ -113,6 +129,114 @@ async function frames(page, total) {
   return { differ: Math.abs(last - first), of: first, ms: Date.now() - started };
 }
 
+/** The wasm in the page with the listeners on it, and `window.rig` to read from outside. `map`
+ * is the codes' numbers as node read them; `blurWired` and `rewrite` are the listeners' terms,
+ * `rowPlant` the row the rewrite reads. */
+async function keyRig(page, wasmPath, map, blurWired, rewrite, rowPlant) {
+  await page.evaluate(
+    async ({ wasm, map, blurWired, rewrite, rowPlant }) => {
+      const KEY_COUNT = 256;
+      const KEY_A = 0x41;
+      const ASYNC_DOWN = 0x8000;
+      const KEY_MASK = 0xff;
+      const CTRL_MASK = 1 << 8;
+      const ALT_MASK = 1 << 9;
+      const bytes = Uint8Array.from(atob(wasm), (c) => c.charCodeAt(0));
+      const { instance } = await WebAssembly.instantiate(bytes, {});
+      const e = instance.exports;
+      window.e = e;
+      let seen = [];
+      let handed = null;
+      let chord = null;
+      const listen = (event) => {
+        event.preventDefault();
+        const down = event.type === "keydown";
+        if (down) seen.push({ type: event.type, code: event.code, isTrusted: event.isTrusted });
+        let key = map[event.code];
+        if (rewrite) {
+          const packed = e.remap_read(rowPlant, key, Number(event.ctrlKey), Number(event.altKey));
+          key = packed & KEY_MASK;
+          if (down) {
+            chord = { key, ctrl: (packed & CTRL_MASK) !== 0, alt: (packed & ALT_MASK) !== 0 };
+          }
+        }
+        if (down) handed = key;
+        e.key_hand(key, Number(down));
+      };
+      window.addEventListener("keydown", listen);
+      window.addEventListener("keyup", listen);
+      if (blurWired) window.addEventListener("blur", () => e.key_active(0));
+      window.rig = {
+        fresh: () => {
+          seen = [];
+        },
+        read: () => {
+          const down = [];
+          const toggled = [];
+          for (let key = 0; key < KEY_COUNT; key++) {
+            if (e.key_answer(key) & ASYNC_DOWN) down.push(key);
+          }
+          for (let key = 0; key < KEY_COUNT; key++) {
+            if (e.key_toggled(key)) toggled.push(key);
+          }
+          return { seen, handed, chord, down, toggled, a: down.includes(KEY_A) };
+        },
+        blurred: () => {
+          window.dispatchEvent(new Event("blur"));
+          e.key_pump();
+          return window.rig.read();
+        },
+      };
+    },
+    { wasm: readFileSync(wasmPath).toString("base64"), map, blurWired, rewrite, rowPlant },
+  );
+}
+
+/** One key check, one JSON row a read. A plant is this script's wrong number, its listener left
+ * off, or the wasm's wrong row: none is in a crate's own code. */
+async function keyCheck(page, wasmPath, check, plant) {
+  if (plant !== "none" && plant !== KEY_PLANTS[check]) {
+    throw new Error(`no plant ${plant} on ${check}`);
+  }
+  const codes = [...PRESSED_CODES, ...CHORDS.map(([, code]) => code), CTRL_CODE];
+  const map = Object.fromEntries(codes.map((code) => [code, virtualKey(code)]));
+  if (plant === "map-keya-b") map.KeyA = KEY_B;
+  const blurWired = plant !== "active-unwired";
+  const rewrite = check === "WD8";
+  const rowPlant = plant === "row-swapped" ? 1 : 0;
+  await keyRig(page, wasmPath, map, blurWired, rewrite, rowPlant);
+  const read = () => page.evaluate(() => window.rig.read());
+  const row = (fields) => console.log(JSON.stringify(fields));
+  if (check === "WD2") {
+    for (const code of PRESSED_CODES) {
+      await page.evaluate(() => window.rig.fresh());
+      await page.keyboard.down(code);
+      const held = await read();
+      await page.keyboard.up(code);
+      const after = await read();
+      const { seen, handed, down } = held;
+      row({ row: "key", code, seen, handed, down, after: after.down });
+    }
+  } else if (check === "WD3") {
+    await page.keyboard.down("KeyA");
+    const held = await read();
+    row({ row: "read", stage: "held", a: held.a, toggled: held.toggled });
+    const blurred = await page.evaluate(() => window.rig.blurred());
+    row({ row: "read", stage: "blurred", a: blurred.a, toggled: blurred.toggled });
+    await page.keyboard.up("KeyA");
+  } else {
+    for (const [pressed, code] of CHORDS) {
+      await page.keyboard.down(CTRL_CODE);
+      await page.keyboard.down(code);
+      const held = await read();
+      row({ row: "chord", pressed, read: held.chord, down: held.down });
+      await page.keyboard.up(code);
+      await page.keyboard.up(CTRL_CODE);
+    }
+  }
+  row({ row: "done" });
+}
+
 async function main() {
   const [wasmPath, arm, check, plant, frameWord] = process.argv.slice(2);
   const total = Number(frameWord);
@@ -123,6 +247,12 @@ async function main() {
   });
   const page = await context.newPage();
   await page.setContent(PAGE);
+  if (Object.hasOwn(KEY_PLANTS, check)) {
+    await keyCheck(page, wasmPath, check, plant);
+    console.log("version", browser.version());
+    await browser.close();
+    return;
+  }
   await page.evaluate(
     async ({ wasm, check, plant, total }) => {
       const bytes = Uint8Array.from(atob(wasm), (c) => c.charCodeAt(0));

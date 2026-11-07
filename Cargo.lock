@@ -413,6 +413,7 @@ dependencies = [
  "oxide_logline",
  "oxide_trace",
  "window",
+ "window-input",
 ]
 
 [[package]]
