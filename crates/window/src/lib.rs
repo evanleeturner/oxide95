@@ -40,8 +40,10 @@
 //! placed or destroyed, the program reading none back; z-order and the
 //! owner chain are not kept; the key-to-character map is `window-input`'s,
 //! handed to `TranslateMessage` by [`Screen::character`], so a
-//! back with none posts no character; a key message's scan code is 0, no
-//! back handing one in; a command's `l` is 0, as [`Event::Command`] says; icons
+//! back with none posts no character; a key message's scan code is
+//! [`Screen::scan`]'s and every message's `x`, `y` are [`Screen::point`]'s,
+//! each 0 from a back with no keys kept; a command's `l` is 0, as
+//! [`Event::Command`] says; icons
 //! and painting are another crate's, so an icon is a handle and nothing more.
 //!
 //! The crate names no game and nothing of any one target, so it builds for
@@ -177,6 +179,17 @@ pub trait Screen {
         let _ = key;
         0
     }
+    /// The scan code of the key `key`, as bits 16 to 24 of its message's
+    /// `l` hold it; 0 for none. A back with no key map has none.
+    fn scan(&self, key: u32) -> u32 {
+        let _ = key;
+        0
+    }
+    /// The pointer's point on the screen, which a message carries from the
+    /// moment it is queued; the origin from a back that keeps none.
+    fn point(&self) -> (i32, i32) {
+        (0, 0)
+    }
 }
 
 /// A borrowed back: each of a program's files keeps its own front and all
@@ -208,6 +221,14 @@ impl<S: Screen> Screen for &S {
 
     fn character(&self, key: u32) -> u32 {
         (**self).character(key)
+    }
+
+    fn scan(&self, key: u32) -> u32 {
+        (**self).scan(key)
+    }
+
+    fn point(&self) -> (i32, i32) {
+        (**self).point()
     }
 }
 

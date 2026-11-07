@@ -162,12 +162,15 @@ impl<S: Screen> Desk<S> {
     }
 
     /// Queues each event the back raised since the last pump as the
-    /// program's message, stamped with the back's time. A button, the
-    /// pointer and its motion queue nothing: the program polls them.
+    /// program's message, stamped with the back's time and its pointer's
+    /// point. Every event is applied before any is queued, so a batch's
+    /// messages all carry its last point. A button, the pointer and its
+    /// motion queue nothing: the program polls them.
     pub fn pump(&self) {
         let mut events = Vec::new();
         self.screen.pump(&mut |event| events.push(event));
         let time = self.screen.now();
+        let (x, y) = self.screen.point();
         let mut state = self.state();
         for event in events {
             let (window, message, w, l) = match event {
@@ -180,7 +183,8 @@ impl<S: Screen> Desk<S> {
                 }
                 Event::Key { window, key, down } => {
                     let (message, l) = state.key(key, down);
-                    (window, message, u32::from(key), l)
+                    let scan = self.screen.scan(u32::from(key));
+                    (window, message, u32::from(key), l | scan << 16)
                 }
                 Event::Command { window, id } => (window, WM_COMMAND, u32::from(id), 0),
                 Event::Button { .. } | Event::Pointer { .. } | Event::Motion { .. } => continue,
@@ -191,7 +195,8 @@ impl<S: Screen> Desk<S> {
                 w,
                 l,
                 time,
-                ..Message::default()
+                x,
+                y,
             });
         }
     }

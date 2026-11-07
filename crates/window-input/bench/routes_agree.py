@@ -127,11 +127,6 @@ LISTED = (
     Listed("8001", "keys.held", "GetAsyncKeyState", "v", "8001", "8000"),
     Listed("the timer's window", "timer", "reached", "v", "1", "0"),
 )
-# One message as the 2 routes show it, where more than one call shows it.
-TIMER_MESSAGE = ("0,113,7fff,ffff0011,clock,64,64", "0,113,7fff,ffff0011,clock,0,0")
-KEY_DOWN = ("H3,100,41,1e0001,clock,64,64", "H3,100,41,1,clock,0,0")
-KEY_UP = ("H3,101,41,c01e0001,clock,64,64", "H3,101,41,c0000001,clock,0,0")
-KEY_CHAR = ("H3,102,61,1e0001,clock,64,64", "H3,102,61,1,clock,0,0")
 # Differences first seen on clean code and standing. Each says what was seen; the cause of every
 # one is not read. Each has its own item, as `stale` reads by item. With the list off the fields
 # compare raw, so an entry holding a handle's number goes `past` and `stale` there.
@@ -159,7 +154,9 @@ HELD: tuple[Listed, ...] = (
     # peeks after it are in `HELD_LINES`.
     Listed("the drain's first message", "queue", "PeekMessageA", "o", "H3,f,0,0,clock,0,0", ""),
     Listed("the drain's first answer", "queue", "PeekMessageA", "v", "1", "0"),
-    # A message's `x`, `y`: the real route's holds the cursor's place, `Desk`'s 0,0.
+    # A message's `x`, `y` before the program has placed the pointer: each route's start, the real
+    # route's the middle of its private screen, `Desk`'s the origin. No page names a start, so both
+    # are legal, and these 2 stand.
     Listed(
         "x, y of message 12",
         "messages",
@@ -176,19 +173,6 @@ HELD: tuple[Listed, ...] = (
         "H3,401,8,9,clock,200,180",
         "H3,401,8,9,clock,0,0",
     ),
-    Listed("x, y of the timer, peeked", "timer", "PeekMessageA", "o", *TIMER_MESSAGE),
-    Listed("x, y of the timer, dispatched", "timer", "DispatchMessageA", "a", *TIMER_MESSAGE),
-    # A key's message: its `x`, `y` as above, and its `l`, whose scan code bits are set on the real
-    # route and clear on `Desk`.
-    Listed("key down, peeked", "keys.queue", "PeekMessageA", "o", *KEY_DOWN),
-    Listed("key down, translated", "keys.queue", "TranslateMessage", "a", *KEY_DOWN),
-    Listed("key down, dispatched", "keys.queue", "DispatchMessageA", "a", *KEY_DOWN),
-    Listed("key up, peeked", "keys.queue", "PeekMessageA", "o", *KEY_UP),
-    Listed("key up, translated", "keys.queue", "TranslateMessage", "a", *KEY_UP),
-    Listed("key up, dispatched", "keys.queue", "DispatchMessageA", "a", *KEY_UP),
-    Listed("key char, peeked", "keys.queue", "PeekMessageA", "o", *KEY_CHAR),
-    Listed("key char, translated", "keys.queue", "TranslateMessage", "a", *KEY_CHAR),
-    Listed("key char, dispatched", "keys.queue", "DispatchMessageA", "a", *KEY_CHAR),
 )
 # The rest of the open drain: 63 more peeks, each taking the same `WM_PAINT`, on the real route
 # alone. Any other number goes `past`.

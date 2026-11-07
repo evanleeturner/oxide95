@@ -16,7 +16,9 @@
 //! `GetKeyState` and `MapVirtualKeyA`. Each front's doc names its callers
 //! by file: the shell, the game file, the launcher; a game's rows crate
 //! names the files. The key map, [`map`], answers `MapVirtualKeyA`'s
-//! character, and `TranslateMessage`'s through [`Screen::character`].
+//! character, `TranslateMessage`'s through [`Screen::character`], and a key
+//! message's scan code through [`Screen::scan`]; the point goes on every
+//! message through [`Screen::point`].
 //! The remap rows, [`remap`], name each chord a browser keeps from a page
 //! and the chord the page reads in its place.
 //!
@@ -201,5 +203,15 @@ impl<S: Screen> Screen for Input<S> {
     fn character(&self, key: u32) -> u32 {
         let shift = self.keys.borrow().down[VK_SHIFT];
         u8::try_from(key).map_or(0, |key| map::character(key, shift))
+    }
+
+    /// The key map's scan code for `key`.
+    fn scan(&self, key: u32) -> u32 {
+        u8::try_from(key).map_or(0, map::scan)
+    }
+
+    /// The pointer's point as the events and the fronts left it.
+    fn point(&self) -> (i32, i32) {
+        self.keys.borrow().point
     }
 }

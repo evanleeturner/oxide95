@@ -162,6 +162,14 @@ impl<S: Screen> Screen for Seen<S> {
     fn character(&self, key: u32) -> u32 {
         self.back.character(key)
     }
+
+    fn scan(&self, key: u32) -> u32 {
+        self.back.scan(key)
+    }
+
+    fn point(&self) -> (i32, i32) {
+        self.back.point()
+    }
 }
 
 /// Pumps up to `turns` times, 20 ms apart, until `until` holds for an event the host raised;

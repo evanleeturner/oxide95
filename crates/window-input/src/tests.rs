@@ -4,10 +4,6 @@
 //! reached carries the reading of its callers' code, its test's doc saying
 //! so. The rows are a test's, their names the
 //! `USER32!` spellings the layer logs.
-//!
-//! The desk leaves a key message's scan code 0 (a wall in `window`): a
-//! logged `l` is compared with bits 16 to 24 cleared, the scan code and
-//! the extended key.
 use window::desk::Desk;
 use window::front::Front as WindowFront;
 use window::page::Page;
@@ -74,9 +70,6 @@ const PM_REMOVE: u32 = 1;
 /// `WM_KEYFIRST` and `WM_KEYLAST`, the range the shell's pumps ask.
 const WM_KEYFIRST: u32 = 0x100;
 const WM_KEYLAST: u32 = 0x108;
-/// Bits 16 to 24 of a key message's `l`, the scan code and the extended
-/// key: 0 from the desk.
-const SCAN: u32 = 0x01ff_0000;
 const VK_SHIFT: u8 = 0x10;
 const VK_MENU: u8 = 0x12;
 
@@ -107,14 +100,6 @@ fn taken(front: &WindowFront<'_, Input<Page>>) -> (Vec<(u32, u32, u32)>, Vec<u32
         answers.push(front.translate_message(&message));
     }
     (messages, answers)
-}
-
-/// The logged messages with the scan code cleared.
-fn unscanned(logged: &[(u32, u32, u32)]) -> Vec<(u32, u32, u32)> {
-    logged
-        .iter()
-        .map(|&(message, w, l)| (message, w, l & !SCAN))
-        .collect()
 }
 
 /// `GetCursorPos` writes the host's pointer, unlocked: a traced run read
@@ -361,7 +346,10 @@ fn a_blur_lets_every_key_go_and_keeps_the_toggles() {
     desk.state().queue.clear();
     back.hand(key(b'A', true));
     let (messages, _) = taken(&windows);
-    assert_eq!(messages, [(0x100, 0x41, 1), (0x102, 0x61, 1)]);
+    assert_eq!(
+        messages,
+        [(0x100, 0x41, 0x001e_0001), (0x102, 0x61, 0x001e_0001)]
+    );
 }
 
 /// The desk's key messages and `TranslateMessage`'s characters, a traced run's
@@ -397,7 +385,7 @@ fn keys_queue_and_translate_as_a_runs_loop_took_them() {
         desk.screen().back().hand(event);
     }
     let (messages, answers) = taken(&windows);
-    assert_eq!(messages, unscanned(&logged));
+    assert_eq!(messages, logged);
     assert_eq!(answers, [1, 0, 1, 1, 0, 1, 1, 1, 0]);
 }
 
@@ -415,11 +403,12 @@ fn alt_o_posts_its_syschar_as_a_runs_loop_took_it() {
     desk.screen().back().hand(key(VK_MENU, true));
     desk.screen().back().hand(key(b'O', true));
     let (messages, _) = taken(&windows);
-    assert_eq!(messages, unscanned(&logged));
+    assert_eq!(messages, logged);
 }
 
 /// A held key's repeat and Shift's capital, a reading, not a measurement: no
-/// run held a key or typed a letter without Alt. `A` down twice, then up: `l` 1,
+/// run held a key or typed a letter without Alt. `A` down twice, then up: `l` 1
+/// and its scan code,
 /// then bit 30 the key down before, then bits 30 and 31 an up; its
 /// character `a`. Shift comes in a pump of its own, a character reading
 /// the keys as the last pump left them (a wall); with it down, `A`.
@@ -435,11 +424,11 @@ fn a_repeat_sets_bit_30_and_shift_types_the_capital() {
     assert_eq!(
         repeated,
         [
-            (0x100, 0x41, 1),
-            (0x102, 0x61, 1),
-            (0x100, 0x41, 0x4000_0001),
-            (0x102, 0x61, 0x4000_0001),
-            (0x101, 0x41, 0xc000_0001),
+            (0x100, 0x41, 0x001e_0001),
+            (0x102, 0x61, 0x001e_0001),
+            (0x100, 0x41, 0x401e_0001),
+            (0x102, 0x61, 0x401e_0001),
+            (0x101, 0x41, 0xc01e_0001),
         ]
     );
     back.hand(key(VK_SHIFT, true));
@@ -447,8 +436,67 @@ fn a_repeat_sets_bit_30_and_shift_types_the_capital() {
     let (shifted, _) = taken(&windows);
     assert_eq!(
         shifted,
-        [(0x100, 0x10, 1), (0x100, 0x41, 1), (0x102, 0x41, 1)]
+        [
+            (0x100, 0x10, 0x002a_0001),
+            (0x100, 0x41, 0x001e_0001),
+            (0x102, 0x41, 0x001e_0001)
+        ]
     );
+}
+
+/// An extended key sets bit 24 over its scan code, a reading of Microsoft's
+/// table: no run pressed one. A key with no row carries no code.
+#[test]
+fn an_extended_key_sets_bit_24_and_a_key_with_no_row_no_code() {
+    let desk = desk();
+    let windows = WindowFront::new(&WINDOW_ROW, &desk);
+    let back = desk.screen().back();
+    back.hand(key(0x26, true));
+    back.hand(key(0x13, true));
+    let (messages, _) = taken(&windows);
+    assert_eq!(messages, [(0x100, 0x26, 0x0148_0001), (0x100, 0x13, 1)]);
+}
+
+/// A message carries the pointer's point as it was queued, read from its
+/// own message: a key's in the batch that moved it, the character a key
+/// posts, and a posted message after the pointer moves on. The first point
+/// of all is the origin, as nothing moved it.
+#[test]
+fn a_message_carries_the_pointers_point() {
+    let desk = desk();
+    let windows = WindowFront::new(&WINDOW_ROW, &desk);
+    let back = desk.screen().back();
+    let _ = windows.post_message(0, 0x401, 8, 9);
+    back.hand(Event::Pointer {
+        window: WINDOW,
+        x: 100,
+        y: 200,
+    });
+    back.hand(key(b'A', true));
+    let down = windows
+        .peek_message(0, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE)
+        .expect("the key's message");
+    assert_eq!((down.x, down.y), (100, 200));
+    let _ = windows.translate_message(&down);
+    let typed = windows
+        .peek_message(0, WM_KEYFIRST, WM_KEYLAST, PM_REMOVE)
+        .expect("its character");
+    assert_eq!((typed.x, typed.y), (100, 200));
+    let first = windows
+        .peek_message(0, 0x401, 0x401, PM_REMOVE)
+        .expect("the first post");
+    assert_eq!((first.x, first.y), (0, 0));
+    back.hand(Event::Pointer {
+        window: WINDOW,
+        x: 30,
+        y: 40,
+    });
+    desk.pump();
+    let _ = windows.post_message(0, 0x401, 8, 9);
+    let moved = windows
+        .peek_message(0, 0x401, 0x401, PM_REMOVE)
+        .expect("the second post");
+    assert_eq!((moved.x, moved.y), (30, 40));
 }
 
 /// A key pressed and let go between 2 reads: USER32 answers 1 at the second,

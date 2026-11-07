@@ -247,6 +247,14 @@ impl<S: Screen> Screen for Slowed<S> {
     fn character(&self, key: u32) -> u32 {
         self.back.character(key)
     }
+
+    fn scan(&self, key: u32) -> u32 {
+        self.back.scan(key)
+    }
+
+    fn point(&self) -> (i32, i32) {
+        self.back.point()
+    }
 }
 
 /// A desk's 2 fronts, as a program's loop calls them.

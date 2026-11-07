@@ -728,16 +728,19 @@ impl<'d, S: Screen> Front<'d, S> {
         answer
     }
 
-    /// Queues one message, stamped with the back's time.
+    /// Queues one message, stamped with the back's time and its pointer's
+    /// point.
     fn queue(&self, window: u32, message: u32, w: u32, l: u32) {
         let time = self.desk.screen().now();
+        let (x, y) = self.desk.screen().point();
         self.desk.state().queue.push_back(Message {
             window,
             message,
             w,
             l,
             time,
-            ..Message::default()
+            x,
+            y,
         });
     }
 
