@@ -775,6 +775,8 @@ version = "0.1.0"
 dependencies = [
  "cpal",
  "log",
+ "softbuffer",
+ "winit",
 ]
 
 [[package]]

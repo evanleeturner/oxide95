@@ -5,6 +5,10 @@
 #   setup <work> [version]   fetch the toolchain's own linker, matched to `rustc --version`
 #   link <work> <gnu|lld> <file.rs> <out.exe>
 #   run <work> <file.exe> [arguments]
+#   under <work> <command...>   run a command on the private screen, which `run` does
+#                               not hand out, so it can read that screen from outside
+#
+# LAYER_CHECK_SCREEN sets the private screen, as Xvfb's WxHxD: 640x480x16 if unset.
 #
 # The fetched linker is never committed. `rust-lld` is kept only to show why it is not the
 # recipe: a program linked by it dies at a panic it means to catch.
@@ -13,6 +17,7 @@ set -euo pipefail
 readonly TARGET=i686-pc-windows-gnu
 readonly MINGW_LIBS=/usr/i686-w64-mingw32/lib
 readonly XVFB_LIMIT_S=300
+readonly SCREEN="${LAYER_CHECK_SCREEN:-640x480x16}"
 
 xvfb_pid=""
 prefix=""
@@ -79,7 +84,7 @@ start_wine() {
   trap 'exit 143' TERM
   trap 'exit 130' INT
   : >"${display_file}"
-  timeout "${XVFB_LIMIT_S}" Xvfb -displayfd 3 -screen 0 640x480x16 3>"${display_file}" 2>/dev/null &
+  timeout "${XVFB_LIMIT_S}" Xvfb -displayfd 3 -screen 0 "${SCREEN}" 3>"${display_file}" 2>/dev/null &
   xvfb_pid=$!
   while [[ ! -s "${display_file}" ]]; do
     tries=$((tries + 1))
@@ -128,6 +133,13 @@ run_exe() {
   wine "${exe}" "$@"
 }
 
+under() {
+  local work=$1
+  shift
+  start_wine "${work}"
+  "$@"
+}
+
 main() {
   local verb=${1:-}
   [[ $# -gt 0 ]] && shift
@@ -135,8 +147,9 @@ main() {
     setup) setup "$@" ;;
     link) link "$@" ;;
     run) run_exe "$@" ;;
+    under) under "$@" ;;
     *)
-      err "usage: wine.sh setup|link|run <work> ..."
+      err "usage: wine.sh setup|link|run|under <work> ..."
       return 2
       ;;
   esac
