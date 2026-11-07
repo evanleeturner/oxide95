@@ -113,13 +113,6 @@ move_atom() {
     { print }' "$1" >"$2"
 }
 
-# A copy of a log with step `queue`'s first `PeekMessageA` line gone.
-take_one_peek() {
-  awk '/^step / { step = $2 }
-    step == "queue" && /c=USER32!PeekMessageA / && !taken { taken = 1; next }
-    { print }' "$1" >"$2"
-}
-
 # The moved answer is the one new `past`, and its hold goes `stale`.
 atom_went_past() {
   local clean=$1 planted=$2
@@ -127,18 +120,14 @@ atom_went_past() {
     grep -q "^stale the class's atom$" "${planted}"
 }
 
-# A hold is a difference let through, so these read that it lets through nothing else: the scorer
-# alone, over copies of a run's logs. One held answer moved, and one held line taken away.
+# A hold is a difference let through, so this reads that it lets through nothing else: the scorer
+# alone, over a copy of a run's log, one held answer moved.
 holds() {
   local out=$1
   local wrong=0
   move_atom "${out}/desk.log" "${out}/desk-atom-moved.log"
-  take_one_peek "${out}/thin.log" "${out}/thin-one-peek-less.log"
   score "${out}" atom-moved "${out}/thin.log" "${out}/desk-atom-moved.log" || true
-  score "${out}" peek-less "${out}/thin-one-peek-less.log" "${out}/desk.log" || true
   told atom-moved atom_went_past "${out}/clean.txt" "${out}/atom-moved.txt"
-  told peek-less one_new_past "${out}/clean.txt" "${out}/peek-less.txt" \
-    '^past PeekMessageA lines 62 63 step=queue$'
   printf '%s hold arms not as expected\n' "${wrong}"
   [[ "${wrong}" == 0 ]]
 }

@@ -5,7 +5,7 @@
 `routes_agree.exe` makes the same calls through the route that asks the real USER32 and through
 the route that answers over `Desk`. A difference between the two logs is a finding unless a list
 below names it, so those lists are the whole of what this forgives. `LISTED` was named before the
-first log was read; `HELD` and `HELD_LINES` name, exactly, what that log then showed. A listed
+first log was read; `HELD` names, exactly, what stands after that log's causes were read. A listed
 difference never seen goes `stale`, and is a red: a stale list clears nothing.
 
 What this reads: each call's `c`, `a`, `s`, `o` and `v`, step by step, in order, and whether all
@@ -94,32 +94,6 @@ class Listed:
         )
 
 
-@dataclass(frozen=True)
-class HeldLines:
-    """Lines one route wrote and the other did not: the route that lacks them, each line's `a`,
-    `o` and `v`, and how many."""
-
-    item: str
-    step: str
-    call: str
-    side: str
-    a: str
-    o: str
-    v: str
-    count: int
-
-    def takes(self, call: Call, side: str) -> bool:
-        """Whether a line is one of these, exactly. How many is read once the logs are done."""
-        return (self.step, self.call, self.side, self.a, self.o, self.v) == (
-            call.step,
-            call.name,
-            side,
-            call.numbered["a"],
-            call.numbered["o"],
-            call.numbered["v"],
-        )
-
-
 # The known differences between the routes. With these off (`--list-off`), each goes `past` by
 # name, as must the handles, so none of these can be empty.
 LISTED = (
@@ -127,18 +101,17 @@ LISTED = (
     Listed("8001", "keys.held", "GetAsyncKeyState", "v", "8001", "8000"),
     Listed("the timer's window", "timer", "reached", "v", "1", "0"),
 )
-# Differences first seen on clean code and standing. Each says what was seen; the cause of every
-# one is not read. Each has its own item, as `stale` reads by item. With the list off the fields
-# compare raw, so an entry holding a handle's number goes `past` and `stale` there.
+# Differences standing, each with its cause read and its judge named. Each has its own item, as
+# `stale` reads by item. With the list off the fields compare raw, so an entry holding a handle's
+# number goes `past` and `stale` there.
 HELD: tuple[Listed, ...] = (
-    # `RegisterClassA` answers another atom.
+    # `RegisterClassA` answers another atom. Both legal: the page gives a class's atom a range and
+    # no number (`dataxchg_about-atom-tables.md:84`).
     Listed("the class's atom", "classes", "RegisterClassA", "v", "c02b", "c000"),
-    # Translating a `WM_CHAR` answers 1 on the real route, 0 on `Desk`.
+    # Translating a `WM_CHAR` answers 1 on the real route, 0 on `Desk`. Not both legal: the page
+    # backs `Desk` (`nf-winuser-translatemessage.md:83`), and Wine 9.0 differs from the page; the
+    # real route only passes the call on.
     Listed("translating a WM_CHAR", "keys.queue", "TranslateMessage", "v", "1", "0"),
-    # The open drain: the real route's first peek takes a `WM_PAINT`, `Desk`'s finds nothing. The
-    # peeks after it are in `HELD_LINES`.
-    Listed("the drain's first message", "queue", "PeekMessageA", "o", "H3,f,0,0,clock,0,0", ""),
-    Listed("the drain's first answer", "queue", "PeekMessageA", "v", "1", "0"),
     # A message's `x`, `y` before the program has placed the pointer: each route's start, the real
     # route's the middle of its private screen, `Desk`'s the origin. No page names a start, so both
     # are legal, and these 2 stand.
@@ -157,20 +130,6 @@ HELD: tuple[Listed, ...] = (
         "o",
         "H3,401,8,9,clock,200,180",
         "H3,401,8,9,clock,0,0",
-    ),
-)
-# The rest of the open drain: 63 more peeks, each taking the same `WM_PAINT`, on the real route
-# alone. Any other number goes `past`.
-HELD_LINES = (
-    HeldLines(
-        "the drain's other peeks",
-        "queue",
-        "PeekMessageA",
-        DESK,
-        "0,0,0,1",
-        "H3,f,0,0,clock,0,0",
-        "1",
-        63,
     ),
 )
 
@@ -286,7 +245,6 @@ class Score:
         self.list_on = list_on
         self.seen: set[str] = set()
         self.counts = {"same": 0, "form": 0, "clock": 0, "listed": 0, "held": 0, "past": 0}
-        self.lines_held: dict[str, int] = {}
 
     def _say(self, kind: str, words: str) -> None:
         self.counts[kind] += 1
@@ -304,11 +262,6 @@ class Score:
 
     def missing(self, call: Call, side: str) -> None:
         """A line one route wrote and the other did not."""
-        for entry in HELD_LINES:
-            if entry.takes(call, side):
-                self.lines_held[entry.item] = self.lines_held.get(entry.item, 0) + 1
-                self._say("held", f"{entry.item} {call.name} line missing-on-{side}")
-                return
         self._say(
             "past",
             f"{call.name} line missing-on-{side} a={call.numbered['a']} "
@@ -339,18 +292,9 @@ class Score:
         else:
             self._say("same", f"{thin.name} step={thin.step}")
 
-    def count_held_lines(self) -> None:
-        """Held lines in any number but the one named go `past`. None at all is `stale`'s."""
-        for entry in HELD_LINES:
-            count = self.lines_held.get(entry.item, 0)
-            if count == entry.count:
-                self.seen.add(entry.item)
-            elif count:
-                self._say("past", f"{entry.call} lines {count} {entry.count} step={entry.step}")
-
     def stale(self) -> int:
         """Every listed difference this pair of logs never showed."""
-        items = [entry.item for entry in (*HELD, *HELD_LINES)]
+        items = [entry.item for entry in HELD]
         if self.list_on:
             items += [entry.item for entry in LISTED] + [HANDLES]
         unseen = [item for item in items if item not in self.seen]
@@ -420,7 +364,6 @@ def main() -> int:
         if step in other.steps:
             read_step(score, calls, other.steps[step])
 
-    score.count_held_lines()
     stale = score.stale()
     absent = uncalled(thin, THIN) + uncalled(other, arguments.other_route)
     complete = thin.complete and other.complete
