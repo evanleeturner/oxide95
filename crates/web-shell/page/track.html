@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MIT -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Test track: a moving mark</title>
+    <link href="track.css" rel="stylesheet" />
+    <script src="track.mjs" type="module"></script>
+  </head>
+  <body>
+    <main>
+      <h1 class="title">Test track</h1>
+      <p class="sentence js-sentence" role="status">
+        This page cannot start from a file opened directly. Open it through its
+        local server instead.
+      </p>
+      <div class="places">
+        <label class="place-file">
+          A disc image to read, if you have one
+          <input class="js-file" type="file" disabled />
+        </label>
+        <button class="js-start" type="button" disabled>Start</button>
+        <button class="js-pause" type="button" disabled>Pause the mark</button>
+        <button class="js-read-again" type="button" disabled>
+          Read the file again
+        </button>
+      </div>
+      <canvas
+        class="screen js-screen"
+        width="640"
+        height="480"
+        tabindex="0"
+        role="application"
+        aria-label="The test track's screen. Hold the up arrow to lift the mark."
+      ></canvas>
+    </main>
+  </body>
+</html>

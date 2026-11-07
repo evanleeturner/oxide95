@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! The page's back: it keeps the picture last presented until the page's
-//! script reads it, once an animation frame. A second present before that
-//! read wins, the one it replaces written as a `draw.drop` line: the program
-//! runs at its own pace and the page shows what is newest.
+//! code reads it, once a frame. A second present before that read wins, the
+//! one it replaces written as a `draw.drop` line: the program runs at its
+//! own pace and the page shows what is newest.
 
 use core::cell::{Cell, RefCell};
 

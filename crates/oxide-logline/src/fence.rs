@@ -39,9 +39,14 @@ const MACROS: [(&str, char); 5] = [
 
 /// The page folders the walk reads. An older page logs sentences and takes no
 /// row, so it stays out of this list until it moves to event ids.
-const PAGES_ON_IDS: [&str; 1] = ["crates/layer-check/page"];
+const PAGES_ON_IDS: [&str; 2] = ["crates/layer-check/page", "crates/web-shell/page"];
 
-const PAGE_CALLS: [(&str, char); 2] = [("logger.info(", 'I'), ("logger.debug(", 'D')];
+const PAGE_CALLS: [(&str, char); 4] = [
+    ("logger.error(", 'E'),
+    ("logger.warn(", 'W'),
+    ("logger.info(", 'I'),
+    ("logger.debug(", 'D'),
+];
 
 fn sources(dir: &Path, found: &mut Vec<PathBuf>) {
     let mut entries: Vec<_> = std::fs::read_dir(dir)

@@ -27,8 +27,9 @@
 //! registry's `RegCreateKeyA`: each comes with its first measured caller.
 //! `GetForegroundWindow`, `GetMessageA`, `SetForegroundWindow`,
 //! `SetRect`, `SetWindowTextA` and `ShowWindowAsync`. `GetMessageA`
-//! blocks until a message comes, which a page cannot do: its loop is the
-//! page's to turn, named when its caller is cut.
+//! blocks until a message comes, which a page's own thread cannot do; a
+//! Worker can wait between turns, as `web-shell` shows, so where its loop
+//! turns is named when its caller is cut.
 //!
 //! Each call writes one `imp.call` line: `c` the row's name, `a` the
 //! call's numbers, `s` the name or title it was given, `o` what it wrote,

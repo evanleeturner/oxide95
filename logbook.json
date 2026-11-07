@@ -446,6 +446,72 @@
       "level": "D",
       "fields": { "samples": "the samples recorded", "peak": "the largest distance from zero", "share": "the share of the sound's power at the tone's pitch, 0 to 1" },
       "template": "{samples} samples recorded, peak {peak}, {share} of the power at the tone's pitch"
+    },
+    {
+      "id": "place.press",
+      "level": "I",
+      "fields": { "place": "the place the player pressed, by its name in the page's script" },
+      "template": "the player pressed {place}"
+    },
+    {
+      "id": "key.down",
+      "level": "I",
+      "fields": { "code": "the key's place on the keyboard, as a browser names it" },
+      "template": "{code} went down on the screen"
+    },
+    {
+      "id": "key.up",
+      "level": "I",
+      "fields": { "code": "the key's place on the keyboard, as a browser names it" },
+      "template": "{code} came up, or the screen lost the focus while it was down"
+    },
+    {
+      "id": "gl.ready",
+      "level": "D",
+      "fields": { "attempt": "the try that worked, from 1", "renderer": "what the browser says draws it" },
+      "template": "WebGL 2 answered on try {attempt}, drawn by {renderer}"
+    },
+    {
+      "id": "gl.refused",
+      "level": "W",
+      "fields": { "attempt": "the try that was refused, from 1" },
+      "template": "WebGL 2 refused try {attempt} from the Worker"
+    },
+    {
+      "id": "gl.gave.up",
+      "level": "E",
+      "fields": { "tries": "the tries made" },
+      "template": "WebGL 2 refused all {tries} tries, so the track stopped"
+    },
+    {
+      "id": "file.read.failed",
+      "level": "W",
+      "fields": { "reason": "the browser's name for the error" },
+      "template": "the picked file would not read: {reason}"
+    },
+    {
+      "id": "track.wasm.refused",
+      "level": "E",
+      "fields": { "reason": "the browser's name for the error" },
+      "template": "the track's program did not load: {reason}"
+    },
+    {
+      "id": "track.stopped",
+      "level": "E",
+      "fields": { "reason": "the browser's name for the error", "detail": "its message" },
+      "template": "the track's program stopped: {reason}, {detail}"
+    },
+    {
+      "id": "track.markers",
+      "level": "D",
+      "fields": { "markers": "the bytes read at the marker places, in order" },
+      "template": "the picked file's markers read {markers}"
+    },
+    {
+      "id": "track.panic",
+      "level": "E",
+      "fields": { "panic": "the panic's message and place" },
+      "template": "the track's program panicked: {panic}"
     }
   ]
 }

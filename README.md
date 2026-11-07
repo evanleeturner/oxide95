@@ -32,6 +32,7 @@ source code that you compile against these libraries.
 | `window` | windows and their message queues |
 | `window-input` | the keyboard and the mouse |
 | `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
+| `web-shell` | a test page for running a program in a browser: a square moves on a canvas, drawn by a background thread that never returns to the page, and a held key reaches that thread through shared memory; it has run only in headless Chromium with software drawing, and no person has walked it by keyboard or screen reader yet |
 | `draw` | pixels and palettes |
 | `draw-surfaces` | DirectDraw's surfaces and palette, painted through `draw` |
 | `video` | a program's Smacker calls, stepped on the game's clock over `video_smacker`, the clip's sound handed to `sound-mix`; no Windows calls of its own yet, and no clip has reached a speaker |

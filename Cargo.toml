@@ -5,5 +5,5 @@ members = ["crates/layer-check", "crates/cd-audio", "crates/sound-buffers", "cra
            "crates/kernel-files", "crates/kernel-memory", "crates/kernel-process", "crates/kernel-registry",
            "crates/joystick", "crates/kernel-text", "crates/kernel-threads", "crates/kernel-time", "crates/logical-disc",
            "crates/oxide-logline", "crates/oxide-trace", "crates/video", "crates/video-smacker",
-           "crates/window", "crates/window-dialogs", "crates/window-input"]
+           "crates/web-shell", "crates/window", "crates/window-dialogs", "crates/window-input"]
 resolver = "3"

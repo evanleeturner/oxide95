@@ -1,0 +1,40 @@
+# The web shell's first build: a test track. A moving mark on a canvas, drawn
+# from a Worker that stays blocked, with keys crossing to it through shared
+# memory. No program runs on it yet; it proves the shape a program's page stands
+# on. The turn's logic is every target's, so a host test runs it whole.
+[package]
+name = "web-shell"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT"
+publish = false
+
+[lints.rust]
+rust_2018_idioms = { level = "warn", priority = -1 }
+unsafe_code = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -2 }
+pedantic = { level = "warn", priority = -2 }
+correctness = { level = "deny", priority = -1 }
+missing_errors_doc = "allow"
+missing_panics_doc = "allow"
+unwrap_used = "deny"
+undocumented_unsafe_blocks = "deny"
+
+# The thin export the page runs: `cargo build --example page_track --target
+# wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_track"
+path = "page/track.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+draw = { path = "../draw", features = ["page"] }
+kernel_files = { path = "../kernel-files" }
+log = { version = "0.4", features = ["kv"] }
+logical_disc = { path = "../logical-disc", features = ["disc"] }
+oxide_logline = { path = "../oxide-logline" }
+window = { path = "../window", features = ["page"] }
+window-input = { path = "../window-input", features = ["desk"] }

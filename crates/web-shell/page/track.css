@@ -1,0 +1,87 @@
+/* SPDX-License-Identifier: MIT */
+:root {
+  --ink: #1a1a1a;
+  --paper: #ffffff;
+  --ring: #0b57d0;
+  --rule: #5f6368;
+  --screen: #202124;
+
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f1f3f4;
+    --paper: #1f1f1f;
+    --ring: #8ab4f8;
+    --rule: #9aa0a6;
+    --screen: #000000;
+  }
+}
+
+body {
+  margin: 0;
+  padding: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font:
+    16px/1.4 system-ui,
+    sans-serif;
+}
+
+button {
+  min-block-size: 32px;
+  min-inline-size: 32px;
+  padding-inline: 12px;
+  border: 1px solid var(--rule);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+
+button:disabled {
+  border-style: dashed;
+}
+
+:focus-visible {
+  outline: 3px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.title {
+  margin-block: 0 8px;
+  font-size: 1.25rem;
+}
+
+.sentence {
+  margin-block: 0 8px;
+}
+
+.places {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.place-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  max-inline-size: 100%;
+}
+
+.place-file input {
+  min-block-size: 32px;
+  max-inline-size: 100%;
+  font: inherit;
+}
+
+.screen {
+  display: block;
+  margin-block-start: 8px;
+  max-inline-size: 100%;
+  block-size: auto;
+  background: var(--screen);
+}

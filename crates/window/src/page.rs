@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
-//! The page's back: everything handed in. The page's script makes it with
+//! The page's back: everything handed in. The page's code makes it with
 //! the canvas's size, hands in each event the canvas raised and sets the
 //! time once a frame; it reads each window's place and shown back to lay
-//! its canvas out. Nothing here reaches the browser, and nothing blocks:
-//! the script turns the program's loop once a frame. The host tests use it
-//! as their back.
+//! its canvas out. Nothing here reaches the browser, and nothing here
+//! blocks: whatever turns the program's loop, the script once a frame or a
+//! Worker waiting between turns, turns it on the one thread that holds this
+//! back. The host tests use it as their back.
 use alloc::vec::Vec;
 use core::cell::{Cell, RefCell};
 
