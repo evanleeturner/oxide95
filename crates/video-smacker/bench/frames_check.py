@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Reads each listed clip through this crate's `dump` and through ffmpeg's binary, and says where they part.
 
@@ -151,9 +150,7 @@ def read_clip(command: list[str], ffmpeg: str, scratch: Path, at: int, clip: Pat
     has_track = bool(struct.unpack_from("<I", head, TRACK_WORD_AT)[0] & HAS_TRACK)
     theirs, their_error = their_frames(ffmpeg, clip)
     with tempfile.TemporaryDirectory(dir=scratch) as folder:
-        ours, spare, code, our_error, sound = our_frames(
-            command, clip, width * height * RGB_BYTES, Path(folder)
-        )
+        ours, spare, code, our_error, sound = our_frames(command, clip, width * height * RGB_BYTES, Path(folder))
     row = Row(
         at=at,
         name=clip.name,
@@ -206,9 +203,7 @@ def main() -> int:
 
     command = [args.runner, str(args.dump)] if args.runner else [str(args.dump)]
     clips = [Path(line.strip()) for line in args.list.read_text().splitlines() if line.strip()]
-    version = subprocess.run(
-        [args.ffmpeg, "-version"], capture_output=True, text=True, check=True
-    ).stdout.split()[2]
+    version = subprocess.run([args.ffmpeg, "-version"], capture_output=True, text=True, check=True).stdout.split()[2]
     digest = hashlib.sha256(args.dump.read_bytes()).hexdigest()
     with concurrent.futures.ThreadPoolExecutor(args.jobs) as pool:
         rows = list(
