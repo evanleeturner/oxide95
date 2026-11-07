@@ -21,10 +21,14 @@ use oxide_trace_check::{CELL, Guard, SOURCE, SOURCE_VALUE, Session, Ticks, book_
 /// What [`CELL`] holds before each site.
 const START: u32 = 0x2a;
 
-/// The function pointers' calls, in order, each one's three arguments. The site's counting
+/// The calls of [`counting_copy`], in order, each one's three arguments. The site's counting
 /// functions touch no memory, so a guarded source shows "the bytes copied are not read
-/// again to log".
-static CALLS: Mutex<Vec<[usize; 3]>> = Mutex::new(Vec::new());
+/// again to log". One static per test: the tests run in parallel, and each empties its own
+/// list outside the gate.
+static COPY_CALLS: Mutex<Vec<[usize; 3]>> = Mutex::new(Vec::new());
+
+/// The calls of [`counting_fill`], as [`COPY_CALLS`] holds [`counting_copy`]'s.
+static FILL_CALLS: Mutex<Vec<[usize; 3]>> = Mutex::new(Vec::new());
 
 fn cell() -> *mut u32 {
     CELL as *mut u32
@@ -97,26 +101,24 @@ fn off_page<T: PartialEq + Debug>(wrapped: impl Fn(&Ticks) -> T, table: &Table<'
     both_ways(&session, &guard, 0, wrapped, table);
 }
 
-fn take_calls() -> Vec<[usize; 3]> {
-    std::mem::take(&mut *CALLS.lock().unwrap_or_else(PoisonError::into_inner))
+fn take_calls(calls: &Mutex<Vec<[usize; 3]>>) -> Vec<[usize; 3]> {
+    std::mem::take(&mut *calls.lock().unwrap_or_else(PoisonError::into_inner))
 }
 
 /// Stands where `core::ptr::copy_nonoverlapping` would, and touches nothing.
 unsafe fn counting_copy(source: *const u8, destination: *mut u8, count: usize) {
-    CALLS.lock().unwrap_or_else(PoisonError::into_inner).push([
-        source.addr(),
-        destination.addr(),
-        count,
-    ]);
+    COPY_CALLS
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .push([source.addr(), destination.addr(), count]);
 }
 
 /// Stands where `core::ptr::write_bytes` would, and touches nothing.
 unsafe fn counting_fill(destination: *mut u8, byte: u8, count: usize) {
-    CALLS.lock().unwrap_or_else(PoisonError::into_inner).push([
-        destination.addr(),
-        usize::from(byte),
-        count,
-    ]);
+    FILL_CALLS
+        .lock()
+        .unwrap_or_else(PoisonError::into_inner)
+        .push([destination.addr(), usize::from(byte), count]);
 }
 
 /// The instrument before anything is judged by it: 2 on 2 hand reads, 0 on none.
@@ -413,7 +415,7 @@ fn cr() {
 
 #[test]
 fn cp() {
-    take_calls();
+    take_calls(&COPY_CALLS);
     off_page(
         // SAFETY: `counting_copy` touches nothing through its arguments.
         |ticks| unsafe {
@@ -432,7 +434,11 @@ fn cp() {
             after: START,
         },
     );
-    assert_eq!(take_calls(), [[0x1000, 0x2000, 4]; 2], "1 call each way");
+    assert_eq!(
+        take_calls(&COPY_CALLS),
+        [[0x1000, 0x2000, 4]; 2],
+        "1 call each way"
+    );
 
     // The source is on the guarded page: logging the copy does not read its bytes.
     off_page(
@@ -453,7 +459,11 @@ fn cp() {
             after: START,
         },
     );
-    assert_eq!(take_calls(), [[SOURCE, CELL, 4]; 2], "1 call each way");
+    assert_eq!(
+        take_calls(&COPY_CALLS),
+        [[SOURCE, CELL, 4]; 2],
+        "1 call each way"
+    );
 
     on_page(
         // SAFETY: both cells are mapped, aligned and apart, and the guard lets each fault
@@ -486,7 +496,7 @@ fn cp() {
 
 #[test]
 fn fill() {
-    take_calls();
+    take_calls(&FILL_CALLS);
     off_page(
         // SAFETY: `counting_fill` touches nothing through its arguments.
         |ticks| unsafe {
@@ -505,7 +515,11 @@ fn fill() {
             after: START,
         },
     );
-    assert_eq!(take_calls(), [[0x2000, 0xab, 4]; 2], "1 call each way");
+    assert_eq!(
+        take_calls(&FILL_CALLS),
+        [[0x2000, 0xab, 4]; 2],
+        "1 call each way"
+    );
 
     on_page(
         // SAFETY: the cell is mapped and aligned, and the guard lets each fault through.
