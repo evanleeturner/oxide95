@@ -42,10 +42,7 @@ impl Thin {
 /// keys reach the queue and no further.
 fn pump_but_keys() {
     let mut message = [0; 7];
-    for (low, high) in [
-        (0, FIRST_KEY_MESSAGE - 1),
-        (LAST_KEY_MESSAGE + 1, u32::MAX),
-    ] {
+    for (low, high) in [(0, FIRST_KEY_MESSAGE - 1), (LAST_KEY_MESSAGE + 1, u32::MAX)] {
         while hand::peek_message(&mut message, 0, low, high, 1) != 0 {
             hand::translate_message(&message);
             hand::dispatch_message(&message);

@@ -185,9 +185,9 @@ impl OnDesk<'_> {
         quietly(|| {
             while let Some(message) = self.windows.peek_message(0, 0, 0, 1) {
                 let _ = self.windows.translate_message(&message);
-                let _ = self.windows.dispatch_message(&message, |_, message| {
-                    script::answer(message.message)
-                });
+                let _ = self
+                    .windows
+                    .dispatch_message(&message, |_, message| script::answer(message.message));
             }
         });
     }
@@ -303,9 +303,11 @@ impl Route for OnDesk<'_> {
     }
 
     fn dispatch_message(&self, message: &Message) {
-        let _ = self.windows.dispatch_message(&to_desk(message), |_, message| {
-            script::answer(message.message)
-        });
+        let _ = self
+            .windows
+            .dispatch_message(&to_desk(message), |_, message| {
+                script::answer(message.message)
+            });
     }
 
     fn send_message(&self, window: u32, message: u32, w: u32, l: u32) {
@@ -372,9 +374,7 @@ impl Route for OnDesk<'_> {
 
     fn timer(&self) {
         quietly(|| {
-            let _ = self
-                .windows
-                .post_message(0, WM_TIMER, TIMER_ID, TIMER_L);
+            let _ = self.windows.post_message(0, WM_TIMER, TIMER_ID, TIMER_L);
         });
         if let Some(message) = self.peek_message(0, WM_TIMER, WM_TIMER, 1) {
             self.dispatch_message(&message);
