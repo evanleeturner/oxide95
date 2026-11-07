@@ -164,8 +164,12 @@ impl Buffer {
     /// the ports build for 32 bits alone, and a host test writes through
     /// [`Easel::with_buffer`].
     #[must_use]
+    #[expect(
+        clippy::cast_possible_truncation,
+        reason = "the answer is the address's low 32 bits, at every width"
+    )]
     pub fn address(&self) -> u32 {
-        u32::try_from(self.pixels.as_ptr().addr() & 0xffff_ffff).unwrap_or(0)
+        self.pixels.as_ptr().addr() as u32
     }
 }
 
