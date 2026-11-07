@@ -29,8 +29,8 @@ source code that you compile against these libraries.
 | `sound-buffers` | DirectSound's object and buffers, moved by a clock onto `sound-mix`'s doors; it has run only in tests, with no real program calling it and nothing reaching a speaker |
 | `joystick` | the calls a program makes to a joystick: one front says none is there, another reads real pads through a page's script, `gilrs` or Windows' own calls; no real pad has been read yet |
 | `logical_disc` | a read-only copy of a CD: a cue sheet with its bin files, or an iso |
-| `window` | windows and their message queues |
-| `window-input` | the keyboard and the mouse |
+| `window` | windows and their message queues; its Windows calls have run under Wine beside the same calls declared by hand, and agreed, but not on real Windows or under a real program |
+| `window-input` | the keyboard and the mouse; its Windows calls have run under Wine beside the same calls declared by hand, with `xdotool` pressing the keys, and agreed, but not on real Windows or under a real program |
 | `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
 | `web-shell` | a test page for running a program in a browser: a square moves on a canvas, drawn by a background thread that never returns to the page, and a held key reaches that thread through shared memory; it has run only in headless Chromium with software drawing, and no person has walked it by keyboard or screen reader yet |
 | `draw` | pixels and palettes |
