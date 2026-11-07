@@ -396,12 +396,9 @@ impl<'d, S: Screen> Front<'d, S> {
         answer
     }
 
-    /// `AdjustWindowRect`: the window rectangle around the client area
-    /// `rect`, grown by the frame, the caption and the menu the style
-    /// names, by this row's metrics. Callers: the shell, the game file,
-    /// the launcher.
-    #[must_use]
-    pub fn adjust_window_rect(&self, rect: Rect, style: u32, menu: bool) -> Rect {
+    /// The frame's width and the caption's height that `style` names, by
+    /// this row's metrics.
+    fn frame(&self, style: u32) -> (i32, i32) {
         let frame = if style & WS_THICKFRAME != 0 {
             self.metric(SM_CXFRAME)
         } else if style & WS_DLGFRAME != 0 {
@@ -416,6 +413,16 @@ impl<'d, S: Screen> Front<'d, S> {
         } else {
             0
         };
+        (frame, caption)
+    }
+
+    /// `AdjustWindowRect`: the window rectangle around the client area
+    /// `rect`, grown by the frame, the caption and the menu the style
+    /// names, by this row's metrics. Callers: the shell, the game file,
+    /// the launcher.
+    #[must_use]
+    pub fn adjust_window_rect(&self, rect: Rect, style: u32, menu: bool) -> Rect {
+        let (frame, caption) = self.frame(style);
         let bar = if menu { self.metric(SM_CYMENU) } else { 0 };
         let grown = Rect {
             left: rect.left - frame,
@@ -529,12 +536,17 @@ impl<'d, S: Screen> Front<'d, S> {
     }
 
     /// The window's client origin on the screen: its rectangle's corner,
-    /// the stand-in drawing no frame.
+    /// past the frame and caption its style names. With none, the corner.
     fn origin(&self, window: u32) -> Option<(i32, i32)> {
-        self.desk
+        let kept = self
+            .desk
             .state()
             .window(window)
-            .map(|row| (row.rect.left, row.rect.top))
+            .map(|row| (row.rect, row.style));
+        kept.map(|(rect, style)| {
+            let (frame, caption) = self.frame(style);
+            (rect.left + frame, rect.top + frame + caption)
+        })
     }
 
     /// `ClientToScreen`: the client point `x`, `y` on the screen; `None`

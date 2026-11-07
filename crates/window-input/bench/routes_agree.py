@@ -135,17 +135,6 @@ HELD: tuple[Listed, ...] = (
     Listed("the class's atom", "classes", "RegisterClassA", "v", "c02b", "c000"),
     # Translating a `WM_CHAR` answers 1 on the real route, 0 on `Desk`.
     Listed("translating a WM_CHAR", "keys.queue", "TranslateMessage", "v", "1", "0"),
-    # `AdjustWindowRect` grows the rectangle on the real route, leaves it on `Desk`.
-    Listed(
-        "the adjusted rectangle",
-        "place",
-        "AdjustWindowRect",
-        "o",
-        "fffffffc,ffffffe2,284,1e4",
-        "0,0,280,1e0",
-    ),
-    # `ClientToScreen` answers 114,150 on the real route, 110,120 on `Desk`.
-    Listed("the client origin", "place", "ClientToScreen", "o", "72,96", "6e,78"),
     # The open drain: the real route's first peek takes a `WM_PAINT`, `Desk`'s finds nothing. The
     # peeks after it are in `HELD_LINES`.
     Listed("the drain's first message", "queue", "PeekMessageA", "o", "H3,f,0,0,clock,0,0", ""),

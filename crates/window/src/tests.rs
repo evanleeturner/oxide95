@@ -125,6 +125,35 @@ fn showing_a_window_gives_it_the_focus() {
     assert_eq!(front.set_focus(0), 0);
 }
 
+/// A framed window's client area starts past its frame and caption, the same
+/// sum `AdjustWindowRect` grows a rectangle by; a popup's starts at its corner.
+#[test]
+fn a_framed_windows_client_origin_stands_past_its_frame() {
+    static FRAMED: Row = Row {
+        file: "test",
+        calls: &CALLS,
+        metrics: &[(4, 26), (32, 4)],
+    };
+    let desk = Desk::new(Page::new(0x400, 0x300));
+    let front = Front::new(&FRAMED, &desk);
+    assert_eq!(front.register_class(0, PROCEDURE, 0, 0, b"Test"), 0xc000);
+    let framed = made(&front, 0x00cf_0000, [110, 120, 640, 480]);
+    assert_eq!(front.client_to_screen(framed, 4, 5), Some((118, 155)));
+    assert_eq!(front.screen_to_client(framed, 114, 150), Some((0, 0)));
+    assert_eq!(
+        front.adjust_window_rect(crate::Rect::sized(0, 0, 640, 480), 0x00cf_0000, false),
+        crate::Rect {
+            left: -4,
+            top: -30,
+            right: 644,
+            bottom: 484
+        }
+    );
+    let popup = made(&front, 0x8000_0000, [110, 120, 640, 480]);
+    assert_eq!(front.client_to_screen(popup, 4, 5), Some((114, 125)));
+    assert_eq!(front.screen_to_client(popup, 114, 125), Some((4, 5)));
+}
+
 /// `PeekMessageA` with `PM_REMOVE` takes one message a call, oldest
 /// first, and answers 0 with nothing written on an empty queue.
 #[test]

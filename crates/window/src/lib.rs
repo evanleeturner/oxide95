@@ -35,8 +35,10 @@
 //! call's numbers, `s` the name or title it was given, `o` what it wrote,
 //! `v` its answer.
 //!
-//! The walls, named: the stand-in draws no frame, so a window's client
-//! area is its whole rectangle; no message is sent while a window is made,
+//! The walls, named: the stand-in draws no frame, yet a window's client
+//! origin stands past the frame and caption its style names, by the row's
+//! metrics, a menu's bar not counted as a window keeps no menu; no message
+//! is sent while a window is made,
 //! placed or destroyed, the program reading none back; z-order and the
 //! owner chain are not kept; the key-to-character map is `window-input`'s,
 //! handed to `TranslateMessage` by [`Screen::character`], so a

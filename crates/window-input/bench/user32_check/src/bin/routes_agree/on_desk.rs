@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 //! The route that answers by itself: `window::front` and `window_input::front` over `Desk`, over
 //! `Page`, with no browser. An event is what a page's script would hand in. Its row's metrics are
-//! the only numbers it is given, and a plant puts a wrong one there.
+//! the only numbers it is given, and a plant puts a wrong one there: the icon's size, and the caption
+//! and sizing frame the real route's `AdjustWindowRect` showed on this private screen.
 use std::cell::Cell;
 use std::ffi::CStr;
 
@@ -67,12 +68,12 @@ static INPUT_CALLS: InputCalls = InputCalls {
 static ROW: Row = Row {
     file: "routes_agree",
     calls: &CALLS,
-    metrics: &[(11, 32), (12, 32)],
+    metrics: &[(4, 26), (11, 32), (12, 32), (32, 4)],
 };
 static WRONG_METRIC_ROW: Row = Row {
     file: "routes_agree",
     calls: &CALLS,
-    metrics: &[(11, 33), (12, 32)],
+    metrics: &[(4, 26), (11, 33), (12, 32), (32, 4)],
 };
 static INPUT_ROW: InputRow = InputRow {
     file: "routes_agree",
