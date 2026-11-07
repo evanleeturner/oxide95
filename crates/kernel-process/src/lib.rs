@@ -178,7 +178,8 @@ impl<P: Process> Front<P> {
     pub fn command_line(&self) -> &'static str {
         let value = self.file.command_line;
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.command_line, v = value; "imp.call");
+            log::debug!(c = self.file.calls.command_line, v = value,
+                by = "kernel-process"; "imp.call");
         });
         value
     }
@@ -188,7 +189,8 @@ impl<P: Process> Front<P> {
     pub fn version(&self) -> u32 {
         let value = self.file.version;
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.version, v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = self.file.calls.version, v:% = oxide_trace::__shown!(value),
+                by = "kernel-process"; "imp.call");
         });
         value
     }
@@ -199,7 +201,8 @@ impl<P: Process> Front<P> {
         let value = self.file.current_process;
         self.process.quiet(|| {
             log::debug!(
-                c = self.file.calls.current_process, v:% = oxide_trace::__shown!(value); "imp.call"
+                c = self.file.calls.current_process, v:% = oxide_trace::__shown!(value),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -218,7 +221,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.module_handle, m:% = Text(asked),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -233,7 +237,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.load_library, m:% = Text(name),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -257,7 +262,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.proc_address, a:% = Args(arguments), q:% = Text(name),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -286,7 +292,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.free_library, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -314,7 +321,7 @@ impl<P: Process> Front<P> {
             log::debug!(
                 c = self.file.calls.module_file_name, a:% = Args(arguments),
                 m:% = Text(written), v:% = oxide_trace::__shown!(value),
-                e:% = oxide_trace::__shown!(error); "imp.call"
+                e:% = oxide_trace::__shown!(error), by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -325,7 +332,8 @@ impl<P: Process> Front<P> {
     pub fn last_error(&self) -> u32 {
         let value = self.process.last_error();
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.last_error, v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = self.file.calls.last_error, v:% = oxide_trace::__shown!(value),
+                by = "kernel-process"; "imp.call");
         });
         value
     }
@@ -335,7 +343,8 @@ impl<P: Process> Front<P> {
         self.process.fail(code);
         let arguments = [oxide_trace::__shown!(code)];
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.set_last_error, a:% = Args(arguments); "imp.call");
+            log::debug!(c = self.file.calls.set_last_error, a:% = Args(arguments),
+                by = "kernel-process"; "imp.call");
         });
     }
 
@@ -343,7 +352,8 @@ impl<P: Process> Front<P> {
     pub fn exit(&self, code: u32) {
         let arguments = [oxide_trace::__shown!(code)];
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.exit, a:% = Args(arguments); "imp.call");
+            log::debug!(c = self.file.calls.exit, a:% = Args(arguments),
+                by = "kernel-process"; "imp.call");
         });
         self.process.end(code);
     }
@@ -353,7 +363,8 @@ impl<P: Process> Front<P> {
     pub fn environment(&self) -> &'static [u8] {
         let value = self.file.environment;
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.environment, s:% = Text(value); "imp.call");
+            log::debug!(c = self.file.calls.environment, s:% = Text(value),
+                by = "kernel-process"; "imp.call");
         });
         value
     }
@@ -364,7 +375,8 @@ impl<P: Process> Front<P> {
     pub fn environment_w(&self) -> impl Iterator<Item = u16> + 'static {
         let value = self.file.environment;
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.environment_w, s:% = Text(value); "imp.call");
+            log::debug!(c = self.file.calls.environment_w, s:% = Text(value),
+                by = "kernel-process"; "imp.call");
         });
         value.iter().map(|byte| u16::from(*byte))
     }
@@ -390,7 +402,8 @@ impl<P: Process> Front<P> {
             oxide_trace::__shown!(value.reserved),
         ];
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.startup_info, r:% = Args(fields); "imp.call");
+            log::debug!(c = self.file.calls.startup_info, r:% = Args(fields),
+                by = "kernel-process"; "imp.call");
         });
         value
     }
@@ -403,7 +416,7 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.set_environment, s:% = Variable(name, value),
-                v:% = oxide_trace::__shown!(answer); "imp.call"
+                v:% = oxide_trace::__shown!(answer), by = "kernel-process"; "imp.call"
             );
         });
         answer
@@ -419,7 +432,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.terminate, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-process"; "imp.call"
             );
         });
         if own {
@@ -437,7 +451,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.load_module, a:% = Args(arguments), m:% = Text(name),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(value); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(value),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -452,7 +467,8 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.create_process, m:% = Text(application), s:% = Text(command),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -461,14 +477,15 @@ impl<P: Process> Front<P> {
     /// `OutputDebugStringA`: the game's text, its line at DEBUG.
     pub fn debug_string(&self, text: &[u8]) {
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.debug_string, s:% = Text(text); "imp.call");
+            log::debug!(c = self.file.calls.debug_string, s:% = Text(text),
+                by = "kernel-process"; "imp.call");
         });
     }
 
     /// `DebugBreak`: the line; no trap, as no debugger holds the run.
     pub fn debug_break(&self) {
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.debug_break; "imp.call");
+            log::debug!(c = self.file.calls.debug_break, by = "kernel-process"; "imp.call");
         });
     }
 
@@ -484,7 +501,8 @@ impl<P: Process> Front<P> {
             oxide_trace::__shown!(arguments),
         ];
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.raise, a:% = Args(numbers); "imp.call");
+            log::debug!(c = self.file.calls.raise, a:% = Args(numbers),
+                by = "kernel-process"; "imp.call");
         });
         self.process.end(code);
     }
@@ -497,7 +515,7 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.set_filter, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value); "imp.call"
+                v:% = oxide_trace::__shown!(value), by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -512,7 +530,7 @@ impl<P: Process> Front<P> {
         self.process.quiet(|| {
             log::debug!(
                 c = self.file.calls.unhandled_filter, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value); "imp.call"
+                v:% = oxide_trace::__shown!(value), by = "kernel-process"; "imp.call"
             );
         });
         value
@@ -544,7 +562,8 @@ impl<P: Process> Front<P> {
             oxide_trace::__shown!(value),
         ];
         self.process.quiet(|| {
-            log::debug!(c = self.file.calls.unwind, a:% = Args(arguments); "imp.call");
+            log::debug!(c = self.file.calls.unwind, a:% = Args(arguments),
+                by = "kernel-process"; "imp.call");
         });
     }
 
@@ -553,7 +572,8 @@ impl<P: Process> Front<P> {
         let value: i32 = 1;
         let arguments = [oxide_trace::__shown!(block)];
         self.process.quiet(|| {
-            log::debug!(c = call, a:% = Args(arguments), v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = call, a:% = Args(arguments), v:% = oxide_trace::__shown!(value),
+                by = "kernel-process"; "imp.call");
         });
         value
     }
@@ -563,7 +583,8 @@ impl<P: Process> Front<P> {
         let value = i32::from(!self.process.reaches(address, size, access));
         let arguments = [oxide_trace::__shown!(address), oxide_trace::__shown!(size)];
         self.process.quiet(|| {
-            log::debug!(c = call, a:% = Args(arguments), v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = call, a:% = Args(arguments), v:% = oxide_trace::__shown!(value),
+                by = "kernel-process"; "imp.call");
         });
         value
     }

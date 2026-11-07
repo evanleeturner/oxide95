@@ -12,17 +12,17 @@ use alloc::vec::Vec;
 use core::cell::RefCell;
 
 use draw::easel::{Area, Back, Buffer, Easel};
-use window::desk::Desk;
-use window::{Numbers, Screen};
+use draw::front::Windows;
+use window::Numbers;
 
 use crate::sdk::{
-    DD_OK, DDBLT_COLORFILL, DDBLT_WAIT, DDBLTFAST_WAIT, DDERR_INVALIDMODE, DDERR_INVALIDOBJECT,
-    DDERR_INVALIDPARAMS, DDERR_NOTFLIPPABLE, DDERR_NOTFOUND, DDERR_OUTOFMEMORY, DDERR_UNSUPPORTED,
-    DDPF_PALETTEINDEXED8, DDPF_RGB, DDSCAPS_BACKBUFFER, DDSCAPS_COMPLEX, DDSCAPS_FLIP,
-    DDSCAPS_FRONTBUFFER, DDSCAPS_PRIMARYSURFACE, DDSCAPS_SYSTEMMEMORY, DDSD_BACKBUFFERCOUNT,
-    DDSD_CAPS, DDSD_HEIGHT, DDSD_PITCH, DDSD_PIXELFORMAT, DDSD_WIDTH, DESC_BACK_COUNT, DESC_BYTES,
-    DESC_CAPS, DESC_FLAGS, DESC_FORMAT_BITS, DESC_FORMAT_FLAGS, DESC_FORMAT_SIZE, DESC_HEIGHT,
-    DESC_PITCH, DESC_SIZE, DESC_SURFACE, DESC_WIDTH, Desc, FORMAT_BYTES,
+    DD_OK, DDBLT_COLORFILL, DDBLT_WAIT, DDBLTFAST_WAIT, DDERR_INVALIDOBJECT, DDERR_INVALIDPARAMS,
+    DDERR_NOTFLIPPABLE, DDERR_NOTFOUND, DDERR_OUTOFMEMORY, DDERR_UNSUPPORTED, DDPF_PALETTEINDEXED8,
+    DDPF_RGB, DDSCAPS_BACKBUFFER, DDSCAPS_COMPLEX, DDSCAPS_FLIP, DDSCAPS_FRONTBUFFER,
+    DDSCAPS_PRIMARYSURFACE, DDSCAPS_SYSTEMMEMORY, DDSD_BACKBUFFERCOUNT, DDSD_CAPS, DDSD_HEIGHT,
+    DDSD_PITCH, DDSD_PIXELFORMAT, DDSD_WIDTH, DESC_BACK_COUNT, DESC_BYTES, DESC_CAPS, DESC_FLAGS,
+    DESC_FORMAT_BITS, DESC_FORMAT_FLAGS, DESC_FORMAT_SIZE, DESC_HEIGHT, DESC_PITCH, DESC_SIZE,
+    DESC_SURFACE, DESC_WIDTH, Desc, FORMAT_BYTES,
 };
 use crate::table::Row;
 
@@ -110,17 +110,17 @@ fn rect_words(rect: Option<[i32; 4]>) -> [u32; 4] {
         .map(|edge| u32::from_ne_bytes(edge.to_ne_bytes()))
 }
 
-/// One program's `DirectDraw` object, over its easel and its desk.
-pub struct Surfaces<'e, B, S> {
+/// One program's `DirectDraw` object, over its easel and its windows.
+pub struct Surfaces<'e, B, W> {
     row: &'static Row,
     easel: &'e Easel<B>,
-    desk: &'e Desk<S>,
+    desk: &'e W,
     state: RefCell<State>,
 }
 
-impl<'e, B: Back, S: Screen> Surfaces<'e, B, S> {
+impl<'e, B: Back, W: Windows> Surfaces<'e, B, W> {
     #[must_use]
-    pub const fn new(row: &'static Row, easel: &'e Easel<B>, desk: &'e Desk<S>) -> Self {
+    pub const fn new(row: &'static Row, easel: &'e Easel<B>, desk: &'e W) -> Self {
         Self {
             row,
             easel,
@@ -139,20 +139,20 @@ impl<'e, B: Back, S: Screen> Surfaces<'e, B, S> {
     fn line(&self, call: &str, arguments: &[u32], wrote: &[u32], answer: u32) {
         let (a, o) = (Numbers(arguments), Numbers(wrote));
         let v = oxide_trace::__shown!(answer);
-        self.desk.screen().quiet(|| {
+        self.desk.quiet(|| {
             if !wrote.is_empty() {
-                log::debug!(c = call, a:% = a, o:% = o, v:% = v; "imp.call");
+                log::debug!(c = call, a:% = a, o:% = o, v:% = v, by = "draw-surfaces"; "imp.call");
             } else if arguments.is_empty() {
-                log::debug!(c = call, v:% = v; "imp.call");
+                log::debug!(c = call, v:% = v, by = "draw-surfaces"; "imp.call");
             } else {
-                log::debug!(c = call, a:% = a, v:% = v; "imp.call");
+                log::debug!(c = call, a:% = a, v:% = v, by = "draw-surfaces"; "imp.call");
             }
         });
     }
 
     /// The `draw.table` lines of `entries`, numbered from `start`.
     fn table(&self, call: &str, start: u32, entries: &[u32]) {
-        self.desk.screen().quiet(|| {
+        self.desk.quiet(|| {
             for (at, chunk) in (0_u32..).zip(entries.chunks(TABLE_LINE as usize)) {
                 let first = start.wrapping_add(at * TABLE_LINE);
                 let first = oxide_trace::__shown!(first);
@@ -327,7 +327,7 @@ impl<'e, B: Back, S: Screen> Surfaces<'e, B, S> {
     pub fn set_display_mode(&self, width: u32, height: u32, bits: u32) -> u32 {
         let known = bits == BITS && self.row.modes.contains(&(width, height, bits));
         let made = known && self.easel.resize_screen(width, height);
-        let answer = if made { DD_OK } else { DDERR_INVALIDMODE };
+        let answer = if made { DD_OK } else { self.row.refused };
         let call = "IDirectDraw::SetDisplayMode";
         self.line(call, &[width, height, bits], &[], answer);
         answer
@@ -811,7 +811,7 @@ impl<'e, B: Back, S: Screen> Surfaces<'e, B, S> {
     #[must_use]
     pub fn absent(&self, interface: &str, slot: u32) -> u32 {
         let i = oxide_trace::__shown!(slot);
-        self.desk.screen().quiet(|| {
+        self.desk.quiet(|| {
             log::debug!(c = interface, i:% = i; "surfaces.absent");
         });
         DDERR_UNSUPPORTED

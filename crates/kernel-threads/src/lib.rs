@@ -100,7 +100,7 @@ impl<T: Threads> ThreadCalls<T> {
         self.threads.quiet(|| {
             log::debug!(
                 c = name, a:% = Args(arguments), v:% = oxide_trace::__shown!(value),
-                from:% = oxide_trace::__shown!(from); "imp.call"
+                from:% = oxide_trace::__shown!(from), by = "kernel-threads"; "imp.call"
             );
         });
     }

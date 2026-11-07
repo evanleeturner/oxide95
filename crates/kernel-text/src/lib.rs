@@ -231,7 +231,8 @@ impl<L: Locale> Front<L> {
     pub fn ansi_code_page(&self) -> u32 {
         let value = self.file.ansi;
         self.locale.quiet(|| {
-            log::debug!(c = self.file.calls.ansi_code_page, v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = self.file.calls.ansi_code_page, v:% = oxide_trace::__shown!(value),
+                by = "kernel-text"; "imp.call");
         });
         value
     }
@@ -241,7 +242,8 @@ impl<L: Locale> Front<L> {
     pub fn oem_code_page(&self) -> u32 {
         let value = self.file.oem;
         self.locale.quiet(|| {
-            log::debug!(c = self.file.calls.oem_code_page, v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = self.file.calls.oem_code_page, v:% = oxide_trace::__shown!(value),
+                by = "kernel-text"; "imp.call");
         });
         value
     }
@@ -260,7 +262,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.code_page_info, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         info
@@ -295,7 +298,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.to_wide, a:% = Args(arguments), s:% = Bytes(bytes),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value
@@ -338,7 +342,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.to_bytes, a:% = Args(arguments), s:% = Units(units),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         (value, defaulted)
@@ -411,7 +416,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = call, a:% = Args(arguments), s:% = text,
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
     }
@@ -449,7 +455,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.map_string, a:% = Args(arguments), s:% = Bytes(bytes),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value
@@ -487,7 +494,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.map_string_w, a:% = Args(arguments), s:% = Units(units),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value
@@ -542,7 +550,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.compare, a:% = Args(arguments), s:% = Bytes(first), with:% = Bytes(second),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value
@@ -556,7 +565,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.compare_w, a:% = Args(arguments), s:% = Units(first), with:% = Units(second),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value
@@ -589,7 +599,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.locale_info, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value
@@ -618,7 +629,8 @@ impl<L: Locale> Front<L> {
         self.locale.quiet(|| {
             log::debug!(
                 c = self.file.calls.locale_info_w, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error); "imp.call"
+                v:% = oxide_trace::__shown!(value), e:% = oxide_trace::__shown!(error),
+                by = "kernel-text"; "imp.call"
             );
         });
         value

@@ -238,8 +238,7 @@ impl Shown {
 }
 
 /// Where the program's pictures are shown: the seam between the calls and a
-/// target. The page's, softbuffer's, and under Wine none: the original's
-/// calls stay Wine's, logged in the layer.
+/// target. The page's, softbuffer's, and under Wine a real window's.
 pub trait Back {
     /// `shown` is the picture now: the back shows it or keeps it to show.
     fn present(&self, shown: &Shown);
@@ -393,6 +392,21 @@ impl<B: Back> Easel<B> {
                 colors: Palette::black(),
             }),
         }
+    }
+
+    /// The back this easel shows on, for an owner that must aim it.
+    #[must_use]
+    pub const fn back(&self) -> &B {
+        &self.back
+    }
+
+    /// Whether the state is lent out now, a front having come back in from
+    /// inside [`Self::with_buffer`] or [`Self::with_screen`]. One thread's
+    /// answer: this type is not `Sync`, so a second thread is its owner's to
+    /// keep out.
+    #[must_use]
+    pub fn held(&self) -> bool {
+        self.state.try_borrow_mut().is_err()
     }
 
     /// The buffer's fields and pixels `run` is handed, a bitmap's by its

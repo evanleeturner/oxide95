@@ -11,6 +11,8 @@ pub struct Row {
     pub levels: &'static [u32],
     /// The `SetDisplayMode` modes it asks: width, height, bits.
     pub modes: &'static [(u32, u32, u32)],
+    /// What `SetDisplayMode` answers for a mode `modes` does not hold.
+    pub refused: u32,
     /// The most back buffers a flip chain is given.
     pub chain: u32,
     /// The `CreatePalette` flags it asks.

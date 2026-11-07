@@ -92,7 +92,7 @@ impl<C: Clocks> Times<C> {
         self.clocks.quiet(|| {
             log::debug!(
                 c = self.file.calls.tick_count, v:% = oxide_trace::__shown!(value),
-                t:% = oxide_trace::__shown!(micros); "imp.call"
+                t:% = oxide_trace::__shown!(micros), by = "kernel-time"; "imp.call"
             );
         });
         value
@@ -124,7 +124,8 @@ impl<C: Clocks> Times<C> {
         self.clocks.sleep(millis);
         let arguments = [oxide_trace::__shown!(millis)];
         self.clocks.quiet(|| {
-            log::debug!(c = self.file.calls.sleep, a:% = Args(arguments); "imp.call");
+            log::debug!(c = self.file.calls.sleep, a:% = Args(arguments),
+                by = "kernel-time"; "imp.call");
         });
     }
 
@@ -140,7 +141,7 @@ impl<C: Clocks> Times<C> {
         self.clocks.quiet(|| {
             log::debug!(
                 c = self.file.calls.counter, v:% = oxide_trace::__shown!(1),
-                t:% = oxide_trace::__shown!(micros); "imp.call"
+                t:% = oxide_trace::__shown!(micros), by = "kernel-time"; "imp.call"
             );
         });
         1
@@ -169,7 +170,8 @@ impl<C: Clocks> Times<C> {
         *into = [0; ZONE_BYTES];
         let value = self.file.zone_unknown;
         self.clocks.quiet(|| {
-            log::debug!(c = self.file.calls.zone, v:% = oxide_trace::__shown!(value); "imp.call");
+            log::debug!(c = self.file.calls.zone, v:% = oxide_trace::__shown!(value),
+                by = "kernel-time"; "imp.call");
         });
         value
     }
@@ -182,7 +184,8 @@ impl<C: Clocks> Times<C> {
         self.clocks.quiet(|| {
             log::debug!(
                 c = self.file.calls.to_local_file_time, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(1), f:% = oxide_trace::__shown!(ticks); "imp.call"
+                v:% = oxide_trace::__shown!(1), f:% = oxide_trace::__shown!(ticks),
+                by = "kernel-time"; "imp.call"
             );
         });
         1
@@ -207,7 +210,7 @@ impl<C: Clocks> Times<C> {
                 c = self.file.calls.to_system_time, a:% = Args(arguments),
                 v:% = oxide_trace::__shown!(value),
                 w:% = Args(words.each_ref().map(|word| oxide_trace::__shown!(*word))),
-                e:% = oxide_trace::__shown!(error); "imp.call"
+                e:% = oxide_trace::__shown!(error), by = "kernel-time"; "imp.call"
             );
         });
         value
@@ -231,7 +234,8 @@ impl<C: Clocks> Times<C> {
         self.clocks.quiet(|| {
             log::debug!(
                 c = self.file.calls.time, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(value), t:% = oxide_trace::__shown!(wall); "imp.call"
+                v:% = oxide_trace::__shown!(value), t:% = oxide_trace::__shown!(wall),
+                by = "kernel-time"; "imp.call"
             );
         });
         value
@@ -243,7 +247,8 @@ impl<C: Clocks> Times<C> {
         let shown = words.each_ref().map(|word| oxide_trace::__shown!(*word));
         self.clocks.quiet(|| {
             log::debug!(
-                c = name, t:% = oxide_trace::__shown!(wall), w:% = Args(shown); "imp.call"
+                c = name, t:% = oxide_trace::__shown!(wall), w:% = Args(shown),
+                by = "kernel-time"; "imp.call"
             );
         });
     }

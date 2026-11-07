@@ -243,7 +243,7 @@ impl<S: Settings> Front<S> {
         self.settings.quiet(|| {
             log::debug!(
                 c = self.file.calls.open_key, a:% = Args(arguments), s:% = Bytes(path),
-                o:% = wrote, v:% = oxide_trace::__shown!(code); "imp.call"
+                o:% = wrote, v:% = oxide_trace::__shown!(code), by = "kernel-registry"; "imp.call"
             );
         });
         answer
@@ -283,7 +283,7 @@ impl<S: Settings> Front<S> {
         self.settings.quiet(|| {
             log::debug!(
                 c = self.file.calls.create_key, a:% = Args(arguments), s:% = Bytes(path),
-                o:% = wrote, v:% = oxide_trace::__shown!(code); "imp.call"
+                o:% = wrote, v:% = oxide_trace::__shown!(code), by = "kernel-registry"; "imp.call"
             );
         });
         answer
@@ -353,7 +353,7 @@ impl<S: Settings> Front<S> {
         self.settings.quiet(|| {
             log::debug!(
                 c = self.file.calls.query_value, a:% = Args(arguments), s:% = Bytes(name),
-                o:% = wrote, v:% = oxide_trace::__shown!(code); "imp.call"
+                o:% = wrote, v:% = oxide_trace::__shown!(code), by = "kernel-registry"; "imp.call"
             );
         });
         queried
@@ -389,7 +389,7 @@ impl<S: Settings> Front<S> {
         self.settings.quiet(|| {
             log::debug!(
                 c = self.file.calls.set_value, a:% = Args(arguments), s:% = Bytes(name),
-                o:% = wrote, v:% = oxide_trace::__shown!(code); "imp.call"
+                o:% = wrote, v:% = oxide_trace::__shown!(code), by = "kernel-registry"; "imp.call"
             );
         });
         code
@@ -407,7 +407,7 @@ impl<S: Settings> Front<S> {
         self.settings.quiet(|| {
             log::debug!(
                 c = self.file.calls.close_key, a:% = Args(arguments),
-                v:% = oxide_trace::__shown!(code); "imp.call"
+                v:% = oxide_trace::__shown!(code), by = "kernel-registry"; "imp.call"
             );
         });
         code

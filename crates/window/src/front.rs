@@ -89,15 +89,17 @@ impl<'d, S: Screen> Front<'d, S> {
         let v = oxide_trace::__shown!(answer);
         self.desk.screen().quiet(|| {
             match (arguments.is_empty(), given.is_empty(), wrote.is_empty()) {
-                (true, true, true) => log::debug!(c = call, v:% = v; "imp.call"),
-                (false, true, true) => log::debug!(c = call, a:% = a, v:% = v; "imp.call"),
+                (true, true, true) => log::debug!(c = call, v:% = v, by = "window"; "imp.call"),
+                (false, true, true) => log::debug!(c = call, a:% = a, v:% = v,
+                    by = "window"; "imp.call"),
                 (false, false, true) => {
-                    log::debug!(c = call, a:% = a, s:% = s, v:% = v; "imp.call");
+                    log::debug!(c = call, a:% = a, s:% = s, v:% = v, by = "window"; "imp.call");
                 }
                 (false, true, false) => {
-                    log::debug!(c = call, a:% = a, o:% = o, v:% = v; "imp.call");
+                    log::debug!(c = call, a:% = a, o:% = o, v:% = v, by = "window"; "imp.call");
                 }
-                _ => log::debug!(c = call, a:% = a, s:% = s, o:% = o, v:% = v; "imp.call"),
+                _ => log::debug!(c = call, a:% = a, s:% = s, o:% = o, v:% = v,
+                    by = "window"; "imp.call"),
             }
         });
     }

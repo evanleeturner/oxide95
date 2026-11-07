@@ -36,6 +36,9 @@ page = ["desk"]
 # A host's back, `native::Native`, through softbuffer: a window `window` lends
 # by its handle traits, so no crate but `window` takes winit.
 native = ["desk", "window/native", "dep:softbuffer", "dep:raw-window-handle"]
+# The Win32 target's back and windows, `user32::Window` and `user32::Real`: the
+# program's windows are Wine's own, painted by `SetDIBitsToDevice`.
+user32 = ["desk", "window/user32"]
 
 [dependencies]
 window = { path = "../window" }

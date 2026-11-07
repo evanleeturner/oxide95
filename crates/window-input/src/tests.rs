@@ -143,8 +143,8 @@ fn get_cursor_pos_writes_the_hosts_pointer() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!GetCursorPos o=2,2 v=1",
-            "imp.call c=USER32!GetCursorPos o=140,f0 v=1",
+            "imp.call c=USER32!GetCursorPos o=2,2 v=1 by=window-input",
+            "imp.call c=USER32!GetCursorPos o=140,f0 v=1 by=window-input",
         ]
     );
 }
@@ -173,11 +173,11 @@ fn get_async_key_state_polls_the_3_buttons() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!GetAsyncKeyState a=1 v=0",
-            "imp.call c=USER32!GetAsyncKeyState a=2 v=0",
-            "imp.call c=USER32!GetAsyncKeyState a=4 v=0",
-            "imp.call c=USER32!GetAsyncKeyState a=1 v=8000",
-            "imp.call c=USER32!GetAsyncKeyState a=1 v=0",
+            "imp.call c=USER32!GetAsyncKeyState a=1 v=0 by=window-input",
+            "imp.call c=USER32!GetAsyncKeyState a=2 v=0 by=window-input",
+            "imp.call c=USER32!GetAsyncKeyState a=4 v=0 by=window-input",
+            "imp.call c=USER32!GetAsyncKeyState a=1 v=8000 by=window-input",
+            "imp.call c=USER32!GetAsyncKeyState a=1 v=0 by=window-input",
         ]
     );
 }
@@ -197,9 +197,9 @@ fn map_virtual_key_types_from_the_map() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!MapVirtualKeyA a=12,2 v=0",
-            "imp.call c=USER32!MapVirtualKeyA a=41,2 v=41",
-            "imp.call c=USER32!MapVirtualKeyA a=41,0 v=0",
+            "imp.call c=USER32!MapVirtualKeyA a=12,2 v=0 by=window-input",
+            "imp.call c=USER32!MapVirtualKeyA a=41,2 v=41 by=window-input",
+            "imp.call c=USER32!MapVirtualKeyA a=41,0 v=0 by=window-input",
         ]
     );
 }
@@ -240,7 +240,7 @@ fn get_key_state_keeps_alts_toggle_in_a_runs_order() {
     let logged: Vec<String> = polls
         .iter()
         .flat_map(|(_, alt)| ["a=11 v=0", alt, "a=10 v=0"])
-        .map(|line| format!("imp.call c=USER32!GetKeyState {line}"))
+        .map(|line| format!("imp.call c=USER32!GetKeyState {line} by=window-input"))
         .collect();
     assert_eq!(lines, logged);
 }
@@ -282,12 +282,12 @@ fn a_clip_locks_the_point_and_motion_moves_it_inside() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!SetCursorPos a=140,f0 v=1",
-            "imp.call c=USER32!ClipCursor a=0,0,280,1e0 v=1",
-            "imp.call c=USER32!GetCursorPos o=150,e8 v=1",
-            "imp.call c=USER32!GetCursorPos o=27f,1df v=1",
-            "imp.call c=USER32!ClipCursor v=1",
-            "imp.call c=USER32!GetCursorPos o=300,200 v=1",
+            "imp.call c=USER32!SetCursorPos a=140,f0 v=1 by=window-input",
+            "imp.call c=USER32!ClipCursor a=0,0,280,1e0 v=1 by=window-input",
+            "imp.call c=USER32!GetCursorPos o=150,e8 v=1 by=window-input",
+            "imp.call c=USER32!GetCursorPos o=27f,1df v=1 by=window-input",
+            "imp.call c=USER32!ClipCursor v=1 by=window-input",
+            "imp.call c=USER32!GetCursorPos o=300,200 v=1 by=window-input",
         ]
     );
 }
@@ -307,9 +307,9 @@ fn show_cursor_counts_and_load_cursor_hands_a_handle() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!ShowCursor a=0 v=ffffffff",
-            "imp.call c=USER32!ShowCursor a=1 v=0",
-            "imp.call c=USER32!LoadCursorA a=0 s=#7f00 v=10020",
+            "imp.call c=USER32!ShowCursor a=0 v=ffffffff by=window-input",
+            "imp.call c=USER32!ShowCursor a=1 v=0 by=window-input",
+            "imp.call c=USER32!LoadCursorA a=0 s=#7f00 v=10020 by=window-input",
         ]
     );
 }
@@ -353,9 +353,9 @@ fn a_blur_lets_every_key_go_and_keeps_the_toggles() {
     assert_eq!(
         lines,
         [
-            "imp.call c=USER32!GetKeyState a=41 v=1",
-            "imp.call c=USER32!GetKeyState a=12 v=1",
-            "imp.call c=USER32!GetAsyncKeyState a=1 v=0",
+            "imp.call c=USER32!GetKeyState a=41 v=1 by=window-input",
+            "imp.call c=USER32!GetKeyState a=12 v=1 by=window-input",
+            "imp.call c=USER32!GetAsyncKeyState a=1 v=0 by=window-input",
         ]
     );
     desk.state().queue.clear();

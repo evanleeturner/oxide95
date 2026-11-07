@@ -9,8 +9,7 @@
 //! palettes, the contexts and the objects they hold, the blits and the screen.
 //! A [`easel::Back`] sees [`easel::Shown`] alone, once a present: [`page::Page`]
 //! keeps it for the page's script, [`native::Native`] paints it on a host's
-//! window. Under Wine there is no back: the original's calls stay Wine's, logged
-//! in the layer.
+//! window, `user32::Window` on a real one under Wine, by GDI32 alone.
 //!
 //! The 23 fronts, in [`front::Front`]: `CreatePalette`, `SelectPalette`,
 //! `SetPaletteEntries`, `RealizePalette`, `SetDIBColorTable`,
@@ -56,3 +55,5 @@ pub mod table;
 mod test_log;
 #[cfg(test)]
 mod tests;
+#[cfg(all(feature = "user32", target_arch = "x86", target_os = "windows"))]
+pub mod user32;
