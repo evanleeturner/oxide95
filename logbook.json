@@ -246,8 +246,14 @@
     {
       "id": "draw.present",
       "level": "D",
-      "fields": { "w": "the window's width the picture was painted into", "h": "its height" },
+      "fields": { "window": "the window painted, its handle as a number: the Win32 back alone", "w": "the window's width the picture was painted into", "h": "its height", "rows": "SetDIBitsToDevice's answer, the rows it drew: the Win32 back alone", "by": "who painted: draw, on the Win32 back alone" },
       "template": "a host's paint at {w} by {h}"
+    },
+    {
+      "id": "draw.frozen",
+      "level": "W",
+      "fields": { "c": "the drawing call that met the easel lent out", "v": "the whole answer it gave", "by": "who answered: draw" },
+      "template": "{c} answered {v} with the easel lent out"
     },
     {
       "id": "surfaces.absent",
