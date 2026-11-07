@@ -21,11 +21,11 @@ export function result(check, state, words) {
   return { check, name: checkName(check), state, words };
 }
 
-function passed(check) {
+export function passed(check) {
   return result(check, PASS, passSentence(check));
 }
 
-function failed(check, values) {
+export function failed(check, values) {
   return result(check, RED, sentence(check, values));
 }
 

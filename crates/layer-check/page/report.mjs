@@ -14,6 +14,9 @@ const SENTENCES = {
   C5: "Your browser made a test tone and could not read it back. The fault is in the browser, and no code from this project ran.",
   C6: "You counted a different number of beeps from the ones played. Check the volume and which speaker is chosen.",
   C10: "The microphone heard nothing while the beeps played. The speaker, the volume or the microphone may be off.",
+  H1: "Your browser reports no speakers or headphones. Plug one in, or allow the page to see them.",
+  H2: "A device was plugged in and this page did not notice. That is a fault in this page.",
+  H3: "Your browser never answered about the microphone. The check goes on without it.",
   P1: "This page started sound before you asked for it. That is a fault in this page.",
   P2: "This page tried to send something out, and it was stopped. That is a fault in this page.",
   P3: "The report holds a device's name. Nothing was sent. That is a fault in this page.",
@@ -28,6 +31,9 @@ const PASSES = {
   C5: "Your browser made a test tone and read it back.",
   C6: "You counted the beeps that were played.",
   C10: "The microphone heard the beeps.",
+  H1: "Your browser reports at least 1 speaker or pair of headphones. This does not show that sound can be heard.",
+  H2: "This page reacted to a test signal that a device was plugged in.",
+  H3: "Your browser answered about the microphone.",
 };
 
 const NAMES = {
@@ -38,6 +44,9 @@ const NAMES = {
   C5: "Test tone",
   C6: "Beep count",
   C10: "Microphone",
+  H1: "Speakers and headphones",
+  H2: "Plugging in",
+  H3: "Microphone question",
   P2: "Nothing sent",
 };
 

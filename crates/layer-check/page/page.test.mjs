@@ -114,6 +114,10 @@ test("the copy holds exactly the shipped files and the logger", () => {
   assert.deepEqual(readdirSync(out).sort(), [...SHIPPED, "logger.mjs"].sort());
 });
 
+test("the page ships devices.mjs", () => {
+  assert.ok(SHIPPED.includes("devices.mjs"));
+});
+
 test("the copy refuses when two loggers differ", () => {
   const root = mkdtempSync(join(tmpdir(), "layer-check-"));
   const crates = join(root, "crates");

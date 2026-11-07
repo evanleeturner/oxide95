@@ -18,6 +18,7 @@ import { fileURLToPath } from "node:url";
 export const SHIPPED = [
   "beep.mjs",
   "computer.mjs",
+  "devices.mjs",
   "index.html",
   "layer-check.css",
   "layer-check.mjs",
