@@ -542,3 +542,106 @@ fn fill() {
         },
     );
 }
+
+/// Stands where `core::ptr::write_bytes` would, for [`real_forms`] alone, and touches nothing.
+unsafe fn silent_fill(_destination: *mut u8, _byte: u8, _count: usize) {}
+
+/// A global of [`real_forms`] alone, declared as a port's are and named bare.
+static mut GLOBAL: u32 = 0;
+
+/// The forms a port's real calls take that the sites above do not: arguments that are plain
+/// locals, a global named bare, a computed pointer, `read_volatile` as the reader, and integer
+/// literals with no type of their own, left to inference. Each row is worked by hand.
+#[test]
+fn real_forms() {
+    let first = 0x2a_u32;
+    let second = -1_i8;
+    off_page(
+        |_| {
+            oxide_trace::enter!("401000", first, second);
+        },
+        &Table {
+            row: "fn.in f=401000 a=2a,ff",
+            order: &[],
+            value: (),
+            after: START,
+        },
+    );
+
+    on_page(
+        // SAFETY: the cell is mapped and aligned, and the guard lets each fault through.
+        || unsafe { core::ptr::read_volatile(CELL.wrapping_add(0) as *const u16) },
+        // SAFETY: as above.
+        |_| unsafe {
+            oxide_trace::rdf!(
+                "401000",
+                core::ptr::read_volatile,
+                CELL.wrapping_add(0) as *const u16
+            )
+        },
+        &Table {
+            row: "mem.rd f=401000 a=20000010 v=2a",
+            order: &[],
+            value: 0x2a_u16,
+            after: START,
+        },
+    );
+
+    on_page(
+        // SAFETY: the cell is mapped and aligned, and the guard lets each fault through.
+        || unsafe {
+            *cell() |= black_box(1_u32);
+        },
+        // SAFETY: as above.
+        |_| unsafe {
+            oxide_trace::du!("401000", cell().add(0), |=, 1);
+        },
+        &Table {
+            row: "mem.upd f=401000 a=20000010 op=|= v=1",
+            order: &[],
+            value: (),
+            after: 0x2b,
+        },
+    );
+
+    off_page(
+        // SAFETY: only this test names `GLOBAL`, and it runs one site at a time.
+        |_| unsafe {
+            GLOBAL = 0x2a;
+            oxide_trace::gr!("401000", "4a0000", GLOBAL)
+        },
+        &Table {
+            row: "glob.rd f=401000 g=4a0000 v=2a",
+            order: &[],
+            value: 0x2a_u32,
+            after: START,
+        },
+    );
+
+    off_page(
+        // SAFETY: as above.
+        |_| unsafe {
+            oxide_trace::gw!("401000", "4a0000", GLOBAL, 0xffff_ffff);
+            GLOBAL
+        },
+        &Table {
+            row: "glob.wr f=401000 g=4a0000 v=ffffffff",
+            order: &[],
+            value: 0xffff_ffff_u32,
+            after: START,
+        },
+    );
+
+    off_page(
+        // SAFETY: `silent_fill` touches nothing through its arguments.
+        |_| unsafe {
+            oxide_trace::fill!("401000", silent_fill, 0x2000 as *mut u8, 0xab, 0x2066);
+        },
+        &Table {
+            row: "mem.fill f=401000 d=2000 b=ab n=2066",
+            order: &[],
+            value: (),
+            after: START,
+        },
+    );
+}

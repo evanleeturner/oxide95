@@ -39,6 +39,7 @@ source code that you compile against these libraries.
 | `video_smacker` | Smacker video clips, turned into pictures, palettes and sound; no Windows calls of its own yet |
 | `oxide_trace` | macros that log the values a rewritten function reads and writes |
 | `oxide_logline` | writes those logs in one line format and checks them against `logbook.json` |
+| `oxide_trace_check` | tests of `oxide_trace`'s macros, in a library of their own because reading memory directly needs code `oxide_trace` forbids: each macro is judged by a table worked out by hand, by `logbook.json`, and by counting its real touches of a page of memory; each kind of check was first shown to fail on a bug put in a copy on purpose; it has run on Linux |
 
 Each library keeps the part that answers Windows calls apart from the part
 that talks to your platform, so the same answers serve a desktop, a browser

@@ -316,16 +316,11 @@ mod host {
     unsafe extern "C" fn on_signal(signal: c_int, info: *mut c_void, context: *mut c_void) {
         // SAFETY: the kernel hands a `SA_SIGINFO` handler a live context, and the flags
         // sit at this offset of it on this host.
-        let flags = unsafe { context.cast::<u8>().add(FLAGS_AT).cast::<u64>() };
+        let flags = unsafe { context.byte_add(FLAGS_AT).cast::<u64>() };
         let ours = if signal == SIGSEGV {
             // SAFETY: the kernel hands a `SA_SIGINFO` handler a live info, and the
             // address sits at this offset of it for a `SIGSEGV`.
-            let address = unsafe {
-                info.cast::<u8>()
-                    .add(FAULT_ADDRESS_AT)
-                    .cast::<usize>()
-                    .read()
-            };
+            let address = unsafe { info.byte_add(FAULT_ADDRESS_AT).cast::<usize>().read() };
             (PAGE..PAGE + PAGE_SIZE).contains(&address)
         } else {
             STEPPING.load(Ordering::SeqCst)
@@ -409,8 +404,8 @@ mod host {
 
     #[repr(C)]
     struct ExceptionPointers {
-        record: *const u8,
-        context: *mut u8,
+        record: *const c_void,
+        context: *mut c_void,
     }
 
     type Handler = unsafe extern "system" fn(*mut ExceptionPointers) -> i32;
@@ -454,10 +449,10 @@ mod host {
         // whose fields sit at these offsets on this host.
         unsafe {
             let record = (*pointers).record;
-            let flags = (*pointers).context.add(FLAGS_AT).cast::<u32>();
+            let flags = (*pointers).context.byte_add(FLAGS_AT).cast::<u32>();
             match record.cast::<u32>().read() {
                 ACCESS_VIOLATION => {
-                    let address = record.add(FAULT_ADDRESS_AT).cast::<usize>().read();
+                    let address = record.byte_add(FAULT_ADDRESS_AT).cast::<usize>().read();
                     if !(PAGE..PAGE + PAGE_SIZE).contains(&address) {
                         return CONTINUE_SEARCH;
                     }

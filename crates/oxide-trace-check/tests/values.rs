@@ -23,7 +23,7 @@ macro_rules! address_of {
         $({
             // SAFETY: a non-null number standing in for an address, printed and never
             // called.
-            let pointer = unsafe { std::mem::transmute::<usize, $pointer>(0x0040_1234) };
+            let pointer = unsafe { std::mem::transmute::<usize, $pointer>(0x40_1234) };
             assert_eq!(show!(pointer), "401234", "{}", stringify!($pointer));
             assert_eq!(show!(Some(pointer)), "401234", "{}", stringify!($pointer));
             assert_eq!(show!(None::<$pointer>), "0", "{}", stringify!($pointer));
