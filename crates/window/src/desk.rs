@@ -4,7 +4,7 @@
 //! its files' fronts. A back raises events; the desk queues them as the
 //! program's messages, a key as its key message.
 
-use alloc::collections::VecDeque;
+use alloc::collections::{BTreeSet, VecDeque};
 use alloc::vec::Vec;
 use core::cell::{RefCell, RefMut};
 
@@ -73,6 +73,10 @@ pub struct State {
     /// The keys down as the queued key messages left them, oldest first:
     /// all let go when the host's window loses the user's attention.
     pub held: Vec<u8>,
+    /// The windows whose paint has ended since they were last shown: a shown
+    /// window not here has `WM_PAINT` waiting, as a real window keeps it until
+    /// it is marked.
+    pub painted: BTreeSet<u32>,
 }
 
 impl State {
@@ -159,6 +163,19 @@ impl<S: Screen> Desk<S> {
     /// call, which may call a front again.
     pub fn state(&self) -> RefMut<'_, State> {
         self.state.borrow_mut()
+    }
+
+    /// Marks `window` as painted, its waiting `WM_PAINT` ended until it is next
+    /// shown; `false` for no such window. A window left unmarked answers a
+    /// paint on every peek.
+    #[must_use]
+    pub fn mark_painted(&self, window: u32) -> bool {
+        let mut state = self.state();
+        let here = state.window(window).is_some();
+        if here {
+            state.painted.insert(window);
+        }
+        here
     }
 
     /// Queues each event the back raised since the last pump as the

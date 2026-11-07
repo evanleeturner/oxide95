@@ -11,6 +11,7 @@ use crate::table::Row;
 use crate::{Bytes, Message, Numbers, Rect, Screen, bits};
 
 /// The messages a front queues or answers, Windows' numbers.
+const WM_PAINT: u32 = 0xf;
 const WM_CLOSE: u32 = 0x10;
 const WM_QUIT: u32 = 0x12;
 const WM_NCHITTEST: u32 = 0x84;
@@ -60,6 +61,25 @@ const SM_CXBORDER: i32 = 5;
 const SM_CXDLGFRAME: i32 = 7;
 const SM_CYMENU: i32 = 15;
 const SM_CXFRAME: i32 = 32;
+
+/// The window a peek answers `WM_PAINT` for once no message waits, if `first` to
+/// `last` (both 0 any) hold its number: `window` (0 any) if shown and its paint
+/// not ended, the newest first, no page read naming an order.
+fn paint_waiting(state: &crate::desk::State, window: u32, first: u32, last: u32) -> Option<u32> {
+    if !(first == 0 && last == 0 || (first..=last).contains(&WM_PAINT)) {
+        return None;
+    }
+    state
+        .windows
+        .iter()
+        .rev()
+        .find(|row| {
+            row.shown
+                && !state.painted.contains(&row.handle)
+                && (window == 0 || row.handle == window)
+        })
+        .map(|row| row.handle)
+}
 
 /// The window the focus passes to when its holder hides or goes: the newest
 /// shown window that is no child, but `leaving`; 0 for none.
@@ -256,6 +276,7 @@ impl<'d, S: Screen> Front<'d, S> {
         let mut state = self.desk.state();
         let before = state.windows.len();
         state.windows.retain(|kept| kept.handle != window);
+        state.painted.remove(&window);
         let gone = state.windows.len() < before;
         if gone && state.focus == window {
             state.focus = next_focus(&state, window);
@@ -327,6 +348,9 @@ impl<'d, S: Screen> Front<'d, S> {
             }
             (before, row.rect)
         });
+        if shown && before.is_some_and(|(before, _)| !before) {
+            state.painted.remove(&window);
+        }
         let child = state
             .window(window)
             .is_none_or(|row| row.style & WS_CHILD != 0);
@@ -357,6 +381,7 @@ impl<'d, S: Screen> Front<'d, S> {
     #[must_use]
     pub fn set_window_pos(&self, window: u32, after: u32, place: Rect, flags: u32) -> u32 {
         let mut state = self.desk.state();
+        let before = state.window(window).is_some_and(|row| row.shown);
         let placed = state.window_mut(window).map(|row| {
             if flags & SWP_NOMOVE == 0 {
                 let (wide, high) = (
@@ -378,6 +403,9 @@ impl<'d, S: Screen> Front<'d, S> {
             }
             (row.rect, row.shown)
         });
+        if !before && placed.is_some_and(|(_, shown)| shown) {
+            state.painted.remove(&window);
+        }
         drop(state);
         if let Some((rect, shown)) = placed {
             self.desk.screen().place(window, rect, shown);
@@ -606,7 +634,8 @@ impl<'d, S: Screen> Front<'d, S> {
     }
 
     /// `DefWindowProcA`: `WM_NCHITTEST` answers `HTCLIENT`,
-    /// `WM_NCACTIVATE` 1, `WM_CLOSE` destroys the window and answers 0;
+    /// `WM_NCACTIVATE` 1, `WM_CLOSE` destroys the window and answers 0,
+    /// `WM_PAINT` ends its waiting paint and answers 0;
     /// any other message 0. Callers: the shell, the game file, the
     /// launcher.
     #[must_use]
@@ -616,6 +645,10 @@ impl<'d, S: Screen> Front<'d, S> {
             WM_NCACTIVATE => 1,
             WM_CLOSE => {
                 self.destroy(window);
+                0
+            }
+            WM_PAINT => {
+                let _ = self.desk.mark_painted(window);
                 0
             }
             _ => 0,
@@ -632,7 +665,8 @@ impl<'d, S: Screen> Front<'d, S> {
 
     /// `PeekMessageA`: the back pumped, then the first queued message for
     /// `window` (0 any) numbered `first` to `last` (both 0 any), taken
-    /// off the queue when `remove` holds `PM_REMOVE`; `None` when none
+    /// off the queue when `remove` holds `PM_REMOVE`; with none queued, a
+    /// waiting paint, which `remove` leaves waiting; `None` when neither
     /// waits. Callers: the shell, the game file.
     #[must_use]
     pub fn peek_message(&self, window: u32, first: u32, last: u32, remove: u32) -> Option<Message> {
@@ -648,6 +682,14 @@ impl<'d, S: Screen> Front<'d, S> {
             } else {
                 state.queue.remove(at)
             }
+        });
+        let found = found.or_else(|| {
+            paint_waiting(&state, window, first, last).map(|handle| Message {
+                window: handle,
+                message: WM_PAINT,
+                time: self.desk.screen().now(),
+                ..Message::default()
+            })
         });
         if let Some(message) = found {
             state.time = message.time;

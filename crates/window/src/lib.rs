@@ -46,7 +46,10 @@
 //! [`Screen::scan`]'s and every message's `x`, `y` are [`Screen::point`]'s,
 //! each 0 from a back with no keys kept; a command's `l` is 0, as
 //! [`Event::Command`] says; icons
-//! and painting are another crate's, so an icon is a handle and nothing more.
+//! and drawing are another crate's, so an icon is a handle and nothing more;
+//! a shown window's `WM_PAINT` waits on every peek until
+//! [`desk::Desk::mark_painted`] ends it, as the drawing crate's paint calls and
+//! `DefWindowProcA` do.
 //!
 //! The crate names no game and nothing of any one target, so it builds for
 //! `wasm32-unknown-unknown`; a game's facts live in its rows crate.

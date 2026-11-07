@@ -127,6 +127,8 @@ pub fn run(plant: Plant) {
     });
 }
 
+const WM_PAINT: u32 = 0xf;
+
 /// What runs here writes no line.
 fn quietly<T>(call: impl FnOnce() -> T) -> T {
     let level = log::max_level();
@@ -181,14 +183,25 @@ impl OnDesk<'_> {
         }
     }
 
+    /// What the script's procedure does on this route: a paint handed to the
+    /// default procedure with no line, as the thin route's procedure hands it, so
+    /// the paint ends; any other message the script's answer.
+    fn procedure(&self, window: u32, message: u32, w: u32, l: u32) -> u32 {
+        if message == WM_PAINT {
+            quietly(|| self.windows.def_window_proc(window, message, w, l))
+        } else {
+            script::answer(message)
+        }
+    }
+
     /// `hand::pump`'s twin on this route: every message taken and run, with no line.
     fn pump(&self) {
         quietly(|| {
             while let Some(message) = self.windows.peek_message(0, 0, 0, 1) {
                 let _ = self.windows.translate_message(&message);
-                let _ = self
-                    .windows
-                    .dispatch_message(&message, |_, message| script::answer(message.message));
+                let _ = self.windows.dispatch_message(&message, |_, message| {
+                    self.procedure(message.window, message.message, message.w, message.l)
+                });
             }
         });
     }
@@ -307,7 +320,7 @@ impl Route for OnDesk<'_> {
         let _ = self
             .windows
             .dispatch_message(&to_desk(message), |_, message| {
-                script::answer(message.message)
+                self.procedure(message.window, message.message, message.w, message.l)
             });
     }
 

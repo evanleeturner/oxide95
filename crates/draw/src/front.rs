@@ -78,7 +78,8 @@ pub trait Windows {
     fn validate(&self, window: u32, rectangle: Option<[u32; 4]>) -> bool;
 }
 
-/// A desk marks nothing: nothing there repaints.
+/// A desk keeps a shown window's paint waiting until it is marked, as a real
+/// window does; a part of a window validated ends its whole paint.
 impl<S: Screen> Windows for Desk<S> {
     fn quiet(&self, line: impl FnOnce()) {
         self.screen().quiet(line);
@@ -99,7 +100,7 @@ impl<S: Screen> Windows for Desk<S> {
     }
 
     fn validate(&self, window: u32, _rectangle: Option<[u32; 4]>) -> bool {
-        self.state().window(window).is_some()
+        self.mark_painted(window)
     }
 }
 

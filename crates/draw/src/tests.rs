@@ -275,6 +275,24 @@ fn paint_calls_answer_the_window() {
     assert_eq!(front.update_window(WINDOW), 1);
 }
 
+/// `BeginPaint` and `ValidateRect` each end a desk window's waiting paint, part
+/// of a window ending the whole; a window not here marks nothing.
+#[test]
+fn a_paint_call_ends_the_desks_waiting_paint() {
+    let (easel, desk) = rig();
+    let front = Front::new(&ROW, &easel, &desk);
+    let mut paint = [9; 6];
+    assert!(!desk.state().painted.contains(&WINDOW));
+    assert_ne!(front.begin_paint(WINDOW, &mut paint), 0);
+    assert!(desk.state().painted.contains(&WINDOW));
+    desk.state().painted.clear();
+    assert_eq!(front.validate_rect(WINDOW, Some([0, 0, 1, 1])), 1);
+    assert!(desk.state().painted.contains(&WINDOW));
+    desk.state().painted.clear();
+    assert_eq!(front.validate_rect(1, None), 0);
+    assert!(desk.state().painted.is_empty());
+}
+
 /// Unreached by a run, and by any row yet, the reading of the callers' code: the
 /// shell asks only when `BITSPIXEL` is 8, and a row answering 32 never gets here.
 /// No value is harvested. The count is what fits: the buffer, the count asked

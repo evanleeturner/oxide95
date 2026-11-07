@@ -46,6 +46,7 @@ static ROW: Row = Row {
 };
 
 const PM_REMOVE: u32 = 1;
+const WM_PAINT: u32 = 0xf;
 const WM_CLOSE: u32 = 0x10;
 const WM_QUIT: u32 = 0x12;
 const WM_COMMAND: u32 = 0x111;
@@ -152,6 +153,134 @@ fn a_framed_windows_client_origin_stands_past_its_frame() {
     let popup = made(&front, 0x8000_0000, [110, 120, 640, 480]);
     assert_eq!(front.client_to_screen(popup, 4, 5), Some((114, 125)));
     assert_eq!(front.screen_to_client(popup, 114, 125), Some((4, 5)));
+}
+
+/// How many of `turns` peeks answer a paint for `window` (0 any). The count is
+/// bounded, so a paint nothing ends reads as `turns` here and never hangs.
+fn paints(front: &Front<'_, Page>, window: u32, turns: usize) -> usize {
+    (0..turns)
+        .filter(|_| {
+            front
+                .peek_message(window, 0, 0, PM_REMOVE)
+                .is_some_and(|message| message.message == WM_PAINT)
+        })
+        .count()
+}
+
+/// A shown window answers `WM_PAINT` on every peek, `PM_REMOVE` taking nothing
+/// away, the message naming the window and the time at a point of 0,0, until
+/// `DefWindowProcA` ends it.
+#[test]
+fn a_shown_windows_paint_waits_on_every_peek_until_it_is_ended() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let handle = window(&front);
+    desk.screen().frame(0x64);
+    let mut taken = None;
+    let lines = debug_lines(|| taken = front.peek_message(0, 0, 0, PM_REMOVE));
+    let paint = Message {
+        window: handle,
+        message: WM_PAINT,
+        time: 0x64,
+        ..Message::default()
+    };
+    assert_eq!(taken, Some(paint));
+    assert_eq!(
+        lines,
+        ["imp.call c=USER32!PeekMessageA a=0,0,0,1 o=10020,f,0,0,64,0,0 v=1 by=window"]
+    );
+    assert_eq!(paints(&front, 0, 8), 8);
+    assert_eq!(front.def_window_proc(handle, WM_PAINT, 0, 0), 0);
+    assert_eq!(paints(&front, 0, 8), 0);
+    assert_eq!(front.peek_message(0, 0, 0, PM_REMOVE), None);
+}
+
+/// A paint answers a filter holding its number and a window it names; a filter
+/// past it, or a hidden window, sees none.
+#[test]
+fn a_paint_answers_only_a_filter_holding_it_and_a_shown_window() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let shown = window(&front);
+    let hidden = made(&front, 0x8000_0000, [0, 0, 8, 8]);
+    let named = |window, first, last| {
+        front
+            .peek_message(window, first, last, PM_REMOVE)
+            .map(|message| message.window)
+    };
+    assert_eq!(named(0, WM_PAINT + 1, 0x400), None);
+    assert_eq!(named(0, 1, WM_PAINT - 1), None);
+    assert_eq!(named(0, WM_PAINT, WM_PAINT), Some(shown));
+    assert_eq!(named(shown, 0, 0), Some(shown));
+    assert_eq!(named(hidden, 0, 0), None);
+}
+
+/// With 2 shown windows the newest's paint comes first, the older's once that
+/// one has ended.
+#[test]
+fn the_newest_shown_windows_paint_comes_first() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let first = window(&front);
+    let second = made(&front, 0x9000_0000, [0, 0, 8, 8]);
+    let next = || {
+        front
+            .peek_message(0, 0, 0, PM_REMOVE)
+            .map(|message| message.window)
+    };
+    assert_eq!(next(), Some(second));
+    assert_eq!(front.def_window_proc(second, WM_PAINT, 0, 0), 0);
+    assert_eq!(next(), Some(first));
+    assert_eq!(front.def_window_proc(first, WM_PAINT, 0, 0), 0);
+    assert_eq!(next(), None);
+}
+
+/// Going from hidden to shown asks for a new paint, by `ShowWindow` or by
+/// `SetWindowPos`; a window shown already, or hidden, or gone, asks for none.
+#[test]
+fn a_window_shown_again_asks_for_a_new_paint() {
+    const STILL: u32 = 0x3;
+    const SHOW: u32 = 0x40;
+    const HIDE: u32 = 0x80;
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let handle = window(&front);
+    let place = Rect::sized(0, 0, 8, 8);
+    assert_eq!(front.def_window_proc(handle, WM_PAINT, 0, 0), 0);
+    assert_eq!(front.show_window(handle, 5), 1);
+    assert_eq!(paints(&front, handle, 2), 0);
+    assert_eq!(front.show_window(handle, 0), 1);
+    assert_eq!(paints(&front, handle, 2), 0);
+    assert_eq!(front.show_window(handle, 5), 0);
+    assert_eq!(paints(&front, handle, 2), 2);
+    assert_eq!(front.def_window_proc(handle, WM_PAINT, 0, 0), 0);
+    assert_eq!(front.set_window_pos(handle, 0, place, STILL | HIDE), 1);
+    assert_eq!(paints(&front, handle, 2), 0);
+    assert_eq!(front.set_window_pos(handle, 0, place, STILL | SHOW), 1);
+    assert_eq!(paints(&front, handle, 2), 2);
+    assert_eq!(front.def_window_proc(handle, WM_PAINT, 0, 0), 0);
+    assert_eq!(front.set_window_pos(handle, 0, place, STILL | SHOW), 1);
+    assert_eq!(paints(&front, handle, 2), 0);
+    assert_eq!(front.show_window(handle, 0), 1);
+    assert_eq!(front.show_window(handle, 5), 0);
+    assert_eq!(front.destroy_window(handle), 1);
+    assert_eq!(paints(&front, 0, 2), 0);
+}
+
+/// A queued message comes before a paint, whichever came first.
+#[test]
+fn a_queued_message_comes_before_a_paint() {
+    let desk = Desk::new(Page::new(0x280, 0x1e0));
+    let front = Front::new(&ROW, &desk);
+    let handle = window(&front);
+    assert_eq!(front.post_message(handle, WM_USER, 0, 0), 1);
+    let number = || {
+        front
+            .peek_message(0, 0, 0, PM_REMOVE)
+            .map(|message| message.message)
+    };
+    assert_eq!(number(), Some(WM_USER));
+    assert_eq!(number(), Some(WM_PAINT));
 }
 
 /// `PeekMessageA` with `PM_REMOVE` takes one message a call, oldest
