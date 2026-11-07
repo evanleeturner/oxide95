@@ -514,7 +514,7 @@ fn a_bad_handle_is_answered_as_the_target_does() {
 
 /// A path whose folder does not exist: the front matches its last part alone.
 #[test]
-#[ignore = "the front finds a module by a path's last part, whatever the folder, where the target may refuse a path no file lies at"]
+#[ignore = "the front finds a module by a path's last part, whatever the folder, where the target answers 0 and error 126 for a path no file lies at"]
 fn a_path_to_no_file_is_answered_as_the_target_does() {
     let front = host_front();
     let asked = b"C:\\NO-SUCH\\KERNEL32.DLL";

@@ -731,8 +731,13 @@ dependencies = [
 name = "kernel_process"
 version = "0.1.0"
 dependencies = [
+ "kernel_files",
  "kernel_process",
+ "kernel_text",
+ "kernel_threads",
+ "kernel_time",
  "log",
+ "logical_disc",
  "oxide_logline",
  "oxide_trace",
 ]

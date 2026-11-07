@@ -38,3 +38,9 @@ oxide_logline = { path = "../oxide-logline" }
 # The checks under tests/ read the host back and the planted file: a feature cannot be turned on
 # for one integration test, and `required-features` would skip them silently.
 kernel_process = { path = ".", features = ["plant", "std"] }
+# The last error's test reads each crate that keeps one, beside this crate's own.
+kernel_files = { path = "../kernel-files", features = ["memory"] }
+kernel_text = { path = "../kernel-text" }
+kernel_threads = { path = "../kernel-threads", features = ["std", "page"] }
+kernel_time = { path = "../kernel-time", features = ["std"] }
+logical_disc = { path = "../logical-disc", features = ["disc"] }
