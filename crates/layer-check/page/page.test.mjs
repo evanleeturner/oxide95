@@ -14,10 +14,20 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
+import { deflateSync } from "node:zlib";
 
 import { countMatches, pickCount, planBeeps } from "./beep.mjs";
 import { missingFeatures, peakHz, withinOneBin } from "./computer.mjs";
 import { copyPage, SHIPPED } from "./copy-page.mjs";
+import { KEYS, keyFaults } from "./key.mjs";
+import {
+  BANDS,
+  decodePng,
+  differingBytes,
+  HEIGHT,
+  pictureBytes,
+  WIDTH,
+} from "./picture.mjs";
 import {
   buildReport,
   passSentence,
@@ -129,4 +139,75 @@ test("the copy script exits non-zero and copies nothing when two loggers differ"
   const run = spawnSync(process.execPath, [script, out]);
   assert.notEqual(run.status, 0);
   assert.equal(existsSync(out), false);
+});
+
+/** A channel's value after a round trip through `bits` bits, as a shallow screen keeps it. */
+function roundTrip(value, bits) {
+  const kept = value >> (8 - bits);
+  return (kept << (8 - bits)) | (kept >> (2 * bits - 8));
+}
+
+test("every band's every channel fails a 5-6-5 screen, as pure colours do not", () => {
+  assert.equal(roundTrip(0xff, 5), 0xff);
+  for (const [red, green, blue] of BANDS) {
+    assert.notEqual(roundTrip(red, 5), red);
+    assert.notEqual(roundTrip(green, 6), green);
+    assert.notEqual(roundTrip(blue, 5), blue);
+  }
+});
+
+test("the picture is opaque and a turned half shows a flip", () => {
+  const bytes = pictureBytes();
+  assert.equal(bytes.length, WIDTH * HEIGHT * 4);
+  assert.equal(bytes[3], 255);
+  assert.deepEqual([...bytes.subarray(0, 3)], BANDS[0]);
+  const lastRow = (HEIGHT - 1) * WIDTH * 4;
+  assert.deepEqual([...bytes.subarray(lastRow, lastRow + 3)], BANDS[1]);
+});
+
+test("differingBytes counts one wrong byte, and colour alone at step 3", () => {
+  const wanted = Buffer.from([1, 2, 3, 255, 4, 5, 6, 255]);
+  assert.equal(differingBytes(wanted, wanted, 4), 0);
+  assert.equal(
+    differingBytes(wanted, Buffer.from([1, 2, 3, 255, 4, 5, 7, 255]), 4),
+    1,
+  );
+  assert.equal(differingBytes(wanted, Buffer.from([1, 2, 3, 4, 5, 6]), 3), 0);
+});
+
+function png(kind, depth, filtered) {
+  const chunk = (type, data) => {
+    const size = Buffer.alloc(4);
+    size.writeUInt32BE(data.length);
+    return Buffer.concat([size, Buffer.from(type), data, Buffer.alloc(4)]);
+  };
+  const head = Buffer.alloc(13);
+  head.writeUInt32BE(2, 0);
+  head.writeUInt32BE(1, 4);
+  head[8] = depth;
+  head[9] = kind;
+  return Buffer.concat([
+    Buffer.alloc(8),
+    chunk("IHDR", head),
+    chunk("IDAT", deflateSync(filtered)),
+  ]);
+}
+
+test("decodePng undoes a row's filter and refuses a kind it does not take", () => {
+  const raw = Buffer.from([1, 10, 20, 30, 1, 1, 1]);
+  const { rows, step } = decodePng(png(2, 8, raw));
+  assert.equal(step, 3);
+  assert.deepEqual([...rows], [10, 20, 30, 11, 21, 31]);
+  assert.throws(() => decodePng(png(3, 8, raw)), /does not take/);
+  assert.throws(() => decodePng(png(2, 16, raw)), /does not take/);
+});
+
+test("keyFaults is empty on a whole trusted run and names each wrong event", () => {
+  const whole = KEYS.flatMap(([, code]) =>
+    ["keydown", "keyup"].map((type) => ({ type, code, trusted: true })),
+  );
+  assert.deepEqual(keyFaults(whole, KEYS), []);
+  assert.equal(keyFaults([], KEYS).length, 6);
+  const lying = whole.map((seen) => ({ ...seen, trusted: false }));
+  assert.match(keyFaults(lying, KEYS)[0], /isTrusted=false/);
 });

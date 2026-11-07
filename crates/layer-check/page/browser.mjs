@@ -19,7 +19,7 @@ import { createServer as plainServer } from "node:http";
 import { createServer as tlsServer } from "node:https";
 import { networkInterfaces } from "node:os";
 import { join } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { sentence } from "./report.mjs";
 
@@ -210,18 +210,24 @@ function lanAddress() {
   throw new Error("no LAN address on this box");
 }
 
-function launch(playwright, kind) {
+/** Playwright, from where `PLAYWRIGHT` names it. */
+export function playwrightFromEnv() {
+  return import(pathToFileURL(process.env.PLAYWRIGHT).href);
+}
+
+/** A muted browser; `extra` adds a plant's `prefs` for Firefox or `args` for Chromium. */
+export function launch(playwright, kind, extra = {}) {
   if (kind === "firefox") {
     return playwright.firefox.launch({
       headless: true,
-      firefoxUserPrefs: FIREFOX_PREFS,
+      firefoxUserPrefs: { ...FIREFOX_PREFS, ...extra.prefs },
       executablePath: FIREFOX_PATH,
     });
   }
   const channel = kind === "chrome" ? { channel: "chrome" } : {};
   return playwright.chromium.launch({
     headless: true,
-    args: CHROME_ARGS,
+    args: [...CHROME_ARGS, ...(extra.args ?? [])],
     ...channel,
   });
 }
@@ -439,7 +445,7 @@ async function main() {
     lanPort: await listen(plain, lan),
   };
   const otherPort = await listen(otherServer, "127.0.0.2");
-  const playwright = await import(pathToFileURL(process.env.PLAYWRIGHT).href);
+  const playwright = await playwrightFromEnv();
   const axeSource = readFileSync(process.env.AXE, "utf8");
   const ctx = { playwright, servers, axeSource, otherPort, lan };
   try {
@@ -469,4 +475,4 @@ async function main() {
   }
 }
 
-await main();
+if (process.argv[1] === fileURLToPath(import.meta.url)) await main();
