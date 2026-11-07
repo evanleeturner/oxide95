@@ -9,6 +9,7 @@
 #                               not hand out, so it can read that screen from outside
 #
 # LAYER_CHECK_SCREEN sets the private screen, as Xvfb's WxHxD: 640x480x16 if unset.
+# LAYER_CHECK_SCREEN_LIMIT_S sets how long it may live, in seconds: 300 if unset.
 #
 # The fetched linker is never committed. `rust-lld` is kept only to show why it is not the
 # recipe: a program linked by it dies at a panic it means to catch.
@@ -16,7 +17,7 @@ set -euo pipefail
 
 readonly TARGET=i686-pc-windows-gnu
 readonly MINGW_LIBS=/usr/i686-w64-mingw32/lib
-readonly XVFB_LIMIT_S=300
+readonly XVFB_LIMIT_S="${LAYER_CHECK_SCREEN_LIMIT_S:-300}"
 readonly SCREEN="${LAYER_CHECK_SCREEN:-640x480x16}"
 
 xvfb_pid=""

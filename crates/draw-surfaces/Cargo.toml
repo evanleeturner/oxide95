@@ -29,6 +29,30 @@ undocumented_unsafe_blocks = "deny"
 desk = ["draw/desk", "window/desk"]
 # The page's back, as `draw`'s.
 page = ["desk", "draw/page"]
+# A host's back and the Win32 target's, as `draw`'s: for the worked script's
+# programs below, which no game's build takes.
+native = ["desk", "draw/native", "window/native"]
+user32 = ["desk", "draw/user32", "window/user32"]
+
+# The worked script in a browser: `cargo build --example surfaces_page --features page
+# --target wasm32-unknown-unknown --release`. Its file lies with the script, under `page/`.
+[[example]]
+name = "surfaces_page"
+path = "page/surfaces.rs"
+crate-type = ["cdylib"]
+required-features = ["page"]
+
+# The worked script on a host's window: run under a time limit.
+[[example]]
+name = "surfaces_native"
+path = "bench/surfaces_native.rs"
+required-features = ["native"]
+
+# The worked script on a real Wine window, built for `i686-pc-windows-gnu`.
+[[example]]
+name = "surfaces_wine"
+path = "bench/surfaces_wine.rs"
+required-features = ["user32"]
 
 [dependencies]
 draw = { path = "../draw" }
