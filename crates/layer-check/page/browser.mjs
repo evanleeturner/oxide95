@@ -68,6 +68,8 @@ if (navigator.mediaDevices) {
     { kind: "audiooutput", label: ${JSON.stringify(FAKE_LABEL)}, deviceId: "x", groupId: "y" },
   ];
 }
+const PRESSED_PAD = { id: "A made pad", mapping: "standard", connected: true, axes: [0, 0, 0, 0], buttons: [] };
+Object.defineProperty(navigator, "getGamepads", { configurable: true, value: () => [PRESSED_PAD] });
 `;
 
 // The microphone stubs: a person's real microphone is owed, and no browser here has one.

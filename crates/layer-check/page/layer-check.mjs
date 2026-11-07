@@ -24,13 +24,17 @@ import {
   askMicrophone,
   checkFollows,
   checkList,
+  checkPads,
   checkQuestion,
   deviceRows,
+  followPads,
   listCounts,
   NO_ANSWER,
+  padRows,
   watchDevices,
   YES,
 } from "./devices.mjs";
+import { startPolling } from "./gamepads.mjs";
 import { logger } from "./logger.mjs";
 import {
   buildReport,
@@ -49,6 +53,7 @@ let context = null;
 let played = 0;
 let violations = 0;
 let deviceNames = [];
+let padNames = [];
 
 function show(found) {
   results.set(found.check, found);
@@ -188,7 +193,7 @@ function onViolation() {
 }
 
 function fillRows() {
-  const rows = deviceNames.map((name) => {
+  const rows = [...deviceNames, ...padNames].map((name) => {
     const row = document.createElement("li");
     row.textContent = name;
     return row;
@@ -202,6 +207,18 @@ function showRead(read, why, media) {
   deviceNames = deviceRows(read.devices);
   fillRows();
   show(checkList(media, read));
+}
+
+function showPads(count) {
+  logger.debug("check.page.pads", { pads: count });
+  padNames = padRows(navigator);
+  fillRows();
+  show(checkPads(count));
+}
+
+// `gamepads.mjs` tells a refusal in its own words, which are no event id.
+function padsRefused(_, why) {
+  logger.info("check.page.refused", { why });
 }
 
 async function answered(answer, watch) {
@@ -220,10 +237,11 @@ async function ask(media, watch) {
   document.body.dataset.asked = "true";
 }
 
-// The list starts at load: a listing plays nothing and opens nothing. The
+// The list and the pads start at load: a listing plays nothing and opens nothing. The
 // microphone is asked only from a person's press.
 async function startDevices() {
   const media = navigator.mediaDevices;
+  followPads(window, startPolling, { info: padsRefused }, showPads);
   if (!media) {
     show(checkList(media));
     show(await checkFollows(media));

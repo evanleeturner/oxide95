@@ -5,7 +5,7 @@
 // served file, or a script run before the page's, so no plant ships. It prints what each
 // arm read, one JSON line an arm, and a separate script scores the output.
 //
-// A stub shows what the page does with an answer. A person's plug and grant stay
+// A stub shows what the page does with an answer. A person's plug, grant and pad stay
 // owed. A device's label is never printed, and every arm but `list-real` runs with the
 // sound server out of reach. A new stream this run opened stops the run with exit 3.
 //
@@ -91,7 +91,8 @@ if (media) {
 }
 `;
 
-// The list the stubbed arms read.
+// The list and the pad the stubbed arms read. The pressed frame is the joystick crate's
+// recorded "some buttons". A browser shows no pad until its first press: 4 empty slots.
 function stubs(arm) {
   return `
 if (media) {
@@ -111,12 +112,25 @@ if (media) {
   };
   ${arm.never ? "media.getUserMedia = () => new Promise(() => {});" : ""}
 }
+const pressedPad = {
+  id: "A made pad",
+  mapping: "standard",
+  connected: true,
+  axes: [0, 0, 0, 0],
+  buttons: Array.from({ length: 17 }, (_, at) => ({ pressed: [0, 3, 11, 16].includes(at) })),
+};
+window.padFrame = [null, null, null, null];
+window.press = () => {
+  window.padFrame = [pressedPad, null, null, null];
+};
+Object.defineProperty(navigator, "getGamepads", { configurable: true, value: () => window.padFrame });
+${arm.pressed ? "window.press();" : ""}
 `;
 }
 
 const ARMS = [
   { name: "list-real", realServer: true },
-  { name: "clean", stub: true },
+  { name: "clean", stub: true, pressed: true },
   { name: "H1-zero", stub: true, outputs: 0 },
   { name: "H2-ignored", stub: true, swap: ["devices.mjs", LISTENER, ""] },
   { name: "H2-plug", stub: true, plug: true },
@@ -124,9 +138,12 @@ const ARMS = [
   { name: "H3-never", stub: true, never: true, ask: true },
   { name: "H3-nodevice", only: "firefox", ask: true },
   { name: "H3-plain", only: "firefox", held: true, ask: true },
+  { name: "H6-nopress", stub: true },
+  { name: "H6-press", stub: true, press: true },
   {
     name: "A-noname",
     stub: true,
+    pressed: true,
     swap: ["index.html", ASK_WORDS, ""],
   },
 ];
@@ -237,10 +254,12 @@ const attached = (page, selector, timeout = WAIT_MS) =>
 async function driveArm(page, arm, ctx) {
   await page.goto(`https://127.0.0.1:${ctx.tlsPort}/index.html?log=debug`);
   await attached(page, '[data-check="H2"]');
+  await attached(page, '[data-check="H6"]');
   const rowsBefore = await readRows(page);
   const deviceRowsBefore = await countDeviceRows(page);
   const listingsBefore = await page.evaluate(() => window.spy.listings);
   if (arm.plug) await page.evaluate(() => window.plug());
+  if (arm.press) await page.evaluate(() => window.press());
   if (arm.ask) {
     await page.click(".js-ask", { timeout: WAIT_MS });
     await attached(page, '[data-check="H3"]', QUESTION_WAIT_MS);
