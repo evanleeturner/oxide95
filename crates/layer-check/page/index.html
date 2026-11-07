@@ -5,10 +5,13 @@
     <meta charset="utf-8" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; style-src 'self'"
+      content="default-src 'none'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; media-src 'self' blob:; worker-src 'self' blob:; form-action 'none'; base-uri 'none'; style-src 'self'; img-src data:"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Sound check for this computer</title>
+    <!-- An empty icon: with none, Firefox asks for /favicon.ico, the policy refuses
+         it, and a healthy page could report that it tried to send something out. -->
+    <link href="data:," rel="icon" />
     <link href="layer-check.css" rel="stylesheet" />
     <script src="layer-check.mjs" type="module"></script>
   </head>
@@ -42,8 +45,8 @@
       <section class="js-mic" hidden>
         <h2>Listen with the microphone (you can leave this out)</h2>
         <p>
-          The page plays the beeps again and listens for them. Your browser
-          asks you first. Nothing is recorded or sent.
+          The page plays the beeps again and listens for them. Your browser asks
+          you first. Nothing is recorded or sent.
         </p>
         <button class="js-mic-start" type="button">Use the microphone</button>
       </section>

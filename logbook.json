@@ -362,6 +362,36 @@
       "level": "D",
       "fields": { "c": "the import, as DLL!NAME", "w": "the reason, by its name" },
       "template": "{c} turned away: {w}"
+    },
+    {
+      "id": "check.page.started",
+      "level": "I",
+      "fields": {},
+      "template": "the person pressed the button and the checks began"
+    },
+    {
+      "id": "check.page.result",
+      "level": "I",
+      "fields": { "check": "the check's short name", "state": "what it read: pass, red, not run or not asked" },
+      "template": "check {check} read {state}"
+    },
+    {
+      "id": "check.page.done",
+      "level": "I",
+      "fields": { "results": "the results shown so far" },
+      "template": "the checks ended with {results} results"
+    },
+    {
+      "id": "check.page.violation",
+      "level": "I",
+      "fields": { "count": "the refusals seen so far on this page" },
+      "template": "the page's policy refused a request: {count} so far"
+    },
+    {
+      "id": "check.page.beeps",
+      "level": "D",
+      "fields": { "count": "the beeps chosen at random", "hz": "their pitch" },
+      "template": "playing {count} beeps at {hz}"
     }
   ]
 }

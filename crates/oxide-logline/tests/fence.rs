@@ -55,9 +55,97 @@ fn fails_once(report: &Report, words: &str) {
     assert!(report.problems[0].contains(words), "{:?}", report.problems);
 }
 
+/// A throwaway workspace holding `rows` and one script in a page folder the walk reads.
+fn walk_page(name: &str, rows: &[Value], script: &str) -> Report {
+    let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("fence-page-{name}"));
+    let page = root.join("crates/layer-check/page");
+    fs::create_dir_all(&page).expect("the temporary tree is writable");
+    fs::write(
+        root.join("logbook.json"),
+        json!({ "events": rows }).to_string(),
+    )
+    .expect("the temporary logbook is writable");
+    fs::write(page.join("made.mjs"), script).expect("the temporary script is writable");
+    let report = check(&root);
+    eprintln!("{name}: {:?}", report.problems);
+    report
+}
+
+/// The row each page test logs against.
+fn page_row() -> Value {
+    json!({
+        "id": "made.page.result",
+        "level": "I",
+        "fields": { "check": "a check" },
+        "template": "{check}",
+    })
+}
+
+const GOOD_PAGE_CALL: &str = "logger.info(\"made.page.result\", { check: found.check });\n";
+
 #[test]
 fn every_log_call_is_cataloged_and_every_entry_is_used() {
     check(&home()).enforce();
+}
+
+#[test]
+fn a_page_call_on_its_row_holds_and_a_commented_call_is_not_one() {
+    let script = format!("// logger.info(\"a sentence\");\n{GOOD_PAGE_CALL}");
+    let report = walk_page("holds", &[page_row()], &script);
+    assert!(report.problems.is_empty(), "{:?}", report.problems);
+    assert_eq!(report.sites, 1);
+    assert_eq!(report.files, 1);
+}
+
+#[test]
+fn a_page_row_logged_nowhere_is_an_orphan() {
+    let report = walk_page("orphan", &[page_row()], "");
+    fails_once(&report, "an orphan entry");
+}
+
+#[test]
+fn a_page_event_with_no_row_fails() {
+    let script = format!("{GOOD_PAGE_CALL}logger.info(\"made.page.other\");\n");
+    let report = walk_page("no-row", &[page_row()], &script);
+    fails_once(&report, "uncataloged event");
+}
+
+#[test]
+fn a_page_sentence_fails() {
+    let script = format!("{GOOD_PAGE_CALL}logger.info(\"check: a sentence\");\n");
+    let report = walk_page("sentence", &[page_row()], &script);
+    fails_once(&report, "not a bare event id");
+}
+
+#[test]
+fn a_page_call_at_another_level_fails() {
+    let script = "logger.debug(\"made.page.result\", { check: found.check });\n";
+    let report = walk_page("level", &[page_row()], script);
+    fails_once(&report, "logged at D, cataloged at I");
+}
+
+#[test]
+fn a_page_field_logged_nowhere_fails() {
+    let report = walk_page(
+        "field",
+        &[page_row()],
+        "logger.info(\"made.page.result\");\n",
+    );
+    fails_once(&report, "the field `check` is logged nowhere");
+}
+
+#[test]
+fn a_page_field_with_no_row_fails() {
+    let script = "logger.info(\"made.page.result\", { check: found.check, extra: 1 });\n";
+    let report = walk_page("extra", &[page_row()], script);
+    fails_once(&report, "the undeclared field `extra`");
+}
+
+#[test]
+fn a_page_value_outside_one_object_fails() {
+    let script = format!("{GOOD_PAGE_CALL}logger.info(\"made.page.result\", found.check);\n");
+    let report = walk_page("loose", &[page_row()], &script);
+    fails_once(&report, "go in one object");
 }
 
 #[test]

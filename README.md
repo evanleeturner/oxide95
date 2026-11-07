@@ -24,6 +24,7 @@ source code that you compile against these libraries.
 | `kernel_threads` | thread numbers, locks, per-thread slots and counters |
 | `kernel_time` | clocks and dates |
 | `cd-audio` | the calls a program makes to its CD-audio disc: one front answers from a row and reads no disc, another plays the disc's tracks through `sound-mix` or a page's script; it has run only in tests over stand-in discs, so nothing has reached a speaker |
+| `layer-check` | a page that tests a browser's sound with none of the other crates' code, so a later fault can say whether the computer is to blame; it has run muted in Chromium, Chrome and Firefox on one Linux computer, and nobody has heard its beeps yet |
 | `sound-mix` | Miles Sound System's calls, mixed in memory; a back over Windows' `waveOut` is written but has not run on real Windows yet, a browser page's back has run muted, and one over cpal for Linux and macOS, the feature `native`, needs ALSA's headers on Linux; nothing has reached a speaker |
 | `sound-buffers` | DirectSound's object and buffers, moved by a clock onto `sound-mix`'s doors; it has run only in tests, with no real program calling it and nothing reaching a speaker |
 | `joystick` | the calls a program makes to a joystick: one front says none is there, another reads real pads through a page's script, `gilrs` or Windows' own calls; no real pad has been read yet |

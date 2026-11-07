@@ -5,6 +5,9 @@
 //! a level that differs from the entry's, an undeclared field, or a template
 //! naming a field the entry does not declare.
 //!
+//! It also reads the page folders in [`PAGES_ON_IDS`], whose scripts log the same
+//! events by `logger.info("id", { key: value })`, under the same rules.
+//!
 //! One walk, so that every workspace holding a logbook calls the same one: a
 //! workspace's test is one line, `check(root).enforce()`. A workspace that takes
 //! these crates and shares log rows with them calls
@@ -33,6 +36,12 @@ const MACROS: [(&str, char); 5] = [
     ("debug!(", 'D'),
     ("trace!(", 'T'),
 ];
+
+/// The page folders the walk reads. An older page logs sentences and takes no
+/// row, so it stays out of this list until it moves to event ids.
+const PAGES_ON_IDS: [&str; 1] = ["crates/layer-check/page"];
+
+const PAGE_CALLS: [(&str, char); 2] = [("logger.info(", 'I'), ("logger.debug(", 'D')];
 
 fn sources(dir: &Path, found: &mut Vec<PathBuf>) {
     let mut entries: Vec<_> = std::fs::read_dir(dir)
@@ -108,9 +117,9 @@ fn inner(text: &str, open: usize) -> Option<&str> {
     None
 }
 
-fn scan(root: &Path, path: &Path, sites: &mut Vec<Site>, problems: &mut Vec<String>) {
-    let source = std::fs::read_to_string(path).expect("invariant: a source file is UTF-8");
-    let text: String = source
+/// `source` with each whole-line `//` comment blanked, so line numbers still count.
+fn without_comment_lines(source: &str) -> String {
+    source
         .lines()
         .map(|line| {
             if line.trim_start().starts_with("//") {
@@ -120,7 +129,118 @@ fn scan(root: &Path, path: &Path, sites: &mut Vec<Site>, problems: &mut Vec<Stri
             }
         })
         .collect::<Vec<_>>()
-        .join("\n");
+        .join("\n")
+}
+
+/// The event id a quoted `message` holds: two or more dotted parts of lowercase
+/// letters. `None` for anything else, a sentence included.
+fn bare_event(message: &str) -> Option<&str> {
+    message
+        .strip_prefix('"')
+        .and_then(|m| m.strip_suffix('"'))
+        .filter(|e| {
+            e.split('.').count() >= 2
+                && e.split('.')
+                    .all(|part| !part.is_empty() && part.chars().all(|ch| ch.is_ascii_lowercase()))
+        })
+}
+
+/// The field names in a comma list of `name`, `name = value` or `name: value`.
+fn key_names(text: &str) -> Vec<String> {
+    split_top(text, ',')
+        .into_iter()
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(|item| {
+            item.split([':', '=', ' '])
+                .next()
+                .unwrap_or(item)
+                .to_owned()
+        })
+        .collect()
+}
+
+/// The field names of a page call's arguments after its id: none, or one object.
+/// `None` when the values are anything else, as a row could not name them.
+fn page_keys(values: &[&str]) -> Option<Vec<String>> {
+    let given: Vec<&str> = values
+        .iter()
+        .map(|value| value.trim())
+        .filter(|value| !value.is_empty())
+        .collect();
+    match given.as_slice() {
+        [] => Some(Vec::new()),
+        [object] => {
+            let fields = object.strip_prefix('{')?.strip_suffix('}')?;
+            Some(key_names(fields))
+        }
+        _ => None,
+    }
+}
+
+/// The scripts of every folder in [`PAGES_ON_IDS`] that `root` holds. A workspace
+/// without the folder has no such page; this workspace's own fence would call a
+/// moved folder's rows orphans.
+fn page_scripts(root: &Path) -> Vec<PathBuf> {
+    let mut found = Vec::new();
+    for page in PAGES_ON_IDS {
+        let Ok(entries) = std::fs::read_dir(root.join(page)) else {
+            continue;
+        };
+        found.extend(
+            entries
+                .filter_map(Result::ok)
+                .map(|entry| entry.path())
+                .filter(|path| path.extension().is_some_and(|ext| ext == "mjs")),
+        );
+    }
+    found.sort();
+    found
+}
+
+/// Reads one page script's log calls into `sites`.
+fn scan_page(root: &Path, path: &Path, sites: &mut Vec<Site>, problems: &mut Vec<String>) {
+    let source = std::fs::read_to_string(path).expect("invariant: a page script is UTF-8");
+    let text = without_comment_lines(&source);
+    let name = path
+        .strip_prefix(root)
+        .unwrap_or(path)
+        .display()
+        .to_string();
+    for (pattern, level) in PAGE_CALLS {
+        for (at, _) in text.match_indices(pattern) {
+            let place = format!("{name}:{}", text[..at].lines().count());
+            let Some(args) = inner(&text, at + pattern.len()) else {
+                problems.push(format!("{place}: an unclosed log call"));
+                continue;
+            };
+            let parts = split_top(args, ',');
+            let message = parts[0].trim();
+            let Some(event) = bare_event(message) else {
+                problems.push(format!(
+                    "{place}: the message is not a bare event id: {message}"
+                ));
+                continue;
+            };
+            let Some(keys) = page_keys(&parts[1..]) else {
+                problems.push(format!(
+                    "{place}: a page's values go in one object, each by its field's name"
+                ));
+                continue;
+            };
+            sites.push(Site {
+                place,
+                level,
+                event: event.to_owned(),
+                keys,
+            });
+        }
+    }
+}
+
+fn scan(root: &Path, path: &Path, sites: &mut Vec<Site>, problems: &mut Vec<String>) {
+    let source = std::fs::read_to_string(path).expect("invariant: a source file is UTF-8");
+    let text = without_comment_lines(&source);
     let name = path
         .strip_prefix(root)
         .unwrap_or(path)
@@ -149,34 +269,17 @@ fn scan(root: &Path, path: &Path, sites: &mut Vec<Site>, problems: &mut Vec<Stri
                 }
             };
             let message = message.trim().trim_end_matches(',').trim();
-            let event = message.strip_prefix('"').and_then(|m| m.strip_suffix('"'));
-            let Some(event) = event.filter(|e| {
-                e.split('.').count() >= 2
-                    && e.split('.').all(|part| {
-                        !part.is_empty() && part.chars().all(|ch| ch.is_ascii_lowercase())
-                    })
-            }) else {
+            let Some(event) = bare_event(message) else {
                 problems.push(format!(
                     "{place}: the message is not a bare event id: {message}"
                 ));
                 continue;
             };
-            let keys = split_top(keys, ',')
-                .into_iter()
-                .map(str::trim)
-                .filter(|item| !item.is_empty())
-                .map(|item| {
-                    item.split([':', '=', ' '])
-                        .next()
-                        .unwrap_or(item)
-                        .to_owned()
-                })
-                .collect();
             sites.push(Site {
                 place,
                 level,
                 event: event.to_owned(),
-                keys,
+                keys: key_names(keys),
             });
         }
     }
@@ -250,7 +353,7 @@ fn shared_problems(book: &serde_json::Value, shared: &[&str], problems: &mut Vec
     }
 }
 
-/// Walks `root`'s `crates/` against `root`'s `logbook.json`.
+/// Walks `root`'s `crates/` and its page folders against `root`'s `logbook.json`.
 #[must_use]
 pub fn check(root: &Path) -> Report {
     check_sharing(root, &[])
@@ -314,6 +417,10 @@ pub fn check_sharing(root: &Path, shared: &[&str]) -> Report {
     for file in &files {
         scan(root, file, &mut sites, &mut problems);
     }
+    let pages = page_scripts(root);
+    for page in &pages {
+        scan_page(root, page, &mut sites, &mut problems);
+    }
 
     let mut used: BTreeMap<&str, BTreeSet<&str>> = BTreeMap::new();
     for site in &sites {
@@ -357,7 +464,7 @@ pub fn check_sharing(root: &Path, shared: &[&str]) -> Report {
         }
     }
     Report {
-        files: files.len(),
+        files: files.len() + pages.len(),
         sites: sites.len(),
         events: entries.len(),
         shared: shared.len(),

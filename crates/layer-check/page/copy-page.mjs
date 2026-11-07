@@ -5,7 +5,13 @@
 // one. Takes no test and no harness.
 //
 // Call: node copy-page.mjs <out folder>
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+  readFileSync,
+} from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,7 +43,8 @@ export function copyPage(cratesDir, pageDir, outDir) {
     }
   }
   mkdirSync(outDir, { recursive: true });
-  for (const name of SHIPPED) copyFileSync(join(pageDir, name), join(outDir, name));
+  for (const name of SHIPPED)
+    copyFileSync(join(pageDir, name), join(outDir, name));
   copyFileSync(loggers[0], join(outDir, "logger.mjs"));
 }
 

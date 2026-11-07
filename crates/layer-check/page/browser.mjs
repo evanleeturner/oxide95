@@ -3,7 +3,10 @@
 // The page in real browsers, muted, once clean and once per planted fault. A plant is
 // an exact text swap the server makes in a served file, or a script run before the
 // page's, so no plant ships; a swap that matches nothing stops the run. It prints what
-// each arm read and judges nothing: a separate script scores the output.
+// each arm read, and a separate script scores the output.
+//
+// P1 and P4 have no row on the page: what sees them is this script's spy and axe, and
+// neither ships. So this script prints the page's own sentence when one reads red.
 //
 // A green run is no conformance claim: nobody walked it and nobody heard it. The
 // microphone here is a stub, and the count of beeps is answered by this script.
@@ -17,6 +20,8 @@ import { createServer as tlsServer } from "node:https";
 import { networkInterfaces } from "node:os";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
+
+import { sentence } from "./report.mjs";
 
 const FIREFOX_PATH = join(
   process.env.HOME,
@@ -44,9 +49,10 @@ const TYPES = {
 // Runs before the page's own scripts, in every arm: what the browser was asked to do,
 // kept apart from what the page says it did.
 const SPY = `
-window.spy = { contexts: 0, starts: [], mics: 0, violations: [] };
+window.spy = { contexts: 0, starts: [], mics: 0, violations: [], blocked: [] };
 document.addEventListener("securitypolicyviolation", (event) => {
   window.spy.violations.push(event.effectiveDirective);
+  window.spy.blocked.push(event.blockedURI);
 });
 const RealContext = window.AudioContext;
 window.AudioContext = class extends RealContext {
@@ -85,32 +91,69 @@ navigator.mediaDevices.getUserMedia = () => {
   window.spy.mics += 1;
   return new Promise(() => {});
 };`;
-const NO_CONTEXT = "delete window.AudioContext; window.AudioContext = undefined;";
+const NO_CONTEXT =
+  "delete window.AudioContext; window.AudioContext = undefined;";
 const STILL_CLOCK = `Object.defineProperty(BaseAudioContext.prototype, "currentTime", { get: () => 0 });`;
-const BUTTON = '<button class="js-start" type="button">Start the check</button>';
+const BUTTON =
+  '<button class="js-start" type="button">Start the check</button>';
 const REPORT_FLAG = "const REPORT_FOR_EVERYONE = false;";
 const ANY_KEY = `${REPORT_FLAG}
 document.addEventListener("keydown", () => { new AudioContext().createOscillator().start(); });`;
 
 const ARMS = [
-  { name: "clean", init: MIC_LOOP, count: "right", mic: true, query: "?report=1" },
+  {
+    name: "clean",
+    init: MIC_LOOP,
+    count: "right",
+    mic: true,
+    query: "?report=1",
+  },
   { name: "skip", count: "skip" },
   { name: "C1-lan", origin: "lan" },
   { name: "C2-gone", init: NO_CONTEXT },
   { name: "C3-nowasm", swap: ["index.html", " 'wasm-unsafe-eval'", ""] },
   { name: "C4-still", init: STILL_CLOCK },
-  { name: "C5-gain", swap: ["computer.mjs", "const TONE_GAIN = 0.2;", "const TONE_GAIN = 0;"] },
-  { name: "C5-pitch", swap: ["computer.mjs", "tone.frequency.value = TONE_HZ;", "tone.frequency.value = TONE_HZ + 200;"] },
+  {
+    name: "C5-gain",
+    swap: ["computer.mjs", "const TONE_GAIN = 0.2;", "const TONE_GAIN = 0;"],
+  },
+  {
+    name: "C5-pitch",
+    swap: [
+      "computer.mjs",
+      "tone.frequency.value = TONE_HZ;",
+      "tone.frequency.value = TONE_HZ + 200;",
+    ],
+  },
   { name: "C6-wrong", count: "wrong" },
   { name: "C10-silent", init: MIC_SILENT, mic: true },
   { name: "C10-never", init: MIC_NEVER, mic: true },
   { name: "P1-anykey", swap: ["layer-check.mjs", REPORT_FLAG, ANY_KEY] },
   { name: "P2-send", send: true },
-  { name: "P3-leak", swap: ["report.mjs", "return `${kind} ${index + 1}`;", "return device.label;"], query: "?report=1" },
-  { name: "P4-noname", swap: ["index.html", BUTTON, '<button class="js-start" type="button"></button>'] },
+  {
+    name: "P3-leak",
+    swap: [
+      "report.mjs",
+      "return `${kind} ${index + 1}`;",
+      "return device.label;",
+    ],
+    query: "?report=1",
+  },
+  {
+    name: "P4-noname",
+    swap: [
+      "index.html",
+      BUTTON,
+      '<button class="js-start" type="button"></button>',
+    ],
+  },
   { name: "policy", policyPlant: true },
   { name: "report-query", query: "?report=1", copy: true },
-  { name: "report-everyone", swap: ["layer-check.mjs", REPORT_FLAG, "const REPORT_FOR_EVERYONE = true;"], copy: true },
+  {
+    name: "report-everyone",
+    swap: ["layer-check.mjs", REPORT_FLAG, "const REPORT_FOR_EVERYONE = true;"],
+    copy: true,
+  },
 ];
 
 const lines = [];
@@ -131,7 +174,8 @@ function servedFile(folder, path, arm) {
   }
   for (const [file, from, to] of arm.swaps ?? []) {
     if (file !== name) continue;
-    if (!text.includes(from)) throw new Error(`plant matches nothing: ${arm.name}`);
+    if (!text.includes(from))
+      throw new Error(`plant matches nothing: ${arm.name}`);
     text = text.replace(from, () => to);
   }
   return { type, text };
@@ -159,7 +203,8 @@ function listen(server, host) {
 function lanAddress() {
   for (const list of Object.values(networkInterfaces())) {
     for (const { family, internal, address } of list) {
-      if (family === "IPv4" && !internal && !address.startsWith("172.")) return address;
+      if (family === "IPv4" && !internal && !address.startsWith("172."))
+        return address;
     }
   }
   throw new Error("no LAN address on this box");
@@ -174,16 +219,20 @@ function launch(playwright, kind) {
     });
   }
   const channel = kind === "chrome" ? { channel: "chrome" } : {};
-  return playwright.chromium.launch({ headless: true, args: CHROME_ARGS, ...channel });
+  return playwright.chromium.launch({
+    headless: true,
+    args: CHROME_ARGS,
+    ...channel,
+  });
 }
 
 async function axeNames(page, source) {
   await page.evaluate(source);
   const found = await page.evaluate(
     async (values) =>
-      (await window.axe.run(document, { runOnly: { type: "tag", values } })).violations.map(
-        (violation) => violation.id,
-      ),
+      (
+        await window.axe.run(document, { runOnly: { type: "tag", values } })
+      ).violations.map((violation) => violation.id),
     FLOOR,
   );
   return found;
@@ -194,7 +243,10 @@ const clickWhenReady = (page, selector) =>
 
 async function answerCount(page, how) {
   await clickWhenReady(page, ".js-beeps");
-  await page.waitForSelector("body[data-beeped]", { state: "attached", timeout: WAIT_MS });
+  await page.waitForSelector("body[data-beeped]", {
+    state: "attached",
+    timeout: WAIT_MS,
+  });
   if (how === "skip") {
     await clickWhenReady(page, ".js-count-skip");
     return;
@@ -226,6 +278,18 @@ async function readRows(page) {
   );
 }
 
+/** The red rows only this script can see, in the page's own words. */
+function harnessRows(before, axeFound) {
+  const rows = [];
+  if (before.contexts > 0 || before.starts > 0) {
+    rows.push({ check: "P1", state: "red", words: sentence("P1") });
+  }
+  if (axeFound.includes("button-name")) {
+    rows.push({ check: "P4", state: "red", words: sentence("P4") });
+  }
+  return rows;
+}
+
 async function runArm(ctx, kind, armDef) {
   const { playwright, servers, axeSource, otherPort, lan } = ctx;
   const arm = { ...armDef, swaps: armDef.swap ? [armDef.swap] : [] };
@@ -245,7 +309,10 @@ async function runArm(ctx, kind, armDef) {
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  const origin = arm.origin === "lan" ? `http://${lan}:${servers.lanPort}` : `https://127.0.0.1:${servers.tlsPort}`;
+  const origin =
+    arm.origin === "lan"
+      ? `http://${lan}:${servers.lanPort}`
+      : `https://127.0.0.1:${servers.tlsPort}`;
   await page.goto(`${origin}/index.html${arm.query ?? ""}`);
   await page.keyboard.press("Tab");
   await page.keyboard.press("a");
@@ -261,53 +328,70 @@ async function runArm(ctx, kind, armDef) {
     baseIsOwn: document.baseURI === window.location.href,
   }));
   const axeAtLoad = await axeNames(page, axeSource);
-  const everyone = await page.evaluate(() => !document.querySelector(".js-report").hidden);
-  if (arm.name === "P4-noname") await page.evaluate(() => document.querySelector(".js-start").click());
+  if (arm.name === "P4-noname")
+    await page.evaluate(() => document.querySelector(".js-start").click());
   else await clickWhenReady(page, ".js-start");
-  await page.waitForSelector("body[data-ran]", { state: "attached", timeout: WAIT_MS });
+  await page.waitForSelector("body[data-ran]", {
+    state: "attached",
+    timeout: WAIT_MS,
+  });
   if (arm.count) await answerCount(page, arm.count);
   let micMs = null;
   if (arm.mic) {
     const began = Date.now();
     await clickWhenReady(page, ".js-mic-start");
-    await page.waitForSelector("body[data-mic-done]", { state: "attached", timeout: WAIT_MS });
+    await page.waitForSelector("body[data-mic-done]", {
+      state: "attached",
+      timeout: WAIT_MS,
+    });
     micMs = Date.now() - began;
   }
   if (arm.send) await sendPlants(page, otherPort);
   let copyRoute = null;
   if (arm.copy) {
     await clickWhenReady(page, ".js-copy");
-    await page.waitForSelector(".js-copy[data-route]", { state: "attached", timeout: WAIT_MS });
-    copyRoute = await page.evaluate(() => document.querySelector(".js-copy").dataset.route);
+    await page.waitForSelector(".js-copy[data-route]", {
+      state: "attached",
+      timeout: WAIT_MS,
+    });
+    copyRoute = await page.evaluate(
+      () => document.querySelector(".js-copy").dataset.route,
+    );
   }
   const axeAfter = await axeNames(page, axeSource);
   await page.waitForTimeout(SETTLE_MS);
   const rows = await readRows(page);
   const after = await page.evaluate(() => ({
     violations: window.spy.violations,
+    blocked: window.spy.blocked,
     secure: window.isSecureContext,
+    everyone: !document.querySelector(".js-report").hidden,
     report: document.querySelector(".js-report-text").textContent,
   }));
   await browser.close();
-  out(JSON.stringify({
-    browser: kind,
-    arm: arm.name,
-    rows,
-    before,
-    styled,
-    axeAtLoad,
-    axeAfter,
-    everyone,
-    micMs,
-    copyRoute,
-    violations: after.violations,
-    secure: after.secure,
-    reportHasLabel: after.report.includes(FAKE_LABEL),
-    report: after.report,
-    hits: [...new Set(servers.state.hits)].sort(),
-    otherHits: servers.other.hits,
-    errors,
-  }));
+  out(
+    JSON.stringify({
+      browser: kind,
+      arm: arm.name,
+      rows,
+      harnessRows: harnessRows(before, [...axeAtLoad, ...axeAfter]),
+      before,
+      styled,
+      axeAtLoad,
+      axeAfter,
+      everyone: after.everyone,
+      micMs,
+      copyRoute,
+      violations: after.violations,
+      blocked: after.blocked,
+      secure: after.secure,
+      reportHasLabel: after.report.includes(FAKE_LABEL),
+      report: after.report,
+      hits: [...new Set(servers.state.hits)].sort(),
+      otherHits: servers.other.hits,
+      errors,
+    }),
+  );
 }
 
 async function main() {
@@ -318,12 +402,29 @@ async function main() {
   const cert = join(tempDir, "cert.pem");
   execFileSync(
     "openssl",
-    ["req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", key, "-out", cert, "-days", "1", "-subj", "/CN=localhost"],
+    [
+      "req",
+      "-x509",
+      "-newkey",
+      "rsa:2048",
+      "-nodes",
+      "-keyout",
+      key,
+      "-out",
+      cert,
+      "-days",
+      "1",
+      "-subj",
+      "/CN=localhost",
+    ],
     { stdio: "ignore" },
   );
   const state = { folder, arm: {}, hits: [] };
   const route = makeRoute(state);
-  const tls = tlsServer({ key: readFileSync(key), cert: readFileSync(cert) }, route);
+  const tls = tlsServer(
+    { key: readFileSync(key), cert: readFileSync(cert) },
+    route,
+  );
   const plain = plainServer(route);
   const lan = lanAddress();
   const other = { hits: [] };
@@ -347,12 +448,21 @@ async function main() {
         try {
           await runArm(ctx, kind, arm);
         } catch (error) {
-          out(JSON.stringify({ browser: kind, arm: arm.name, crashed: error.message }));
+          out(
+            JSON.stringify({
+              browser: kind,
+              arm: arm.name,
+              crashed: error.message,
+            }),
+          );
         }
       }
     }
   } finally {
-    writeFileSync(join(outDir, "layer-check-output.jsonl"), `${lines.join("\n")}\n`);
+    writeFileSync(
+      join(outDir, "layer-check-output.jsonl"),
+      `${lines.join("\n")}\n`,
+    );
     tls.close();
     plain.close();
     otherServer.close();

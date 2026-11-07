@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: MIT
 // The page's pure logic, under `node --test`. The browser half is `browser.mjs`.
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, readdirSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { test } from "node:test";
@@ -10,7 +18,12 @@ import { fileURLToPath } from "node:url";
 import { countMatches, pickCount, planBeeps } from "./beep.mjs";
 import { missingFeatures, peakHz, withinOneBin } from "./computer.mjs";
 import { copyPage, SHIPPED } from "./copy-page.mjs";
-import { buildReport, passSentence, reportHoldsName, sentence } from "./report.mjs";
+import {
+  buildReport,
+  passSentence,
+  reportHoldsName,
+  sentence,
+} from "./report.mjs";
 
 const PAGE_DIR = fileURLToPath(new URL(".", import.meta.url));
 
@@ -34,7 +47,7 @@ test("sentence fills its feature and refuses an unknown check", () => {
 });
 
 test("C4's pass never claims a device or a speaker works", () => {
-  assert.doesNotMatch(passSentence("C4"), /device/i);
+  assert.doesNotMatch(passSentence("C4"), /device|speaker/i);
   assert.match(passSentence("C4"), /does not show/);
 });
 
@@ -88,10 +101,7 @@ test("the copy holds exactly the shipped files and the logger", () => {
   }
   const out = join(root, "out");
   copyPage(crates, PAGE_DIR, out);
-  assert.deepEqual(
-    readdirSync(out).sort(),
-    [...SHIPPED, "logger.mjs"].sort(),
-  );
+  assert.deepEqual(readdirSync(out).sort(), [...SHIPPED, "logger.mjs"].sort());
 });
 
 test("the copy refuses when two loggers differ", () => {
@@ -105,4 +115,18 @@ test("the copy refuses when two loggers differ", () => {
     () => copyPage(crates, PAGE_DIR, join(root, "out")),
     /loggers differ/,
   );
+});
+
+test("the copy script exits non-zero and copies nothing when two loggers differ", () => {
+  const root = mkdtempSync(join(tmpdir(), "layer-check-"));
+  for (const crate of ["one", "two"]) {
+    mkdirSync(join(root, crate, "page"), { recursive: true });
+    writeFileSync(join(root, crate, "page", "logger.mjs"), crate);
+  }
+  const script = join(root, "one", "page", "copy-page.mjs");
+  copyFileSync(join(PAGE_DIR, "copy-page.mjs"), script);
+  const out = join(root, "out");
+  const run = spawnSync(process.execPath, [script, out]);
+  assert.notEqual(run.status, 0);
+  assert.equal(existsSync(out), false);
 });

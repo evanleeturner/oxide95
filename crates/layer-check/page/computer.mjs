@@ -35,7 +35,12 @@ export function notRun(check, reason) {
 
 /** The names this page needs and `scope` lacks, in a fixed order; empty when none. */
 export function missingFeatures(scope) {
-  const needs = ["AudioContext", "AnalyserNode", "OscillatorNode", "WebAssembly"];
+  const needs = [
+    "AudioContext",
+    "AnalyserNode",
+    "OscillatorNode",
+    "WebAssembly",
+  ];
   return needs.filter((name) => !scope[name]);
 }
 
