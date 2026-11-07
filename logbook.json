@@ -394,6 +394,18 @@
       "template": "playing {count} beeps at {hz}"
     },
     {
+      "id": "check.page.devices",
+      "level": "D",
+      "fields": { "why": "what made the page read the list: load, plug or grant", "outputs": "the speakers and headphones listed", "inputs": "the microphones listed", "labelled": "the devices whose name the browser shows" },
+      "template": "the list on {why}: {outputs} outputs, {inputs} inputs, {labelled} with a name"
+    },
+    {
+      "id": "check.page.microphone",
+      "level": "I",
+      "fields": { "answer": "yes, none, or the name of a refusal" },
+      "template": "the microphone question answered {answer}"
+    },
+    {
       "id": "check.computer.result",
       "level": "I",
       "fields": { "check": "the check's short name", "state": "what it read: pass or red" },

@@ -181,7 +181,7 @@ function servedFile(folder, path, arm) {
   return { type, text };
 }
 
-function makeRoute(state) {
+export function makeRoute(state) {
   return (request, response) => {
     const path = request.url.split("?")[0];
     state.hits.push(path);
@@ -194,7 +194,7 @@ function makeRoute(state) {
   };
 }
 
-function listen(server, host) {
+export function listen(server, host) {
   return new Promise((done) => {
     server.listen(0, host, () => done(server.address().port));
   });
@@ -232,7 +232,7 @@ export function launch(playwright, kind, extra = {}) {
   });
 }
 
-async function axeNames(page, source) {
+export async function axeNames(page, source) {
   await page.evaluate(source);
   const found = await page.evaluate(
     async (values) =>
@@ -400,10 +400,8 @@ async function runArm(ctx, kind, armDef) {
   );
 }
 
-async function main() {
-  const [folder, outDir, tempDir] = process.argv.slice(2);
-  mkdirSync(outDir, { recursive: true });
-  mkdirSync(tempDir, { recursive: true });
+/** A one-day certificate for the local address, made in `tempDir`, as the server takes it. */
+export function makeCert(tempDir) {
   const key = join(tempDir, "key.pem");
   const cert = join(tempDir, "cert.pem");
   execFileSync(
@@ -425,12 +423,16 @@ async function main() {
     ],
     { stdio: "ignore" },
   );
+  return { key: readFileSync(key), cert: readFileSync(cert) };
+}
+
+async function main() {
+  const [folder, outDir, tempDir] = process.argv.slice(2);
+  mkdirSync(outDir, { recursive: true });
+  mkdirSync(tempDir, { recursive: true });
   const state = { folder, arm: {}, hits: [] };
   const route = makeRoute(state);
-  const tls = tlsServer(
-    { key: readFileSync(key), cert: readFileSync(cert) },
-    route,
-  );
+  const tls = tlsServer(makeCert(tempDir), route);
   const plain = plainServer(route);
   const lan = lanAddress();
   const other = { hits: [] };

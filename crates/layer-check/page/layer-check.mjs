@@ -20,6 +20,17 @@ import {
   RED,
   result,
 } from "./computer.mjs";
+import {
+  askMicrophone,
+  checkFollows,
+  checkList,
+  checkQuestion,
+  deviceRows,
+  listCounts,
+  NO_ANSWER,
+  watchDevices,
+  YES,
+} from "./devices.mjs";
 import { logger } from "./logger.mjs";
 import {
   buildReport,
@@ -37,6 +48,7 @@ const results = new Map();
 let context = null;
 let played = 0;
 let violations = 0;
+let deviceNames = [];
 
 function show(found) {
   results.set(found.check, found);
@@ -175,6 +187,55 @@ function onViolation() {
   show(result("P2", RED, sentence("P2")));
 }
 
+function fillRows() {
+  const rows = deviceNames.map((name) => {
+    const row = document.createElement("li");
+    row.textContent = name;
+    return row;
+  });
+  part("device-list").replaceChildren(...rows);
+}
+
+function showRead(read, why, media) {
+  const { outputs, inputs, labelled } = listCounts(read.devices);
+  logger.debug("check.page.devices", { why, outputs, inputs, labelled });
+  deviceNames = deviceRows(read.devices);
+  fillRows();
+  show(checkList(media, read));
+}
+
+async function answered(answer, watch) {
+  logger.info("check.page.microphone", { answer });
+  show(checkQuestion(answer));
+  if (answer === YES) await watch.readNow("grant");
+}
+
+async function ask(media, watch) {
+  part("ask").disabled = true;
+  const { answer, late } = await askMicrophone(media);
+  await answered(answer, watch);
+  if (answer === NO_ANSWER) {
+    void late.then((lateAnswer) => answered(lateAnswer, watch));
+  }
+  document.body.dataset.asked = "true";
+}
+
+// The list starts at load: a listing plays nothing and opens nothing. The
+// microphone is asked only from a person's press.
+async function startDevices() {
+  const media = navigator.mediaDevices;
+  if (!media) {
+    show(checkList(media));
+    show(await checkFollows(media));
+    part("ask").hidden = true;
+    return;
+  }
+  const watch = watchDevices(media, (read, why) => showRead(read, why, media));
+  await watch.readNow("load");
+  show(await checkFollows(media, watch));
+  part("ask").addEventListener("click", () => void ask(media, watch));
+}
+
 document.addEventListener("securitypolicyviolation", onViolation);
 part("start").addEventListener("click", () => void runChecks());
 part("beeps").addEventListener("click", () => void playForCount());
@@ -187,3 +248,4 @@ for (const count of [2, 3, 4]) {
 part("count-skip").addEventListener("click", () => void skipCount());
 part("mic-start").addEventListener("click", () => void useMicrophone());
 part("copy").addEventListener("click", () => void copyReport());
+void startDevices();
