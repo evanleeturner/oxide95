@@ -12,6 +12,7 @@ mod pictures;
 mod probes;
 mod refusal_cuts;
 mod refusals;
+mod seek_clip;
 mod sound;
 mod test_log;
 mod writer;

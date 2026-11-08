@@ -25,8 +25,9 @@ const ARMS = {
     firefoxUserPrefs: { "media.volume_scale": "0" },
   },
 };
-/// `seek`'s clips: every palette entry painted and rewritten, and pixels that change.
-const SEEK_CLIPS = ["palette", "blocks"];
+/// `seek`'s clips: every palette entry painted and rewritten; pixels that change; and
+/// one whose frames all differ, as each of the other two holds a pair of frames alike.
+const SEEK_CLIPS = ["palette", "blocks", "ladder"];
 const SCREEN_CLIP = "palette";
 const PACE_CLIPS = ["long-6666", "long-7100"];
 const RUNS_WANTED = 3;
