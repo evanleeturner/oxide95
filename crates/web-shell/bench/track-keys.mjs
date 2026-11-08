@@ -229,15 +229,18 @@ function installRecorder() {
 }
 
 // What the page holds after a key, read in the page and changing nothing but the
-// recorders' lists, which it empties; the one-file page's own list is emptied too.
-function readInPage(track) {
+// recorders' lists, which it empties; the one-file page's own list is emptied too. A
+// reloaded document holds no recorder and no started track: it reads empty, so the
+// caller's `born` sees the reload, where a thrown read would say only "no answer".
+export function readInPage(track) {
   const at = document.activeElement ?? document.body;
+  const words = track ? window.trackPage?.words : null;
   return {
     at: at.tagName.toLowerCase(),
-    codes: window.benchSeen.splice(0),
-    prevented: window.benchPrevented.splice(0),
-    took: track ? [] : window.take(),
-    words: track ? Array.from(window.trackPage.words.slice(0, 16)) : null,
+    codes: window.benchSeen?.splice(0) ?? [],
+    prevented: window.benchPrevented?.splice(0) ?? [],
+    took: track ? [] : (window.take?.() ?? []),
+    words: words ? Array.from(words.slice(0, 16)) : null,
     born: performance.timeOrigin,
   };
 }
