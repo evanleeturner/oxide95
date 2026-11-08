@@ -7,13 +7,13 @@
 //! links no `user32`. The mode `first <way>` asks whether a box closes with no key from outside.
 #![allow(unsafe_code)]
 
-use std::cell::Cell;
+use std::cell::{Cell, RefCell};
 use std::fmt::Display;
 
 use kernel_process::resource;
-use window::Rect;
 use window::desk::{Desk, Window};
 use window::page::Page;
+use window::{Event, Rect};
 use window_dialogs::front::Front;
 use window_dialogs::table::{Calls, Row};
 use window_dialogs::tables::Tables;
@@ -564,6 +564,309 @@ fn bars() {
     }
 }
 
+const DS_SETFONT: u32 = 0x40;
+/// A label's style: a visible child, no tab stop.
+const LABEL: u32 = 0x5000_0000;
+/// The command a box's procedure posts itself at `WM_INITDIALOG`, to read the focus once the
+/// box is up, then end it.
+const MARKER: u16 = 0x99;
+const PARAM: isize = 0x33;
+/// `Front`'s planted boxes sit at this id and on, one a case, in the order of `CASES`.
+const FIRST_BOX: u32 = 20;
+
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn DialogBoxParamA(
+        instance: usize,
+        name: *const u8,
+        owner: usize,
+        procedure: Procedure,
+        param: isize,
+    ) -> isize;
+}
+
+/// A box case's owner: the top window, none, or one gone.
+#[derive(Clone, Copy)]
+enum Owner {
+    Top,
+    Zero,
+    Gone,
+}
+
+/// One box case: its row name, the box's style and controls, its owner, the value its
+/// procedure ends it with, the procedure's answer to `WM_INITDIALOG`, and whether its template
+/// is the extended form, which `template::dialog` refuses.
+struct Case {
+    name: &'static str,
+    style: u32,
+    controls: &'static [(u16, u16, u32, &'static str)],
+    owner: Owner,
+    value: i32,
+    init: bool,
+    extended: bool,
+}
+
+/// A default push whose words are an odd count with their end, so the next control's header
+/// needs the reader's alignment, then an auto check.
+const TWO: &[(u16, u16, u32, &str)] = &[(1, 0x80, DEFAULT, "Ok"), (11, 0x80, AUTO, "One")];
+
+const fn case(
+    name: &'static str,
+    controls: &'static [(u16, u16, u32, &'static str)],
+    value: i32,
+) -> Case {
+    Case {
+        name,
+        style: BOX_STYLE,
+        controls,
+        owner: Owner::Top,
+        value,
+        init: true,
+        extended: false,
+    }
+}
+
+const CASES: &[Case] = &[
+    case("value0", TWO, 0),
+    case("value7", TWO, 7),
+    case("valueneg1", TWO, -1),
+    Case {
+        style: BOX_STYLE | DS_SETFONT,
+        ..case("font", TWO, 7)
+    },
+    case("none", &[], 7),
+    case("one", &[(1, 0x80, DEFAULT, "Ok")], 7),
+    case(
+        "label",
+        &[(0xffff, 0x82, LABEL, "Label"), (1, 0x80, DEFAULT, "Ok")],
+        7,
+    ),
+    Case {
+        owner: Owner::Zero,
+        ..case("owner0", TWO, 7)
+    },
+    Case {
+        owner: Owner::Gone,
+        ..case("ownergone", TWO, 7)
+    },
+    Case {
+        init: false,
+        ..case("answer0", TWO, 7)
+    },
+    Case {
+        extended: true,
+        ..case("extended", &[], 7)
+    },
+];
+
+thread_local! {
+    /// The box case's value and `WM_INITDIALOG` answer, for `boxed`.
+    static CASE: Cell<(isize, isize)> = const { Cell::new((0, 0)) };
+    static IDS: RefCell<Vec<u16>> = const { RefCell::new(Vec::new()) };
+    static OWNER_NOW: Cell<usize> = const { Cell::new(0) };
+    /// What `boxed` read, in order: `w`, `l`, the focus, `EndDialog`'s answer.
+    static SEEN: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A handle by its kind, against names built at the read.
+fn named(handle: usize, names: &[(String, usize)]) -> String {
+    let names: Vec<(&str, usize)> = names
+        .iter()
+        .map(|(name, other)| (name.as_str(), *other))
+        .collect();
+    kind(handle, &names)
+}
+
+/// The names a box row reads a handle by under USER32: each control by its id, the box, the owner.
+fn user32_names(window: usize) -> Vec<(String, usize)> {
+    let mut names: Vec<(String, usize)> = IDS.with_borrow(|ids| {
+        ids.iter()
+            .map(|&id| {
+                // SAFETY: `window` is the open box; `GetDlgItem` answers 0 for an id it lacks.
+                let handle = unsafe { GetDlgItem(window, i32::from(id)) };
+                (format!("id{id}"), handle)
+            })
+            .collect()
+    });
+    names.push(("box".into(), window));
+    names.push(("owner".into(), OWNER_NOW.get()));
+    names
+}
+
+/// The same names under `Front`.
+fn front_names(front: &Own<'_>, window: u32, ids: &[u16], owner: u32) -> Vec<(String, usize)> {
+    let mut names: Vec<(String, usize)> = ids
+        .iter()
+        .map(|&id| {
+            let handle = front.get_dlg_item(window, u32::from(id));
+            (format!("id{id}"), wide(handle))
+        })
+        .collect();
+    names.push(("box".into(), wide(window)));
+    names.push(("owner".into(), wide(owner)));
+    names
+}
+
+/// The box rows' procedure under USER32: at `WM_INITDIALOG` it reads `w` and `l` and posts
+/// itself the marker, answering the case's word; at the marker it reads the focus and ends the
+/// box with the case's value.
+extern "system" fn boxed(window: usize, message: u32, w: usize, l: isize) -> isize {
+    let (value, init) = CASE.get();
+    match message {
+        WM_INITDIALOG => {
+            let names = user32_names(window);
+            SEEN.with_borrow_mut(|seen| {
+                seen.push(named(w, &names));
+                seen.push(l.to_string());
+            });
+            // SAFETY: `window` is the box USER32 is opening, live for this call; a post takes
+            // any handle and fails softly.
+            unsafe { PostMessageA(window, WM_COMMAND, usize::from(MARKER), 0) };
+            init
+        }
+        WM_COMMAND if w & 0xffff == usize::from(MARKER) => {
+            let names = user32_names(window);
+            // SAFETY: the box is open while its procedure runs; the focus call takes nothing.
+            let focus = unsafe { GetFocus() };
+            // SAFETY: as above, the box open.
+            let ended = unsafe { EndDialog(window, value) };
+            SEEN.with_borrow_mut(|seen| {
+                seen.push(named(focus, &names));
+                seen.push(u8::from(ended != 0).to_string());
+            });
+            1
+        }
+        _ => 0,
+    }
+}
+
+/// USER32's side of a box case: `DialogBoxIndirectParamA`'s answer and error word, then what
+/// `boxed` read, `none` for each read the box never reached.
+fn user32_box(
+    case: &Case,
+    template: &[u32],
+    instance: usize,
+    owner: usize,
+) -> ((isize, u32), Vec<String>) {
+    CASE.set((
+        isize::try_from(case.value).unwrap_or_default(),
+        isize::from(case.init),
+    ));
+    IDS.set(case.controls.iter().map(|control| control.0).collect());
+    OWNER_NOW.set(owner);
+    SEEN.set(Vec::new());
+    let answer = traced(|| {
+        // SAFETY: the template lives across the call, a whole planted template on a 4-byte
+        // boundary; the procedure is `extern "system"`; an owner gone fails softly.
+        unsafe { DialogBoxIndirectParamA(instance, template.as_ptr(), owner, boxed, PARAM) }
+    });
+    let mut seen = SEEN.take();
+    seen.resize(4, "none".into());
+    (answer, seen)
+}
+
+/// `Front`'s side of a box case, over a fresh desk whose top window holds the focus: the
+/// wait's answer, then the same reads as `boxed`'s.
+fn front_box(disc: &Disc, case: &Case, id: u32) -> (u32, Vec<String>) {
+    let (desk, tables) = (Desk::new(Page::new(0x280, 0x1e0)), Tables::new());
+    desk.state().windows.push(desk_window(TOP, 0, 0));
+    desk.state().focus = TOP;
+    let front = Front::new(&ROW, &desk, &tables, disc);
+    let owner = match case.owner {
+        Owner::Top => TOP,
+        Owner::Zero => 0,
+        Owner::Gone => GONE,
+    };
+    let ids: Vec<u16> = case.controls.iter().map(|control| control.0).collect();
+    let value = u32::from_ne_bytes(case.value.to_ne_bytes());
+    let mut seen = Vec::new();
+    let answer = front.dialog_box_wait([INSTANCE, id, owner, 0x50, 0x33], |_, sent| {
+        let names = front_names(&front, sent.window, &ids, owner);
+        match sent.message {
+            WM_INITDIALOG => {
+                seen.push(named(wide(sent.w), &names));
+                seen.push(sent.l.to_string());
+                let window = sent.window;
+                desk.screen().hand(Event::Command { window, id: MARKER });
+                u32::from(case.init)
+            }
+            WM_COMMAND if sent.w & 0xffff == u32::from(MARKER) => {
+                let focus = desk.state().focus;
+                seen.push(named(wide(focus), &names));
+                seen.push(front.end_dialog(sent.window, value).to_string());
+                0
+            }
+            _ => 0,
+        }
+    });
+    seen.resize(4, "none".into());
+    (answer, seen)
+}
+
+/// An extended box template, no controls: the version word 1 and `0xffff`, a help id, an
+/// extended style and the style, then a count of 0, the place, and no menu, class or title.
+fn extended_box() -> Vec<u8> {
+    let mut out = Vec::new();
+    for word in [1u16, 0xffff] {
+        out.extend_from_slice(&word.to_le_bytes());
+    }
+    for long in [0u32, 0, BOX_STYLE] {
+        out.extend_from_slice(&long.to_le_bytes());
+    }
+    for word in [0u16, 0, 0, 10, 10, 0, 0, 0] {
+        out.extend_from_slice(&word.to_le_bytes());
+    }
+    out
+}
+
+/// The box rows: each case's answer, `WM_INITDIALOG`'s `w` and `l`, the focus once the box is
+/// up, `EndDialog`'s answer, both sides; then `DialogBoxParamA` on an id the module lacks.
+fn boxes() {
+    let bytes: Vec<Vec<u8>> = CASES
+        .iter()
+        .map(|case| {
+            if case.extended {
+                extended_box()
+            } else {
+                plant::dialog(case.style, "Box", case.controls)
+            }
+        })
+        .collect();
+    let entries: Vec<(u32, u32, &[u8])> = (FIRST_BOX..)
+        .zip(&bytes)
+        .map(|(id, bytes)| (resource::DIALOG, id, &bytes[..]))
+        .collect();
+    let disc = Disc(kernel_process::plant::image(&entries));
+    // SAFETY: a null name asks the exe's own module.
+    let instance = unsafe { GetModuleHandleA(std::ptr::null()) };
+    let windows = user32_windows(instance);
+    for ((case, bytes), id) in CASES.iter().zip(&bytes).zip(FIRST_BOX..) {
+        let owner = match case.owner {
+            Owner::Top => windows[0],
+            Owner::Zero => 0,
+            Owner::Gone => windows[3],
+        };
+        let (theirs, seen) = user32_box(case, &aligned(bytes), instance, owner);
+        let (ours, own_seen) = front_box(&disc, case, id);
+        let name = case.name;
+        row_error(&format!("box.{name}.answer"), &theirs, number(ours));
+        let reads = ["init_w", "init_l", "focus", "ended"];
+        for (read, (user32, front)) in reads.iter().zip(seen.iter().zip(&own_seen)) {
+            row(&format!("box.{name}.{read}"), user32, front);
+        }
+    }
+    let theirs = traced(|| {
+        let name = std::ptr::without_provenance(usize::try_from(LACKING).unwrap_or_default());
+        // SAFETY: a resource name by its number, which the module lacks; the procedure is
+        // `extern "system"`.
+        unsafe { DialogBoxParamA(instance, name, windows[0], boxed, PARAM) }
+    });
+    let (desk, tables) = (Desk::new(Page::new(0x280, 0x1e0)), Tables::new());
+    let front = Front::new(&ROW, &desk, &tables, &disc);
+    let ours = front.dialog_box_wait([INSTANCE, LACKING, TOP, 0x50, 0x33], |_, _| 0);
+    row_error("box.lacking.answer", &theirs, number(ours));
+}
+
 /// The first read's procedure: way 0 never ends its box, way 1 ends it in `WM_INITDIALOG`,
 /// way 2 posts itself `IDOK`, way 3 posts Return's down and up to the control the focus goes to.
 extern "system" fn first(window: usize, message: u32, w: usize, l: isize) -> isize {
@@ -645,6 +948,7 @@ fn main() {
         Some("hello") => println!("hello"),
         Some("menus") => menus(),
         Some("bars") => bars(),
+        Some("box") => boxes(),
         Some("first") => {
             let way = arguments
                 .get(2)
@@ -653,7 +957,7 @@ fn main() {
             first_read(way);
         }
         _ => {
-            eprintln!("usage: user32_probe hello | menus | bars | first <0|1|2|3>");
+            eprintln!("usage: user32_probe hello | menus | bars | box | first <0|1|2|3>");
             std::process::exit(2);
         }
     }
