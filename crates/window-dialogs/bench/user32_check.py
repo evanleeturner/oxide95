@@ -163,6 +163,145 @@ STANDING: dict[str, Standing] = {
 }
 
 
+# The crate's public names this check is asked to hold, `file:line kind name` at the commit it
+# began on; `src/` is untouched by it. A name is held when the rows under its prefix call through
+# it on Front's side: a row runs it, not a claim that each field's value is compared.
+NAMES = 85
+NAMES_HELD: dict[str, tuple[str, ...]] = {
+    "menu.load": (
+        "front:88 struct Front",
+        "front:96 fn new",
+        "front:120 fn load_menu",
+        "plant:24 fn menu",
+        "template:137 fn menu",
+        "tables:89 struct Tables",
+        "tables:95 fn new",
+        "tables:53 struct State",
+        "tables:54 field menus",
+    ),
+    "menu.shape": (
+        "tables:101 fn state",
+        "tables:14 struct Menu",
+        "tables:15 field handle",
+        "tables:16 field items",
+        "template:23 struct Item",
+        "template:24 field id",
+        "template:25 field state",
+        "template:26 field words",
+        "template:27 field popup",
+        "template:28 field items",
+    ),
+    "menu.enable": (
+        "front:180 fn enable_menu_item",
+        "tables:63 fn menu_mut",
+        "template:215 fn find_item",
+    ),
+    "menu.check": ("front:191 fn check_menu_item",),
+    "bar.load": ("lib:48 trait Resources", "lib:51 method resource"),
+    "bar.set": (
+        "front:136 fn set_menu",
+        "tables:22 struct Bar",
+        "tables:23 field window",
+        "tables:24 field menu",
+        "tables:55 field bars",
+    ),
+    "bar.draw": (
+        "front:152 fn draw_menu_bar",
+        "tables:25 field drawn",
+        "tables:73 fn bar_mut",
+    ),
+    "box.value7": (
+        "front:302 fn dialog_box_wait",
+        "plant:40 fn dialog",
+        "template:185 fn dialog",
+        "template:45 struct Dialog",
+        "template:50 field controls",
+        "tables:44 struct Open",
+        "tables:45 field handle",
+        "tables:48 field controls",
+        "tables:56 field boxes",
+        "tables:58 field ended",
+    ),
+    "box.font": ("template:46 field style",),
+    "box.owner0": ("tables:46 field owner",),
+    "box.answer0": ("tables:47 field before",),
+    "inside.end": ("front:364 fn end_dialog",),
+    "inside.id11.": (
+        "front:393 fn get_dlg_item",
+        "tables:31 struct Control",
+        "tables:32 field handle",
+        "tables:33 field id",
+        "tables:38 field words",
+        "template:34 struct Control",
+        "template:35 field id",
+        "template:36 field class",
+        "template:40 field words",
+    ),
+    "inside.check.": ("front:403 fn check_dlg_button", "tables:68 fn open_mut"),
+    "inside.checked.": (
+        "front:417 fn is_dlg_button_checked",
+        "tables:37 field button",
+        "tables:39 field checked",
+    ),
+    "keys.tab.": ("tables:34 field style", "template:37 field style"),
+    "keys.return.": ("front:429 fn press", "front:475 fn key"),
+}
+NAMES_NOT_HELD: dict[str, tuple[str, ...]] = {
+    "it answers 0 at once with the box open, by its own words: a wall, no row": (
+        "front:273 fn dialog_box_param",
+    ),
+    "a log line's call name, and log lines are not this check": (
+        "table:7 struct Calls",
+        "table:8 field check_dlg_button",
+        "table:9 field check_menu_item",
+        "table:10 field dialog_box_param",
+        "table:11 field draw_menu_bar",
+        "table:12 field enable_menu_item",
+        "table:13 field end_dialog",
+        "table:14 field get_dlg_item",
+        "table:15 field is_dlg_button_checked",
+        "table:16 field load_menu",
+        "table:17 field set_menu",
+        "table:22 struct Row",
+        "table:23 field file",
+        "table:24 field calls",
+    ),
+    "parsed past, its value read by no row: placement and drawing are a wall": (
+        "template:38 field ex_style",
+        "template:39 field place",
+        "template:47 field ex_style",
+        "template:48 field place",
+    ),
+    "the box's own caption: no row reads the box's words": ("template:49 field title",),
+}
+
+
+def names_row(held: set[str]) -> int:
+    """Count the names the held rows hold, each not held printed with its reason; the reds."""
+    every = [name for group in NAMES_HELD.values() for name in group]
+    every += [name for group in NAMES_NOT_HELD.values() for name in group]
+    reds = 0
+    if len(every) != NAMES or len(set(every)) != NAMES:
+        print(
+            f"RED names: {len(set(every))} unique of {len(every)} listed, {NAMES} asked"
+        )
+        reds += 1
+    count = 0
+    for prefix, group in NAMES_HELD.items():
+        if any(name.startswith(prefix) for name in held):
+            count += len(group)
+            continue
+        for name in group:
+            print(f"RED name {name}: no held row under {prefix}")
+            reds += 1
+    for why, group in NAMES_NOT_HELD.items():
+        for name in group:
+            print(f"name not held {name}: {why}")
+    print(f"names held {count} of {NAMES}")
+    log.debug("names held %d, reds %d", count, reds)
+    return reds
+
+
 def held_rows(path: Path = ROWS_FILE) -> list[tuple[str, str]]:
     """The row list by name, `(mode, name)` in the probe's order, from the file beside this one."""
     rows = []
@@ -246,6 +385,7 @@ def score(folder: Path) -> int:
     for name, (mode, _) in printed.items():
         print(f"RED {name}: printed by {mode}, not held")
         counts["RED"] += 1
+    counts["RED"] += names_row({name for _, name in held})
     print(
         f"rows held {len(held)}: ok {counts['ok']}, STANDING {counts['STANDING']}, "
         f"RED {counts['RED']}"
