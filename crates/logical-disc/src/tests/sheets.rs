@@ -39,8 +39,13 @@ impl ReadAt for Sparse {
             return Err(Error::BadArgument);
         }
         for (place, byte) in into.iter_mut().enumerate() {
-            let from = usize::try_from(at).ok().and_then(|at| at.checked_add(place));
-            *byte = from.and_then(|from| self.head.get(from)).copied().unwrap_or(0);
+            let from = usize::try_from(at)
+                .ok()
+                .and_then(|at| at.checked_add(place));
+            *byte = from
+                .and_then(|from| self.head.get(from))
+                .copied()
+                .unwrap_or(0);
         }
         Ok(())
     }

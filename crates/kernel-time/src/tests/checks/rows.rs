@@ -41,22 +41,14 @@ pub(super) const ROW: Row = Row {
 /// takes, far past `datetime`'s year 9999.
 pub(super) const TABLE: [(&str, u64, [u16; 8]); 9] = [
     ("zero", 0, [1601, 1, 1, 1, 0, 0, 0, 0]),
-    (
-        "unix",
-        116_444_736_000_000_000,
-        [1970, 1, 4, 1, 0, 0, 0, 0],
-    ),
+    ("unix", 116_444_736_000_000_000, [1970, 1, 4, 1, 0, 0, 0, 0]),
     ("y2k", 125_911_584_000_000_000, [2000, 1, 6, 1, 0, 0, 0, 0]),
     (
         "leap",
         125_962_560_000_000_000,
         [2000, 2, 2, 29, 0, 0, 0, 0],
     ),
-    (
-        "y1900",
-        94_405_824_000_000_000,
-        [1900, 3, 4, 1, 0, 0, 0, 0],
-    ),
+    ("y1900", 94_405_824_000_000_000, [1900, 3, 4, 1, 0, 0, 0, 0]),
     (
         "y2100",
         157_520_160_000_000_000,
@@ -117,7 +109,10 @@ impl<'a> Book<'a> {
         if !pass {
             self.fails += 1;
         }
-        (self.out)(&format!("CHECK {check} {} {name} = {verdict} {told}", self.back));
+        (self.out)(&format!(
+            "CHECK {check} {} {name} = {verdict} {told}",
+            self.back
+        ));
     }
 
     /// A reading with no judge in this run.
@@ -268,7 +263,12 @@ fn bytes(book: &mut Book<'_>) {
     let want = [
         0xCF, 0x07, 12, 0, 5, 0, 31, 0, 23, 0, 59, 0, 59, 0, 0xE7, 0x03,
     ];
-    book.check("ti2", "bytes.end", bytes == want, &format_args!("{bytes:?}"));
+    book.check(
+        "ti2",
+        "bytes.end",
+        bytes == want,
+        &format_args!("{bytes:?}"),
+    );
 }
 
 /// The C library's `time`, a stand-in's own edges: no document names them.

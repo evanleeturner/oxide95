@@ -11,11 +11,11 @@ use crate::disc::{RAW, USER};
 use crate::{Disc, OpenError, Source};
 
 mod folder;
-mod test_log;
-mod tracks;
+mod records;
 mod sheets;
 mod stamped;
-mod records;
+mod test_log;
+mod tracks;
 
 /// The tree's files: the name a game asks, its sector, its length, its
 /// bytes' seed.

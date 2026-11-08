@@ -45,7 +45,9 @@ fn stamp(mark: u16, frame: u16, big: bool) -> Vec<u8> {
 
 /// `count` frames of one mark, from frame 0.
 fn frames(mark: u16, count: u16, big: bool) -> Vec<u8> {
-    (0..count).flat_map(|frame| stamp(mark, frame, big)).collect()
+    (0..count)
+        .flat_map(|frame| stamp(mark, frame, big))
+        .collect()
 }
 
 /// One bin: the data track's 25 sectors, track 2's 10 frames with no
@@ -133,7 +135,10 @@ impl Rows {
             self.differ.push(format!("{} {what}", self.image));
             "DIFF"
         };
-        println!("{} {} {what} {got} want {want} {verdict}", self.kind, self.image);
+        println!(
+            "{} {} {what} {got} want {want} {verdict}",
+            self.kind, self.image
+        );
     }
 }
 
@@ -238,7 +243,11 @@ fn check(image: Image) -> Vec<String> {
             &format!("{:?}", Ok::<usize, Error>(length)),
         );
         let wrong = wrong_frames(&whole[..moved], mark, flag) + (length - moved) / FRAME;
-        rows.row(&format!("track{number}_frames_wrong"), &wrong.to_string(), "0");
+        rows.row(
+            &format!("track{number}_frames_wrong"),
+            &wrong.to_string(),
+            "0",
+        );
         for (what, at) in [
             ("edge", FRAME - 2),
             ("last_byte", length - 1),
@@ -249,7 +258,11 @@ fn check(image: Image) -> Vec<String> {
             let from = at.min(length);
             let to = (at + 4).min(length);
             let want = format!("count={}:{}", to - from, hex(&source[from..to]));
-            rows.row(&format!("track{number}_{what}"), &answer(read, &into), &want);
+            rows.row(
+                &format!("track{number}_{what}"),
+                &answer(read, &into),
+                &want,
+            );
         }
     }
     for number in [1, 9] {
@@ -290,7 +303,11 @@ fn a_read_past_a_tracks_end_moves_nothing() {
             let at = usize::try_from(count).expect("frames") * FRAME + 100;
             let mut into = [0; 4];
             let read = disc.read_track(number, u64::try_from(at).expect("a place"), &mut into);
-            rows.row(&format!("track{number}_past_end"), &answer(read, &into), "count=0:");
+            rows.row(
+                &format!("track{number}_past_end"),
+                &answer(read, &into),
+                "count=0:",
+            );
         }
         differ.extend(rows.differ);
     }

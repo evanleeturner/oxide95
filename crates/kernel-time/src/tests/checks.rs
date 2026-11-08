@@ -51,10 +51,7 @@ fn brackets(book: &mut Book<'_>) {
     let inner = Instant::now();
     let times = Times::new(&ROW, host);
     let bounds = |before: Instant, after: Instant| {
-        (
-            (before - inner).as_micros(),
-            (after - outer).as_micros(),
-        )
+        ((before - inner).as_micros(), (after - outer).as_micros())
     };
     for round in 1..=2 {
         thread::sleep(SETTLE);
@@ -248,9 +245,7 @@ mod wine {
         let mut out = [0; 8];
         // SAFETY: `out` is the 8 words the call writes.
         unsafe { GetSystemTime(&raw mut out) };
-        [
-            out[0], out[1], out[3], out[4], out[5], out[6], out[7],
-        ]
+        [out[0], out[1], out[3], out[4], out[5], out[6], out[7]]
     }
 
     fn performance() -> i64 {

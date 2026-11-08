@@ -69,7 +69,10 @@ fn row(kind: &str, what: &str, got: &str, want: &str) -> bool {
 fn listed<R: ReadAt>(disc: &Disc<R>) -> Vec<String> {
     use core::fmt::Write as _;
     let hex = |name: &[u8]| -> String {
-        let end = name.iter().position(|&byte| byte == 0).unwrap_or(name.len());
+        let end = name
+            .iter()
+            .position(|&byte| byte == 0)
+            .unwrap_or(name.len());
         name[..end].iter().fold(String::new(), |mut out, byte| {
             write!(out, "{byte:02x}").expect("a string takes a write");
             out
@@ -100,7 +103,11 @@ fn a_name_past_ascii_folds_its_ascii_alone() {
     for (what, name, want) in [
         ("past_ascii_exact", &b"CAF\xc9.TXT"[..], "read=100:source"),
         ("past_ascii_ascii_folded", b"caf\xc9.txt", "read=100:source"),
-        ("past_ascii_byte_unfolded", b"CAF\xe9.TXT", "refused=NotFound"),
+        (
+            "past_ascii_byte_unfolded",
+            b"CAF\xe9.TXT",
+            "refused=NotFound",
+        ),
     ] {
         same &= row("DI1", what, &shown(&read_named(&disc, name), &source), want);
     }
