@@ -295,6 +295,7 @@ impl Outcome {
 /// The 3 voices over `O`, driven by a clock only the bench moves.
 pub struct Script<O> {
     front: Front<HeldClock, Witness<Against<O>>>,
+    back: Rc<RefCell<O>>,
     clock: Rc<Cell<u64>>,
     seen: Seen,
     reading: Rc<Reading>,
@@ -311,8 +312,9 @@ impl<O: Output> Script<O> {
     pub fn load(back: O, plant: Plant) -> Self {
         let clock = Rc::new(Cell::new(0));
         let reading = Rc::new(Reading::default());
+        let back = Rc::new(RefCell::new(back));
         let witness = Witness::new(Against {
-            back: Rc::new(RefCell::new(back)),
+            back: Rc::clone(&back),
             want: Rc::new(worked()),
             reading: Rc::clone(&reading),
         });
@@ -335,6 +337,7 @@ impl<O: Output> Script<O> {
         }
         Self {
             front,
+            back,
             clock,
             seen,
             reading,
@@ -364,6 +367,11 @@ impl<O: Output> Script<O> {
         }
         self.clock.set(self.clock.get().max(now_us));
         self.front.pump();
+    }
+
+    /// The back's room, read directly, so a route can read it once the mix stops asking.
+    pub fn room(&self) -> usize {
+        self.back.borrow().room()
     }
 
     /// Ends the voices and closes the back.
