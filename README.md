@@ -1,74 +1,54 @@
 # oxide95
 
-If you have rewritten an old 32-bit Windows program in Rust, it still expects
-Windows to answer its calls: open this file, make this window, draw these
-pixels, what time is it. oxide95 is a set of Rust libraries that answer those
-calls themselves, so the rewritten program can run without Windows.
+oxide95 is a set of Rust libraries for people who are rewriting an old
+Windows game in Rust and want it to run on a computer today.
 
-The libraries cover calls a Windows 95 era program makes to KERNEL32, USER32,
-GDI32 and ADVAPI32 (the Windows system libraries for files, windows, drawing
-and settings), plus the C library's memory helpers. Each call gives back what
-the calling program reads from it and nothing more, so Windows itself is never
-rebuilt. oxide95 cannot run an existing `.exe` file: your program has to be
-source code that you compile against these libraries.
+A game made for Windows 95 leans on Windows for almost everything. To open
+a file, put a window on the screen, draw a picture, play a sound, read the
+joystick or check the time, it asks Windows and waits for the answer. A
+rewritten game still asks those same questions. oxide95 answers them in
+Windows' place, so the game can run on Linux, in a web browser or inside a
+test, with no Windows underneath. For example, when the game reaches for
+its CD, `logical_disc` hands it a copy of the disc saved as a file.
+
+oxide95 can't run a game's original `.exe` file. The game has to be source
+code (the text a program is built from) that you build together with these
+libraries.
 
 ## What is here
 
-| Library | What it answers |
+| Libraries | What they answer for the game |
 | --- | --- |
-| `kernel_files` | opening, reading, writing, moving and finding files |
-| `kernel_memory` | `malloc`, `free` and the C library's other memory helpers |
-| `kernel_process` | the program's command line, path, version and last error |
-| `kernel_registry` | saved settings, kept in a text file or in memory |
-| `kernel_text` | code pages and text conversion |
-| `kernel_threads` | thread numbers, locks, per-thread slots and counters |
-| `kernel_time` | clocks and dates |
-| `cd-audio` | the calls a program makes to its CD-audio disc: one front answers from a row and reads no disc, another plays the disc's tracks through `sound-mix` or a page's script; it has run only in tests over stand-in discs, so nothing has reached a speaker |
-| `layer-check` | a page and a bench that test a browser's and a computer's sound with none of the other crates' code, so a later fault can say whether the computer is to blame; the page has run muted in Chromium, Chrome and Firefox, the bench natively and under Wine into a private output, all on one Linux computer, and no person has checked either by ear yet; two scripts do the same for a picture and a key on a bare page, and have run without a visible window in Chromium and Firefox on that computer, the picture read back from the canvas and from the browser's screenshot, the key sent by a test driver, so no person has looked at the picture or pressed a key; three small programs do the same outside a browser, one directly on that computer and two under Wine, each on a private screen no person sees: at full colour all 64,000 of the picture's pixels came back right and the keys a test tool sent arrived; on a 16-bit screen the direct program refused the screen and the Wine program's picture came back wrong in every pixel, and with the window left unfocused no key arrived, which is how these checks are meant to fail; one more program and page read the computer's plainest parts, with none of the other crates' code: 2 clocks move and agree, a written file comes back, 2 threads keep each other out, and a block of memory keeps what was put in it, each run natively, under Wine and in Chromium without a visible window on that computer, and each made to fail on purpose to show that it can |
-| `sound-mix` | Miles Sound System's calls, mixed in memory; a back over Windows' `waveOut` is written but has not run on real Windows yet, a browser page's back has run muted, and one over cpal for Linux and macOS, the feature `native`, needs ALSA's headers on Linux; nothing has reached a speaker |
-| `sound-buffers` | DirectSound's object and buffers, moved by a clock onto `sound-mix`'s doors; it has run only in tests, with no real program calling it and nothing reaching a speaker |
-| `joystick` | the calls a program makes to a joystick: one front says none is there, another reads real pads through a page's script, `gilrs` or Windows' own calls; no real pad has been read yet |
-| `logical_disc` | a read-only copy of a CD: a cue sheet with its bin files, or an iso |
-| `window` | windows and their message queues; its Windows calls have run under Wine beside the same calls declared by hand, and agreed, but not on real Windows or under a real program |
-| `window-input` | the keyboard and the mouse; its Windows calls have run under Wine beside the same calls declared by hand, with `xdotool` pressing the keys, and agreed, but not on real Windows or under a real program |
-| `window-dialogs` | menus and dialog boxes, laid out from the program's own files |
-| `web-shell` | a test page for running a program in a browser: a square moves on a canvas, drawn by a background thread that never returns to the page, and a held key reaches that thread through shared memory; it has run only in headless Chromium with software drawing, and no person has walked it by keyboard or screen reader yet |
-| `draw` | pixels and palettes |
-| `draw-surfaces` | DirectDraw's surfaces and palette, painted through `draw` |
-| `video` | a program's Smacker calls, stepped on the game's clock over `video_smacker`, the clip's sound handed to `sound-mix`; no Windows calls of its own yet, and no clip has reached a speaker |
-| `video_smacker` | Smacker video clips, turned into pictures, palettes and sound; no Windows calls of its own yet |
-| `oxide_trace` | macros that log the values a rewritten function reads and writes |
-| `oxide_logline` | writes those logs in one line format and checks them against `logbook.json` |
-| `oxide_trace_check` | tests of `oxide_trace`'s macros, in a library of their own because reading memory directly needs code `oxide_trace` forbids: each macro is judged by a table worked out by hand, by `logbook.json`, and by counting its real touches of a page of memory; each kind of check was first shown to fail on a bug put in a copy on purpose; it has run on Linux and, built for 32-bit Windows, under Wine |
+| `kernel_files`, `kernel_memory`, `kernel_process`, `kernel_registry`, `kernel_text`, `kernel_threads`, `kernel_time` | files, memory, the command line, saved settings, text, threads and clocks |
+| `window`, `window-input`, `window-dialogs` | windows, the keyboard and mouse, menus and dialog boxes |
+| `draw`, `draw-surfaces` | pixels, colour palettes and DirectDraw, the drawing system Windows had then |
+| `sound-mix`, `sound-buffers`, `cd-audio` | sound through Miles Sound System and DirectSound, two sound systems games of that time used, and music from the game's CD |
+| `video`, `video_smacker` | video clips in Smacker, a video format games of that time used |
+| `joystick` | joysticks and game pads |
+| `logical_disc` | a read-only copy of a CD, from a `.cue` and `.bin` pair or an `.iso` file |
+| `oxide_trace`, `oxide_logline`, `oxide_trace_check` | the log, and tests of the log |
+| `layer-check`, `web-shell` | small test programs and pages that check a computer's sound, screen, keys and basic parts with none of the other libraries' code |
 
-Each library keeps the part that answers Windows calls apart from the part
-that talks to your platform, so the same answers serve a desktop, a browser
-page or a test. Every call writes one log line naming the call, its numbers
-and its answer, so a wrong answer shows up in the log.
+Every call writes one line to a log: the call, what the game asked, and
+what came back. When the game goes wrong, the log shows which answer was
+wrong. Each library also keeps the part that answers the game apart from
+the part that talks to your computer, so the same answers work on a
+desktop, in a web page or in a test.
 
-Some calls and cases are not answered yet. `kernel_registry`, `kernel_text`,
-`cd-audio`, `draw`, `draw-surfaces`, `joystick`, `sound-buffers`, `sound-mix`, `video`, `video_smacker`, `window`,
-`window-dialogs` and `window-input` list theirs at the top of `src/lib.rs`.
+## How far along it is
 
-## Where it has been checked
+This is early work. It has been tested on one Linux computer, both
+directly and under Wine (a program that runs Windows software on Linux),
+and in a web browser. It has not been tried on real Windows yet, no person
+has heard its sound through a speaker yet, and it has never been built on
+macOS. Libraries that leave some calls unanswered list them at the top of
+their `src/lib.rs`.
 
-The tests pass on Linux:
+To run the tests:
 
 ```bash
 cargo test --workspace
 ```
-
-The code also compiles for two more targets, `i686-pc-windows-gnu` (32-bit
-Windows) and `wasm32-unknown-unknown` (a browser page), but those two commands
-only check that it compiles and run nothing:
-
-```bash
-cargo clippy --workspace --all-targets --target i686-pc-windows-gnu
-cargo check --workspace --target wasm32-unknown-unknown \
-  --features kernel_threads/page,kernel_registry/page,window/page,window-input/desk,draw/page,sound-mix/page
-```
-
-macOS has never been built or tested.
 
 ## License
 
