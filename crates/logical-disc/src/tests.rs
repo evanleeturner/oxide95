@@ -13,6 +13,9 @@ use crate::{Disc, OpenError, Source};
 mod folder;
 mod test_log;
 mod tracks;
+mod sheets;
+mod stamped;
+mod records;
 
 /// The tree's files: the name a game asks, its sector, its length, its
 /// bytes' seed.
