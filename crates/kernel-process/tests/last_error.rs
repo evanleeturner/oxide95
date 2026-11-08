@@ -2,8 +2,9 @@
 //! One miss, read two ways. The last error is one slot a thread, so a miss in any crate should read
 //! back through `kernel_process`. Each back is a test: `CHECK <host> <back>.own` prints what the
 //! back kept, `CHECK <host> <back>.through` what the process answers, and the test asserts both.
-//! Today each back keeps its own, so those tests are ignored with that reason; `--ignored` keeps
-//! them red until the slots are one, and they then pass with no edit here.
+//! Every back sets and reads the one shared slot, so the two rows agree. A page's threads share
+//! one slot, so each miss test clears it first: a back that set nothing would otherwise read the
+//! code the test before it left.
 #![allow(
     unsafe_code,
     reason = "the judge reaches the target's calls by hand-declared names"
@@ -56,6 +57,7 @@ fn read_both(back: &str, code: u32, own: u32, through: u32) {
 
 #[test]
 fn a_miss_in_the_memory_folder_reads_through_the_process() {
+    kernel_last_error::set(0);
     let process = page_process();
     let files = Files::new(&FILES, MemoryFolder::default());
     files.open(c"NO.DAT", 0x8000_0000, 1, OPEN_EXISTING, 0x80);
@@ -65,6 +67,7 @@ fn a_miss_in_the_memory_folder_reads_through_the_process() {
 
 #[test]
 fn a_miss_on_the_disc_reads_through_the_process() {
+    kernel_last_error::set(0);
     let process = page_process();
     let disc = Disc::open(Source::Iso(empty_disc())).expect("the volume opens");
     let files = Files::new(&FILES, disc);
@@ -75,6 +78,7 @@ fn a_miss_on_the_disc_reads_through_the_process() {
 
 #[test]
 fn a_refused_slot_on_the_host_reads_through_the_process() {
+    kernel_last_error::set(0);
     let process = host_process();
     let calls = ThreadCalls::new(&THREADS, kernel_threads::host::Host::new());
     let _ = calls.slot_free(0, 0xFFFF_FFF0);
@@ -84,6 +88,7 @@ fn a_refused_slot_on_the_host_reads_through_the_process() {
 
 #[test]
 fn a_refused_slot_on_the_page_reads_through_the_process() {
+    kernel_last_error::set(0);
     let process = page_process();
     let calls = ThreadCalls::new(&THREADS, kernel_threads::page::Page::new());
     let _ = calls.slot_free(0, 0xFFFF_FFF0);
@@ -93,6 +98,7 @@ fn a_refused_slot_on_the_page_reads_through_the_process() {
 
 #[test]
 fn a_refused_time_on_the_host_reads_through_the_process() {
+    kernel_last_error::set(0);
     let process = host_process();
     let times = Times::new(&TIME, kernel_time::host::Host::new(u64::MAX));
     let mut date = [0; kernel_time::table::DATE_BYTES];
@@ -103,6 +109,7 @@ fn a_refused_time_on_the_host_reads_through_the_process() {
 
 #[test]
 fn a_refused_time_on_the_page_reads_through_the_process() {
+    kernel_last_error::set(0);
     let process = page_process();
     let times = Times::new(
         &TIME,
@@ -140,6 +147,7 @@ fn handed(code: u32) {
 /// whatever slot that function reaches, and here the test's function is what reaches the process.
 #[test]
 fn the_text_back_keeps_no_error_and_hands_it_on() {
+    kernel_last_error::set(0);
     let front = kernel_text::Front::new(&TEXT, Portable::new(handed));
     assert!(front.code_page_info(9999).is_none());
     let got = page_process().last_error();
