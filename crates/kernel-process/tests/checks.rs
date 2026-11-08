@@ -529,12 +529,12 @@ fn round<P: Process>(name: &str, front: &Front<P>) {
     front.set_last_error(0);
     check(&format!("round.{name}.clear"), 0, front.last_error());
     front.load_library(b"NO-SUCH.DLL");
-    check(&format!("round.{name}.refused"), 126, front.last_error());
-    check(
-        &format!("round.{name}.back"),
-        126,
-        front.process().last_error(),
-    );
+    // On Windows the slot is the target's own last error, and writing a line can set it, so both
+    // reads come before either line is written.
+    let refused = front.last_error();
+    let back = front.process().last_error();
+    check(&format!("round.{name}.refused"), 126, refused);
+    check(&format!("round.{name}.back"), 126, back);
 }
 
 #[test]

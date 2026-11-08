@@ -142,7 +142,7 @@ fn handed(code: u32) {
 fn the_text_back_keeps_no_error_and_hands_it_on() {
     let front = kernel_text::Front::new(&TEXT, Portable::new(handed));
     assert!(front.code_page_info(9999).is_none());
-    let got = HANDED.with(Front::last_error);
+    let got = page_process().last_error();
     println!("CHECK {HOST} text.handed want={BAD_ARGUMENT} got={got}");
     assert_eq!(got, BAD_ARGUMENT);
 }
