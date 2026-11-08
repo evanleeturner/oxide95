@@ -72,7 +72,7 @@ fn volume() -> Vec<u8> {
 }
 
 /// The volume's sectors as a raw `MODE1/2352` track.
-fn raw_track() -> Vec<u8> {
+pub(crate) fn raw_track() -> Vec<u8> {
     let bcd = |value: usize| u8::try_from(value / 10 * 16 + value % 10).expect("a BCD byte");
     let mut sync = [0xff; 12];
     sync[0] = 0;

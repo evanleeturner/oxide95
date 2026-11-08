@@ -29,6 +29,14 @@ disc = ["dep:logical_disc", "logical_disc/disc"]
 door = ["disc", "dep:sound-mix"]
 # A store's Ogg tracks through the door. Not in the browser, which plays the file itself.
 ogg = ["door", "dep:kernel_files", "dep:lewton"]
+# A disc's sound through `sound-mix`'s back over cpal, on Linux and macOS, for the bench's
+# route. On Linux it needs ALSA's headers to build.
+native = ["door", "sound-mix/native"]
+
+# The made disc's logic on a held clock: `cargo test -p cd-audio --features door,ogg`.
+[[test]]
+name = "made_track"
+required-features = ["door", "ogg"]
 
 [dependencies]
 oxide_trace = { path = "../oxide-trace" }
