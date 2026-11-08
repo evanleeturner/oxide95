@@ -72,12 +72,20 @@ pub trait Words: Memory {
     ///
     /// `address` is one of the list's ends, or a word of a block this
     /// memory's heap made and has not released.
+    #[allow(
+        unsafe_code,
+        reason = "an address is a bare number here, so its safety is the caller's promise"
+    )]
     unsafe fn read(&self, address: u32) -> u32;
     /// Writes `value` at `address`, which may sit at any byte.
     ///
     /// # Safety
     ///
     /// As [`Words::read`].
+    #[allow(
+        unsafe_code,
+        reason = "an address is a bare number here, so its safety is the caller's promise"
+    )]
     unsafe fn write(&self, address: u32, value: u32);
 }
 
@@ -125,6 +133,10 @@ impl<M: Words> DebugHeap<M> {
     ///
     /// `block` is null, or a block this file's malloc made, here or in the
     /// unswapped C library, and not yet freed.
+    #[allow(
+        unsafe_code,
+        reason = "the caller vouches for the block, whose header names the list's others"
+    )]
     pub unsafe fn free(&self, block: *mut u8) {
         let memory = self.memory();
         memory.lock();
@@ -156,6 +168,10 @@ impl<M: Words> DebugHeap<M> {
     /// The make, under the lock: a block asked of the heap, its header and
     /// guards written, put at the list's first end; null when the size or
     /// the heap refuses.
+    #[allow(
+        unsafe_code,
+        reason = "the list's ends and the new block are words this heap reads and writes by address"
+    )]
     fn make(&self, bytes: u32) -> *mut u8 {
         let Some(ask) = bytes.checked_add(OVERHEAD).filter(|&ask| ask <= LARGEST) else {
             return null_mut();

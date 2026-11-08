@@ -74,12 +74,20 @@ pub trait Memory {
     /// # Safety
     ///
     /// `block` came from this memory and is not yet released.
+    #[allow(
+        unsafe_code,
+        reason = "a block's origin is the caller's promise, which no type here can carry"
+    )]
     unsafe fn resize(&self, block: *mut u8, bytes: u32) -> *mut u8;
     /// The block handed back.
     ///
     /// # Safety
     ///
     /// `block` came from this memory, is not null and is not yet released.
+    #[allow(
+        unsafe_code,
+        reason = "a block's origin is the caller's promise, which no type here can carry"
+    )]
     unsafe fn release(&self, block: *mut u8);
     /// `_newmode`: whether a failed malloc calls the new handler.
     fn new_mode(&self) -> bool;
@@ -131,6 +139,7 @@ impl<M: Memory> Heap<M> {
     /// # Safety
     ///
     /// `block` is null, or came from this file's heap and is not yet freed.
+    #[allow(unsafe_code, reason = "the caller vouches for the block it hands back")]
     pub unsafe fn free(&self, block: *mut u8) {
         // SAFETY: the caller's promise, null excluded here.
         unsafe { self.free_block(block) };
@@ -142,6 +151,7 @@ impl<M: Memory> Heap<M> {
     /// # Safety
     ///
     /// As [`Heap::free`].
+    #[allow(unsafe_code, reason = "the caller vouches for the block it hands back")]
     pub unsafe fn operator_delete(&self, block: *mut u8) {
         // SAFETY: the caller's promise, null excluded here.
         unsafe { self.free_block(block) };
@@ -177,6 +187,7 @@ impl<M: Memory> Heap<M> {
     /// # Safety
     ///
     /// `block` is null, or came from this file's heap and is not yet freed.
+    #[allow(unsafe_code, reason = "the caller vouches for the block it resizes")]
     pub unsafe fn realloc(&self, block: *mut u8, bytes: u32) -> *mut u8 {
         let moved = if block.is_null() {
             self.allocate(bytes, self.memory.new_mode())
@@ -227,6 +238,7 @@ impl<M: Memory> Heap<M> {
     /// # Safety
     ///
     /// As [`Heap::free`].
+    #[allow(unsafe_code, reason = "the caller vouches for the block it hands back")]
     unsafe fn free_block(&self, block: *mut u8) {
         if !block.is_null() {
             // SAFETY: the caller's promise, null excluded here.
