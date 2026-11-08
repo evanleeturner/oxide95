@@ -14,7 +14,7 @@ const THIS_FILE: &str = "crates/oxide-logline/tests/no_program_address.rs";
 /// The runs the rule takes that are no program's address: the exact path, the
 /// exact value, the lines holding it, and what the value is. Anything else is
 /// a failure, the same value on a new path or a new line included.
-const KNOWN: [(&str, &str, usize, &str); 8] = [
+const KNOWN: [(&str, &str, usize, &str); 10] = [
     (
         "crates/kernel-time/src/lib.rs",
         "10000000",
@@ -29,6 +29,18 @@ const KNOWN: [(&str, &str, usize, &str); 8] = [
     ),
     (
         "crates/kernel-time/src/host/tests.rs",
+        "10000000",
+        1,
+        "file-time ticks a second",
+    ),
+    (
+        "crates/kernel-time/src/tests/checks.rs",
+        "10000000",
+        1,
+        "file-time ticks a second",
+    ),
+    (
+        "crates/kernel-time/src/tests/checks/rows.rs",
         "10000000",
         1,
         "file-time ticks a second",
