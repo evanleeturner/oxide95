@@ -19,6 +19,7 @@ use crate::{Front, Host, NullBack, Output, SMP_DONE, SMP_PLAYING, SMP_STOPPED};
 mod native;
 mod page;
 mod waveout;
+mod witness;
 
 static ROW: Row = Row {
     file: "a program",

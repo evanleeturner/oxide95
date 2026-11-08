@@ -28,13 +28,19 @@ const LISTEN = { capture: true, passive: true };
 // Where a read's `frames` go, given the schedule's end `next` and the context's
 // `now`, in seconds. A block joins the last one while that has not ended, and
 // otherwise lands one block ahead; frames past the cap are dropped and counted.
-// `when` is null if nothing should start.
+// `when` and `next` lie on whole frames: Chromium interpolates a block that starts
+// between 2 frames, which alters every sample. They come from a whole count each
+// time, so no float's rounding gathers. `when` is null if nothing should start.
 export function planBlock(next, frames, now, rate) {
-  const when = next >= now ? next : now + START_LEAD_FRAMES / rate;
+  const whenFrame =
+    next >= now
+      ? Math.round(next * rate)
+      : Math.ceil(now * rate) + START_LEAD_FRAMES;
+  const when = whenFrame / rate;
   const room = Math.floor((now + LEAD_CAP_S - when) * rate);
   const kept = Math.max(0, Math.min(frames, room));
   if (kept === 0) return { when: null, kept: 0, dropped: frames, next };
-  return { when, kept, dropped: frames - kept, next: when + kept / rate };
+  return { when, kept, dropped: frames - kept, next: (whenFrame + kept) / rate };
 }
 
 // The first `frames` of interleaved `i16` samples as two float channels.

@@ -56,7 +56,9 @@ impl Page {
     /// first, at room 0: what the clock passed before this moment is dropped here, and
     /// every frame [`Page::read`] hands out was rendered after it. A second start only
     /// pumps, and a close does not undo it: a page's gesture lasts as long as the page.
-    pub fn start<H: Host>(&self, front: &Front<H, Self>) {
+    /// The front's back is any `O`, so this page may sit behind a witness; a front over
+    /// another page is not caught, and starts this page while pumping that one.
+    pub fn start<H: Host, O: Output>(&self, front: &Front<H, O>) {
         front.pump();
         if !self.shared.started.replace(true) {
             log::debug!(by = "sound-mix"; "sound.page.started");

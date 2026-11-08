@@ -58,6 +58,7 @@ mod voice;
 pub mod wave;
 #[cfg(any(windows, test))]
 pub mod waveout;
+pub mod witness;
 
 use alloc::vec::Vec;
 use core::fmt;

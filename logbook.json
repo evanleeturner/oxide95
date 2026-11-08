@@ -178,6 +178,18 @@
       "template": "the page's back closed with {frames} frames unread"
     },
     {
+      "id": "sound.witness.block",
+      "level": "D",
+      "fields": { "frames": "the frames handed to the back in this write", "hash": "the stream's hash so far", "by": "the crate the mix belongs to" },
+      "template": "the witness saw {frames} frames go to the back; the stream's hash is {hash}"
+    },
+    {
+      "id": "sound.witness.summary",
+      "level": "I",
+      "fields": { "frames": "the frames handed to the back in all", "blocks": "the back's writes in all", "hash": "the hash of all of them", "by": "the crate the mix belongs to" },
+      "template": "the witness saw {frames} frames in {blocks} writes, with the hash {hash}"
+    },
+    {
       "id": "sound.native.opened",
       "level": "D",
       "fields": { "rate": "the rate the device took", "by": "the crate the mix belongs to" },
