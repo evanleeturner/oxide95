@@ -867,6 +867,303 @@ fn boxes() {
     row_error("box.lacking.answer", &theirs, number(ours));
 }
 
+const THREE: u32 = 0x5001_0005;
+const PUSH: u32 = 0x5001_0000;
+const FIELD: u32 = 0x5081_0000;
+const CHOICE: u32 = 0x5001_0003;
+/// The procedure rows' box: a default push, an auto check, a 3-state, a push, a label, then one
+/// control of each class ordinal left, `EDIT` to `COMBOBOX`.
+const INSIDE: &[(u16, u16, u32, &str)] = &[
+    (1, 0x80, DEFAULT, "Ok"),
+    (11, 0x80, AUTO, "One"),
+    (12, 0x80, THREE, "Three"),
+    (13, 0x80, PUSH, "Push"),
+    (14, 0x82, LABEL, "Words"),
+    (15, 0x81, FIELD, "Text"),
+    (16, 0x83, FIELD, "List"),
+    (17, 0x84, LABEL, "Bar"),
+    (18, 0x85, CHOICE, "Combo"),
+];
+/// An id no control holds.
+const ABSENT: u16 = 99;
+/// The controls `CheckDlgButton` is read on: an auto check, a 3-state, a push, a label, none.
+const CHECKED: [u16; 5] = [11, 12, 13, 14, ABSENT];
+const INSIDE_BOX: u32 = 40;
+/// A box whose one control names a class ordinal past `COMBOBOX`.
+const UNKNOWN_BOX: u32 = 41;
+
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn GetClassNameA(window: usize, name: *mut u8, room: i32) -> i32;
+    fn GetWindowTextA(window: usize, words: *mut u8, room: i32) -> i32;
+    fn GetDlgCtrlID(window: usize) -> i32;
+    fn CheckDlgButton(window: usize, id: i32, check: u32) -> i32;
+    fn IsDlgButtonChecked(window: usize, id: i32) -> u32;
+}
+
+thread_local! {
+    /// The procedure rows `inner` read, and the box it read them in.
+    static INSIDE_SEEN: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
+    static BOX_NOW: Cell<usize> = const { Cell::new(0) };
+}
+
+/// One side's calls inside an open box, each answer as a row prints it.
+trait Inside {
+    fn item(&self, id: u16) -> usize;
+    fn class(&self, handle: usize) -> String;
+    fn words(&self, handle: usize) -> String;
+    fn control_id(&self, handle: usize) -> String;
+    fn check(&self, id: u16, check: u32) -> String;
+    fn checked(&self, id: u16) -> String;
+    fn end(&self) -> String;
+}
+
+/// The words a USER32 reader wrote.
+fn written(buffer: &[u8], length: i32) -> String {
+    let length = usize::try_from(length).unwrap_or(0).min(buffer.len());
+    String::from_utf8_lossy(&buffer[..length]).into()
+}
+
+/// USER32 inside the box open as this handle.
+struct Theirs(usize);
+
+impl Inside for Theirs {
+    fn item(&self, id: u16) -> usize {
+        // SAFETY: the box is open while its procedure runs; an id it lacks answers 0.
+        unsafe { GetDlgItem(self.0, i32::from(id)) }
+    }
+
+    /// Upper case: Windows matches a class name without case, and the crate keeps the
+    /// template's own spelling.
+    fn class(&self, handle: usize) -> String {
+        let mut name = [0u8; 64];
+        // SAFETY: the room is the buffer's length; a handle of 0 writes nothing.
+        let length = unsafe { GetClassNameA(handle, name.as_mut_ptr(), 64) };
+        shown(&written(&name, length).to_ascii_uppercase()).into()
+    }
+
+    fn words(&self, handle: usize) -> String {
+        let mut words = [0u8; 64];
+        // SAFETY: as above.
+        let length = unsafe { GetWindowTextA(handle, words.as_mut_ptr(), 64) };
+        shown(&written(&words, length)).into()
+    }
+
+    fn control_id(&self, handle: usize) -> String {
+        // SAFETY: any handle; one not a window answers 0.
+        unsafe { GetDlgCtrlID(handle) }.to_string()
+    }
+
+    fn check(&self, id: u16, check: u32) -> String {
+        // SAFETY: the box is open; an id it lacks fails softly.
+        unsafe { CheckDlgButton(self.0, i32::from(id), check) }.to_string()
+    }
+
+    fn checked(&self, id: u16) -> String {
+        // SAFETY: as above.
+        number(unsafe { IsDlgButtonChecked(self.0, i32::from(id)) })
+    }
+
+    fn end(&self) -> String {
+        // SAFETY: as above.
+        u8::from(unsafe { EndDialog(self.0, ENDED) } != 0).to_string()
+    }
+}
+
+/// `Front` inside the box open as `window`, its rows read from the desk and the tables.
+struct Ours<'a, 'd> {
+    front: &'a Own<'d>,
+    desk: &'a Desk<Page>,
+    tables: &'a Tables,
+    window: u32,
+}
+
+impl Ours<'_, '_> {
+    /// The control row holding `handle` in any box open: its id and words.
+    fn control(&self, handle: usize) -> Option<(u16, String)> {
+        let state = self.tables.state();
+        let mut controls = state.boxes.iter().flat_map(|open| &open.controls);
+        let found = controls.find(|control| wide(control.handle) == handle)?;
+        Some((found.id, found.words.clone()))
+    }
+}
+
+impl Inside for Ours<'_, '_> {
+    fn item(&self, id: u16) -> usize {
+        wide(self.front.get_dlg_item(self.window, u32::from(id)))
+    }
+
+    fn class(&self, handle: usize) -> String {
+        let state = self.desk.state();
+        let found = state.windows.iter().find(|row| wide(row.handle) == handle);
+        found.map_or_else(
+            || "none".into(),
+            |row| shown(&String::from_utf8_lossy(&row.class).to_ascii_uppercase()).into(),
+        )
+    }
+
+    fn words(&self, handle: usize) -> String {
+        self.control(handle)
+            .map_or_else(|| "none".into(), |(_, words)| shown(&words).into())
+    }
+
+    fn control_id(&self, handle: usize) -> String {
+        self.control(handle).map_or(0, |(id, _)| id).to_string()
+    }
+
+    fn check(&self, id: u16, check: u32) -> String {
+        let answer = self
+            .front
+            .check_dlg_button(self.window, u32::from(id), check);
+        answer.to_string()
+    }
+
+    fn checked(&self, id: u16) -> String {
+        let answer = self.front.is_dlg_button_checked(self.window, u32::from(id));
+        number(answer)
+    }
+
+    fn end(&self) -> String {
+        self.front.end_dialog(self.window, 7).to_string()
+    }
+}
+
+/// The procedure rows, in one order for both sides: each control's handle, class, words and id,
+/// then an id absent's handle alone, as USER32's readers on no window answer nothing a row can
+/// judge; `CheckDlgButton` 0 to 3 on each of `CHECKED`, `IsDlgButtonChecked` after each; then the
+/// auto check set, `EndDialog`, and what answers after it while the procedure runs.
+fn inside_reads(side: &impl Inside) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    for id in INSIDE.iter().map(|control| control.0) {
+        let handle = side.item(id);
+        out.push((format!("inside.id{id}.item"), kind(handle, &[])));
+        out.push((format!("inside.id{id}.class"), side.class(handle)));
+        out.push((format!("inside.id{id}.words"), side.words(handle)));
+        out.push((format!("inside.id{id}.ctrl_id"), side.control_id(handle)));
+    }
+    let absent = kind(side.item(ABSENT), &[]);
+    out.push((format!("inside.id{ABSENT}.item"), absent));
+    for id in CHECKED {
+        for check in 0..4 {
+            out.push((
+                format!("inside.check.id{id}.{check}"),
+                side.check(id, check),
+            ));
+            out.push((format!("inside.checked.id{id}.{check}"), side.checked(id)));
+        }
+    }
+    out.push(("inside.check.id11.set".into(), side.check(11, 1)));
+    out.push(("inside.end".into(), side.end()));
+    out.push(("inside.after_end.item".into(), kind(side.item(1), &[])));
+    out.push(("inside.after_end.checked".into(), side.checked(11)));
+    out.push(("inside.after_end.end".into(), side.end()));
+    out
+}
+
+/// The procedure rows' procedure under USER32: at `WM_INITDIALOG` it posts itself the marker; at
+/// the marker it reads the rows, which end the box.
+extern "system" fn inner(window: usize, message: u32, w: usize, _l: isize) -> isize {
+    match message {
+        WM_INITDIALOG => {
+            // SAFETY: `window` is the box USER32 is opening, live for this call.
+            unsafe { PostMessageA(window, WM_COMMAND, usize::from(MARKER), 0) };
+            1
+        }
+        WM_COMMAND if w & 0xffff == usize::from(MARKER) => {
+            BOX_NOW.set(window);
+            INSIDE_SEEN.set(inside_reads(&Theirs(window)));
+            1
+        }
+        _ => 0,
+    }
+}
+
+/// `Front`'s side of the procedure rows: the wait's answer, the rows, then `GetDlgItem` and
+/// `EndDialog` on the box once closed.
+fn front_inside(disc: &Disc) -> (u32, Vec<(String, String)>, (u32, u32)) {
+    let (desk, tables) = (Desk::new(Page::new(0x280, 0x1e0)), Tables::new());
+    desk.state().windows.push(desk_window(TOP, 0, 0));
+    desk.state().focus = TOP;
+    let front = Front::new(&ROW, &desk, &tables, disc);
+    let (mut seen, mut opened) = (Vec::new(), 0);
+    let answer = front.dialog_box_wait([INSTANCE, INSIDE_BOX, 0, 0x50, 0x33], |_, sent| match sent
+        .message
+    {
+        WM_INITDIALOG => {
+            let window = sent.window;
+            desk.screen().hand(Event::Command { window, id: MARKER });
+            1
+        }
+        WM_COMMAND if sent.w & 0xffff == u32::from(MARKER) => {
+            opened = sent.window;
+            let side = Ours {
+                front: &front,
+                desk: &desk,
+                tables: &tables,
+                window: opened,
+            };
+            seen = inside_reads(&side);
+            0
+        }
+        _ => 0,
+    });
+    let closed = (front.get_dlg_item(opened, 1), front.end_dialog(opened, 0));
+    (answer, seen, closed)
+}
+
+/// The procedure rows: the box's answer, the reads inside it by name, the box once closed, then
+/// the box holding an unknown class ordinal.
+fn inside() {
+    let bytes = [
+        plant::dialog(BOX_STYLE, "Box", INSIDE),
+        plant::dialog(BOX_STYLE, "Box", &[(1, 0x86, PUSH, "Odd")]),
+    ];
+    let entries = [
+        (resource::DIALOG, INSIDE_BOX, &bytes[0][..]),
+        (resource::DIALOG, UNKNOWN_BOX, &bytes[1][..]),
+    ];
+    let disc = Disc(kernel_process::plant::image(&entries));
+    // SAFETY: a null name asks the exe's own module.
+    let instance = unsafe { GetModuleHandleA(std::ptr::null()) };
+    let template = aligned(&bytes[0]);
+    let theirs = traced(|| {
+        // SAFETY: the template lives across the call, a whole planted template on a 4-byte
+        // boundary; the procedure is `extern "system"`.
+        unsafe { DialogBoxIndirectParamA(instance, template.as_ptr(), 0, inner, PARAM) }
+    });
+    let opened = BOX_NOW.get();
+    // SAFETY: the box is closed; both calls take a handle gone and fail softly.
+    let closed = unsafe { (GetDlgItem(opened, 1), EndDialog(opened, 0)) };
+    let reads = INSIDE_SEEN.take();
+    let (ours, own_reads, own_closed) = front_inside(&disc);
+    row_error("inside.answer", &theirs, number(ours));
+    for at in 0..reads.len().max(own_reads.len()) {
+        let name = reads.get(at).or_else(|| own_reads.get(at));
+        let name = name.map_or("", |read| read.0.as_str());
+        let answer =
+            |list: &[(String, String)]| list.get(at).map_or("none", |read| &read.1).to_owned();
+        row(name, answer(&reads), answer(&own_reads));
+    }
+    let own_item = kind(wide(own_closed.0), &[]);
+    row("inside.closed.item", kind(closed.0, &[]), own_item);
+    row("inside.closed.end", u8::from(closed.1 != 0), own_closed.1);
+    let template = aligned(&bytes[1]);
+    WAY.set(1);
+    let theirs = traced(|| {
+        // SAFETY: as above; `first` at way 1 ends the box in `WM_INITDIALOG`.
+        unsafe { DialogBoxIndirectParamA(instance, template.as_ptr(), 0, first, PARAM) }
+    });
+    let (desk, tables) = (Desk::new(Page::new(0x280, 0x1e0)), Tables::new());
+    let front = Front::new(&ROW, &desk, &tables, &disc);
+    let ours = front.dialog_box_wait([INSTANCE, UNKNOWN_BOX, 0, 0x50, 0x33], |_, sent| {
+        if sent.message == WM_INITDIALOG {
+            let _ = front.end_dialog(sent.window, 7);
+        }
+        0
+    });
+    row_error("inside.unknown.answer", &theirs, number(ours));
+}
+
 /// The first read's procedure: way 0 never ends its box, way 1 ends it in `WM_INITDIALOG`,
 /// way 2 posts itself `IDOK`, way 3 posts Return's down and up to the control the focus goes to.
 extern "system" fn first(window: usize, message: u32, w: usize, l: isize) -> isize {
@@ -949,6 +1246,7 @@ fn main() {
         Some("menus") => menus(),
         Some("bars") => bars(),
         Some("box") => boxes(),
+        Some("inside") => inside(),
         Some("first") => {
             let way = arguments
                 .get(2)
@@ -957,7 +1255,7 @@ fn main() {
             first_read(way);
         }
         _ => {
-            eprintln!("usage: user32_probe hello | menus | bars | box | first <0|1|2|3>");
+            eprintln!("usage: user32_probe hello | menus | bars | box | inside | first <0|1|2|3>");
             std::process::exit(2);
         }
     }
