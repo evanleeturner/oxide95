@@ -8,6 +8,9 @@
 // `rate()`, `tick(now_ms)`, `gesture()`, `read_frames()` and `frames_ptr()`.
 // `onChange` runs when the context's state or the mute changes.
 //
+// The handle's `context` and `gain` are the seam: `gain` is the last node every block
+// passes, the mute included, so a bench lays a tap after it and patches no browser call.
+//
 // Who owns an input: the listeners only watch. They are passive, so they cannot
 // call `preventDefault`, and a key still does what it does on any page. A pointer
 // counts at `click`, never at a down-event, so a slip of the pointer can be taken
@@ -120,6 +123,8 @@ export function attachSound({ wasm, logger, onChange = () => {} }) {
 
   return {
     stats,
+    context,
+    gain,
     get state() {
       return context.state;
     },

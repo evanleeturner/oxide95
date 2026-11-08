@@ -39,6 +39,14 @@ path = "page/tone.rs"
 crate-type = ["cdylib"]
 required-features = ["page"]
 
+# The reference script on the page: `cargo build --example page_reference --features page
+# --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
+[[example]]
+name = "page_reference"
+path = "page/reference.rs"
+crate-type = ["cdylib"]
+required-features = ["page"]
+
 # One tone for a person to hear; nothing runs it for them.
 [[example]]
 name = "native_tone"

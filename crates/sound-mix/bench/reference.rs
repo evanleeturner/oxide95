@@ -191,7 +191,7 @@ fn file_c(plant: Plant) -> Vec<u8> {
 }
 
 /// The script's clock: the bench sets it, the mix only reads it.
-struct HeldClock(Rc<Cell<u64>>);
+pub struct HeldClock(Rc<Cell<u64>>);
 
 impl Host for HeldClock {
     fn now_us(&self) -> u64 {
@@ -218,7 +218,7 @@ struct Reading {
 
 /// Compares each frame to the worked stream, then hands it on. Every answer is the
 /// back's own. A frame past the stream's end counts as wrong.
-struct Against<O> {
+pub struct Against<O> {
     back: Rc<RefCell<O>>,
     want: Rc<Vec<i16>>,
     reading: Rc<Reading>,
@@ -367,6 +367,11 @@ impl<O: Output> Script<O> {
         }
         self.clock.set(self.clock.get().max(now_us));
         self.front.pump();
+    }
+
+    /// The mix's front, for a route whose back has to be told of it: the page's `start` pumps it.
+    pub fn front(&self) -> &Front<HeldClock, Witness<Against<O>>> {
+        &self.front
     }
 
     /// The back's room, read directly, so a route can read it once the mix stops asking.
