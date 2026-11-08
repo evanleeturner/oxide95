@@ -5,6 +5,8 @@
 // that matches other than once stops the run. It writes what each arm read, one file an arm,
 // and a separate script scores them.
 //
+// `CC1`: `basics-page.mjs`'s four rows as one check, scored outside from what each arm read.
+//
 // `127.0.0.1` is a secure origin, and the 2 headers isolate the page: without both a page
 // gets no `SharedArrayBuffer`, as one arm shows. Run it inside a private sound server: the
 // flag `launch` passes keeps no stream from opening.

@@ -402,8 +402,8 @@ async function main() {
 
     let row = 0;
     let pressed = false;
-    // One key or chord, F7's way: the page's read, then pages, windows and a reload,
-    // and when the browser did nothing seen, the plain key after.
+    // One key or chord, and what the browser did with it: the page's read, then pages, windows,
+    // a reload, and when the browser did nothing seen, the plain key after.
     const press = async (s, playwrightName, send) => {
       stopCheck();
       const before = { pages: context.pages().length, windows: windowCount() };
@@ -447,7 +447,7 @@ async function main() {
       }
       return { sender, first, got, downs, acted, after };
     };
-    // After the browser acted, F7's way: a fresh browser, homed and gated.
+    // After the browser acted: a fresh browser in its place, homed and gated.
     const again = async (s, did) => {
       if (!did.acted.length) return s;
       await context.close().catch(() => {});

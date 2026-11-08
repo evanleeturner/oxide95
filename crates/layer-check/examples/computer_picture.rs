@@ -10,6 +10,9 @@
 //!
 //! Prints one `key` line a key and one `CK1` line, on stdout. Exits 0 on a pass, 1 on red,
 //! 2 on a call it cannot read.
+//!
+//! `CK1`: each key sent from outside reads down and then up in the window.
+//! `CV1`: the worked picture shown in the window, as the screen read from outside holds it.
 use std::num::NonZeroU32;
 use std::process::ExitCode;
 use std::rc::Rc;

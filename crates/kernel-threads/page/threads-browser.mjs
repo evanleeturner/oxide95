@@ -3,6 +3,8 @@
 // The page's threads in headless Chromium, on its main thread: no Worker, and so one thread.
 // It prints every answer and exits non-zero if one differs from the table.
 //
+// `TH4`: the lock and the slots on a page's one thread, against that table.
+//
 // The table is memory, marked, and judged by nothing on the page: one thread cannot contend,
 // so a held-out thread is not read here. A page has a second thread only from a Worker, which
 // also needs shared memory, and this bare page has neither.

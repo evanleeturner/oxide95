@@ -6,6 +6,8 @@
 //
 // It does not say a clock's rate is right: two clocks wrong at one steady rate agree here. A
 // step of the wall clock during the reads gives a false red.
+//
+// `CC1`: the four rows as one check; its pass clears the browser for the kernel crates' checks.
 
 const WAIT_MS = 250;
 const FILE_BYTES = 65536;

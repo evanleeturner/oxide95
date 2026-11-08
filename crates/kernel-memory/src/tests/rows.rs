@@ -10,6 +10,10 @@
 //! 32 bits, as the debug rules cut a pointer to a 32-bit word. The handler's
 //! yeses are a counted queue: calloc and realloc retry a size above the
 //! largest without asking the heap, so a yes forever would never end.
+//!
+//! `ME1`: malloc, calloc, realloc and free keep the C library's documented rules.
+//! `ME2`: a failed allocation asks the new handler, and tries again on its yes.
+//! `ME3`: the debug heap's block header, its two guards and its list of blocks.
 #![allow(
     unsafe_code,
     reason = "the seam's own contract is unsafe, and a row has to call it"

@@ -12,6 +12,11 @@
 //!
 //! `Portable` calls no host, so the same arithmetic runs on every target: only
 //! Wine's answers judge it, and the targets say the table built and read alike.
+//!
+//! `TX1`: every byte to a wide unit and every unit to a byte, as Wine converts.
+//! `TX2`: two strings compared, with case and without, as Wine orders them.
+//! `TX3`: each byte's upper case, lower case and character type, as Wine's.
+//! `TX4`: the code page and locale answers, and each refusal's last error.
 
 use super::kernel_text::table::{Calls, Errors, Row};
 use super::kernel_text::{Front, Portable};

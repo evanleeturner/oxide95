@@ -18,6 +18,10 @@
 //!
 //! Not asked, as Win32 leaves them undefined: a leave by a thread that holds
 //! nothing, an entry into a lock never made, a delete while held.
+//!
+//! `TH1`: the lock: a second thread held out while one holds it, let in after.
+//! `TH2`: the slots: each thread's own value, and a freed slot refused.
+//! `TH3`: the counters: each change made whole while threads race.
 use crate::host::Host;
 use crate::table::{Calls, NO_SLOT, Row, SLOTS};
 use crate::{ThreadCalls, Threads};

@@ -8,6 +8,8 @@
 //!
 //! Lines take the log's `imp.call` form, printed as this file links no logger. Exits 0 when
 //! Wine took every picture, 1 on red.
+//!
+//! `CV1`: the worked picture drawn through Wine, as the screen read from outside holds it.
 use std::ffi::c_void;
 use std::process::ExitCode;
 use std::thread::sleep;

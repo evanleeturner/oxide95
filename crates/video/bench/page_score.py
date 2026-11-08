@@ -7,6 +7,10 @@ judges the refusals; ffprobe's times judge the pace, against a stopwatch held in
 crate's own answer judges nothing here: the crate's lateness is printed and given no line. Every
 row prints; one failed row makes the exit 1, and the run's answer is that exit.
 """
+# `VS3`: a built clip's frames in the page's wasm, `seek` included, against ffmpeg's md5.
+# `VS4`: hand-cut clips refused by name, on the page and under Wine, against the table.
+# `VF2`: the page's pace: `smack_wait`'s due times against the stopwatch and ffprobe's times.
+# `VF4`: a clip's frame placed by `Place` through the drawing page to the canvas, against ffmpeg.
 import argparse
 import json
 import re

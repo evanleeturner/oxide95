@@ -9,6 +9,8 @@
 //!
 //! Lines take the log's `imp.call` form, printed as this file links no logger. Exits 0 on a
 //! pass, 1 on red.
+//!
+//! `CK1`: each key sent from outside reads down and later up through `GetAsyncKeyState`.
 use std::process::ExitCode;
 use std::thread::sleep;
 use std::time::Duration;

@@ -11,6 +11,11 @@ difference and the exit code 1.
 Two plants, each in a copy built in its own target folder: `PARMS` must move both fronts' caps
 and nothing else, and `UNPLUGGED` at Wine's number must turn the named cells green and move
 nothing else. Run under the Wine recipe, whose script gives this its environment and its screen.
+
+`JP1`: a quiet `Front`'s answers beside Wine's own `winmm`, one call at a time.
+`JP2`: `PadFront` and `WinmmPads` beside Wine's, and `gilrs` with no pad; `PadFront`'s unplugged
+number is the named difference.
+`JP3`: the page's pads, judged by `page_check.py`; only its names are counted here.
 """
 
 import argparse

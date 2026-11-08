@@ -3,6 +3,8 @@
 //! stereo samples stamped with its track and its frame, so a byte read
 //! back names its place. Samples are read by the track's own byte order,
 //! as a player would; each check prints one line under `--nocapture`.
+//!
+//! `DI3`: each audio frame read back holds the track and frame stamped in it.
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec;

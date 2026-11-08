@@ -3,6 +3,8 @@
 //! holding a byte past ASCII, and a file whose extent lies past the data
 //! track, in the audio after it. Each check prints one line under
 //! `--nocapture`.
+//!
+//! `DI1`: a disc's files read back equal to the tree they were made of.
 use alloc::format;
 use alloc::string::{String, ToString};
 use alloc::vec;

@@ -4,6 +4,9 @@
 //! declared scope (`cue.rs`'s head), never by running the reader; each row
 //! prints one line under `--nocapture`. Where the format and this reader
 //! part, the rows stand apart, ignored with the reason.
+//!
+//! `DI2`: each cue sheet opened as its public format says; a bad one refused.
+//! `MP3`: a cue sheet's audio file type, as `WAVE` is; it names no check.
 use alloc::string::{String, ToString};
 use alloc::vec::Vec;
 

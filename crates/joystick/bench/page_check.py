@@ -10,6 +10,8 @@ stub on the page's own `navigator`, so this judges the page's code alone and no 
 
 A plant in a copy swaps two hat directions, and exactly those two frames must go off. The sweep
 sets the page's sum against Rust's `stick` too; a difference there is a lead, not a failure.
+
+`JP3`: a recorded pad through `gamepads.mjs` to `PagePads`, each frame against the table here.
 """
 
 import argparse
