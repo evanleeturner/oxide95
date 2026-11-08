@@ -3,6 +3,7 @@
 //! answers for code page 1252 (`fixtures/cp1252-wine.txt`) and the
 //! refusals. The census rows from real runs replay in each game's rows crate.
 
+mod wine;
 use super::*;
 use core::cell::Cell;
 use table::{Calls, Errors};

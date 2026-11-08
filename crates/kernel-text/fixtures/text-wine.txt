@@ -1,0 +1,1648 @@
+# Wine 9.0, a fresh prefix, 2026-11-07: kernel32 asked from a kept error of 0, one call a line.
+# The words before `v` ask, the rest answers; `-` is an empty text, a hex run a text's bytes.
+env LANG en_US.UTF-8
+env LC_ALL unset
+acp 1252 oemcp 437
+cpinfo 0 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 0 v 2 out 20ac.00e9 e 0
+pagebytes 0 v 3 out 80e941 e 0
+pageused 0 v 3 used 0 e 0
+cpinfo 1 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 1 v 2 out 00c7.0398 e 0
+pagebytes 1 v 3 out 3f8241 e 0
+pageused 1 v 3 used 1 e 0
+cpinfo 3 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 3 v 2 out 20ac.00e9 e 0
+pagebytes 3 v 3 out 80e941 e 0
+pageused 3 v 3 used 0 e 0
+cpinfo 2 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 2 v 2 out 00c4.00c8 e 0
+pagebytes 2 v 3 out db8e3f e 0
+pageused 2 v 3 used 1 e 0
+cpinfo 42 v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide 42 v 2 out f080.f0e9 e 0
+pagebytes 42 v 0 out - e 1113
+pageused 42 v 0 used 0 e 87
+cpinfo 437 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 437 v 2 out 00c7.0398 e 0
+pagebytes 437 v 3 out 3f8241 e 0
+pageused 437 v 3 used 1 e 0
+cpinfo 1252 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 1252 v 2 out 20ac.00e9 e 0
+pagebytes 1252 v 3 out 80e941 e 0
+pageused 1252 v 3 used 0 e 0
+cpinfo 1253 v 1 max 1 default 3f00 lead 000000000000000000000000 e 0
+pagewide 1253 v 2 out 20ac.03b9 e 0
+pagebytes 1253 v 3 out 806541 e 0
+pageused 1253 v 3 used 0 e 0
+cpinfo 65001 v 1 max 4 default 3f00 lead 000000000000000000000000 e 0
+pagewide 65001 v 2 out fffd.fffd e 0
+pagebytes 65001 v 7 out e282acc3a9c480 e 0
+pageused 65001 v 7 used 0 e 0
+cpinfo 99999 v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide 99999 v 0 out - e 87
+pagebytes 99999 v 0 out - e 87
+pageused 99999 v 0 used 0 e 87
+wideflag 0 v 1 e 0
+wideflag 1 v 1 e 0
+wideflag 2 v 1 e 0
+wideflag 4 v 1 e 0
+wideflag 8 v 1 e 0
+wideflag 10 v 0 e 1004
+wideflag 400 v 0 e 1004
+wideflag ffff0000 v 0 e 1004
+byteflag 0 v 1 e 0
+byteflag 1 v 0 e 1004
+byteflag 20 v 1 e 0
+byteflag 40 v 1 e 0
+byteflag 80 v 1 e 0
+byteflag 200 v 1 e 0
+byteflag 400 v 1 e 0
+byteflag ffff0000 v 0 e 1004
+given 0394.0041 false v 2 out 3f41 used 1 e 0
+given 0041.0394 true v 2 out 4123 used 1 e 0
+given 0041.0042 true v 2 out 4142 used 0 e 0
+given 0394.0395 true v 2 out 2323 used 1 e 0
+empty wide v 0 e 87 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+empty bytes v 0 e 87 left aaaaaaaaaaaaaaaa
+empty map v 0 e 87 left aaaaaaaaaaaaaaaa
+empty mapw v 0 e 87 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+short wide v 0 e 122 left 0061.0062.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+short bytes v 0 e 122 left 6161aaaaaaaaaaaa
+short map v 0 e 122 left 4142aaaaaaaaaaaa
+short mapw v 0 e 122 left 0041.0041.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+room0 wide v 5 e 0 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+room0 bytes v 5 e 0 left aaaaaaaaaaaaaaaa
+room0 map v 5 e 0 left aaaaaaaaaaaaaaaa
+room0 mapw v 5 e 0 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+alone wide v 5 e 0
+alone bytes v 5 e 0
+alone map v 5 e 0
+info 409 1004 v 5 out 3132353200 e 0
+infow 409 1004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 409 1004 v 5 e 0
+infoshort 409 1004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 409 b v 4 out 34333700 e 0
+infow 409 b v 4 out 0034.0033.0037.0000 e 0
+infoalone 409 b v 4 e 0
+infoshort 409 b v 0 e 122 left 3433aaaaaaaaaaaa
+info 409 3 v 4 out 454e5500 e 0
+infow 409 3 v 4 out 0045.004e.0055.0000 e 0
+infoalone 409 3 v 4 e 0
+infoshort 409 3 v 0 e 122 left 454eaaaaaaaaaaaa
+info 409 80001004 v 5 out 3132353200 e 0
+infow 409 80001004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 409 80001004 v 5 e 0
+infoshort 409 80001004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 409 7777 v 0 out - e 1004
+infow 409 7777 v 0 out - e 1004
+infoalone 409 7777 v 0 e 1004
+infoshort 409 7777 v 0 e 1004 left aaaaaaaaaaaaaaaa
+info 0 1004 v 5 out 3132353200 e 0
+infow 0 1004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 0 1004 v 5 e 0
+infoshort 0 1004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 0 b v 4 out 34333700 e 0
+infow 0 b v 4 out 0034.0033.0037.0000 e 0
+infoalone 0 b v 4 e 0
+infoshort 0 b v 0 e 122 left 3433aaaaaaaaaaaa
+info 0 3 v 4 out 454e5500 e 0
+infow 0 3 v 4 out 0045.004e.0055.0000 e 0
+infoalone 0 3 v 4 e 0
+infoshort 0 3 v 0 e 122 left 454eaaaaaaaaaaaa
+info 0 80001004 v 5 out 3132353200 e 0
+infow 0 80001004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 0 80001004 v 5 e 0
+infoshort 0 80001004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 0 7777 v 0 out - e 1004
+infow 0 7777 v 0 out - e 1004
+infoalone 0 7777 v 0 e 1004
+infoshort 0 7777 v 0 e 1004 left aaaaaaaaaaaaaaaa
+info 400 1004 v 5 out 3132353200 e 0
+infow 400 1004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 400 1004 v 5 e 0
+infoshort 400 1004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 400 b v 4 out 34333700 e 0
+infow 400 b v 4 out 0034.0033.0037.0000 e 0
+infoalone 400 b v 4 e 0
+infoshort 400 b v 0 e 122 left 3433aaaaaaaaaaaa
+info 400 3 v 4 out 454e5500 e 0
+infow 400 3 v 4 out 0045.004e.0055.0000 e 0
+infoalone 400 3 v 4 e 0
+infoshort 400 3 v 0 e 122 left 454eaaaaaaaaaaaa
+info 400 80001004 v 5 out 3132353200 e 0
+infow 400 80001004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 400 80001004 v 5 e 0
+infoshort 400 80001004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 400 7777 v 0 out - e 1004
+infow 400 7777 v 0 out - e 1004
+infoalone 400 7777 v 0 e 1004
+infoshort 400 7777 v 0 e 1004 left aaaaaaaaaaaaaaaa
+info 800 1004 v 5 out 3132353200 e 0
+infow 800 1004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 800 1004 v 5 e 0
+infoshort 800 1004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 800 b v 4 out 34333700 e 0
+infow 800 b v 4 out 0034.0033.0037.0000 e 0
+infoalone 800 b v 4 e 0
+infoshort 800 b v 0 e 122 left 3433aaaaaaaaaaaa
+info 800 3 v 4 out 454e5500 e 0
+infow 800 3 v 4 out 0045.004e.0055.0000 e 0
+infoalone 800 3 v 4 e 0
+infoshort 800 3 v 0 e 122 left 454eaaaaaaaaaaaa
+info 800 80001004 v 5 out 3132353200 e 0
+infow 800 80001004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 800 80001004 v 5 e 0
+infoshort 800 80001004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 800 7777 v 0 out - e 1004
+infow 800 7777 v 0 out - e 1004
+infoalone 800 7777 v 0 e 1004
+infoshort 800 7777 v 0 e 1004 left aaaaaaaaaaaaaaaa
+info 7f 1004 v 5 out 3132353200 e 0
+infow 7f 1004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 7f 1004 v 5 e 0
+infoshort 7f 1004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 7f b v 4 out 34333700 e 0
+infow 7f b v 4 out 0034.0033.0037.0000 e 0
+infoalone 7f b v 4 e 0
+infoshort 7f b v 0 e 122 left 3433aaaaaaaaaaaa
+info 7f 3 v 4 out 49564c00 e 0
+infow 7f 3 v 4 out 0049.0056.004c.0000 e 0
+infoalone 7f 3 v 4 e 0
+infoshort 7f 3 v 0 e 122 left 4956aaaaaaaaaaaa
+info 7f 80001004 v 5 out 3132353200 e 0
+infow 7f 80001004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 7f 80001004 v 5 e 0
+infoshort 7f 80001004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 7f 7777 v 0 out - e 1004
+infow 7f 7777 v 0 out - e 1004
+infoalone 7f 7777 v 0 e 1004
+infoshort 7f 7777 v 0 e 1004 left aaaaaaaaaaaaaaaa
+info 407 1004 v 5 out 3132353200 e 0
+infow 407 1004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 407 1004 v 5 e 0
+infoshort 407 1004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 407 b v 4 out 38353000 e 0
+infow 407 b v 4 out 0038.0035.0030.0000 e 0
+infoalone 407 b v 4 e 0
+infoshort 407 b v 0 e 122 left 3835aaaaaaaaaaaa
+info 407 3 v 4 out 44455500 e 0
+infow 407 3 v 4 out 0044.0045.0055.0000 e 0
+infoalone 407 3 v 4 e 0
+infoshort 407 3 v 0 e 122 left 4445aaaaaaaaaaaa
+info 407 80001004 v 5 out 3132353200 e 0
+infow 407 80001004 v 5 out 0031.0032.0035.0032.0000 e 0
+infoalone 407 80001004 v 5 e 0
+infoshort 407 80001004 v 0 e 122 left 3132aaaaaaaaaaaa
+info 407 7777 v 0 out - e 1004
+infow 407 7777 v 0 out - e 1004
+infoalone 407 7777 v 0 e 1004
+infoshort 407 7777 v 0 e 1004 left aaaaaaaaaaaaaaaa
+after cpinfo v 0 e 87 then v 1 e 87
+after wide v 0 e 87 then v 5 e 87
+after compare v 0 e 1004 then v 2 e 1004
+after info v 0 e 1004 then v 5 e 1004
+cmpa 409 0 616263 616263 v 2 e 0
+cmpw 409 0 616263 616263 v 2 e 0
+cmpa 409 0 616263 616264 v 1 e 0
+cmpw 409 0 616263 616264 v 1 e 0
+cmpa 409 0 616264 616263 v 3 e 0
+cmpw 409 0 616264 616263 v 3 e 0
+cmpa 409 0 61 42 v 1 e 0
+cmpw 409 0 61 42 v 1 e 0
+cmpa 409 0 61 41 v 1 e 0
+cmpw 409 0 61 41 v 1 e 0
+cmpa 409 1 61 41 v 2 e 0
+cmpw 409 1 61 41 v 2 e 0
+cmpa 409 0 6162 61 v 3 e 0
+cmpw 409 0 6162 61 v 3 e 0
+cmpa 409 0 612d62 6162 v 3 e 0
+cmpw 409 0 612d62 6162 v 3 e 0
+cmpa 409 1000 5a 61 v 3 e 0
+cmpw 409 1000 5a 61 v 3 e 0
+cmpa 409 ffff0000 61 61 v 0 e 1004
+cmpw 409 ffff0000 61 61 v 0 e 1004
+cmpa 409 0 42 61 v 3 e 0
+cmpw 409 0 42 61 v 3 e 0
+cmpa 409 0 41 61 v 3 e 0
+cmpw 409 0 41 61 v 3 e 0
+cmpa 409 1 41 61 v 2 e 0
+cmpw 409 1 41 61 v 2 e 0
+cmpa 409 1 42 61 v 3 e 0
+cmpw 409 1 42 61 v 3 e 0
+cmpa 409 0 6162 6142 v 1 e 0
+cmpw 409 0 6162 6142 v 1 e 0
+cmpa 409 0 6142 6162 v 3 e 0
+cmpw 409 0 6142 6162 v 3 e 0
+cmpa 409 1 6162 6142 v 2 e 0
+cmpw 409 1 6162 6142 v 2 e 0
+cmpa 409 1 786142 784162 v 2 e 0
+cmpw 409 1 786142 784162 v 2 e 0
+cmpa 409 0 612d62 612d63 v 1 e 0
+cmpw 409 0 612d62 612d63 v 1 e 0
+cmpa 409 0 636f2d6f70 636f6f70 v 3 e 0
+cmpw 409 0 636f2d6f70 636f6f70 v 3 e 0
+cmpa 409 0 69742773 697473 v 3 e 0
+cmpw 409 0 69742773 697473 v 3 e 0
+cmpa 409 1 69742773 697473 v 3 e 0
+cmpw 409 1 69742773 697473 v 3 e 0
+cmpa 409 0 80 e9 v 1 e 0
+cmpw 409 0 80 e9 v 1 e 0
+cmpa 409 0 e9 80 v 3 e 0
+cmpw 409 0 e9 80 v 3 e 0
+cmpa 409 1 e9 c9 v 2 e 0
+cmpw 409 1 e9 c9 v 2 e 0
+cmpa 409 0 e9 c9 v 1 e 0
+cmpw 409 0 e9 c9 v 1 e 0
+cmpa 409 1 ff 9f v 2 e 0
+cmpw 409 1 ff 9f v 2 e 0
+cmpa 409 0 616263 6162 v 3 e 0
+cmpw 409 0 616263 6162 v 3 e 0
+cmpa 409 0 6162 616263 v 1 e 0
+cmpw 409 0 6162 616263 v 1 e 0
+cmpa 409 0 - - v 2 e 0
+cmpw 409 0 - - v 2 e 0
+cmpa 409 0 - 61 v 1 e 0
+cmpw 409 0 - 61 v 1 e 0
+cmpa 409 0 61 - v 3 e 0
+cmpw 409 0 61 - v 3 e 0
+cmpa 409 0 610062 610063 v 1 e 0
+cmpw 409 0 610062 610063 v 1 e 0
+cmpa 409 0 610062 61 v 3 e 0
+cmpw 409 0 610062 61 v 3 e 0
+cmpa 409 0 6100 61 v 2 e 0
+cmpw 409 0 6100 61 v 2 e 0
+cmpa 0 0 61 42 v 1 e 0
+cmpw 0 0 61 42 v 1 e 0
+cmpa 400 0 61 42 v 1 e 0
+cmpw 400 0 61 42 v 1 e 0
+cmpa 800 0 61 42 v 1 e 0
+cmpw 800 0 61 42 v 1 e 0
+cmpa 407 0 61 42 v 1 e 0
+cmpw 407 0 61 42 v 1 e 0
+cmpa 7f 0 61 42 v 1 e 0
+cmpw 7f 0 61 42 v 1 e 0
+upperw 0041 v 1 out 0041 e 0
+lowerw 0041 v 1 out 0061 e 0
+typew 0041 v 1 bits 0381 e 0
+upperw 0061 v 1 out 0041 e 0
+lowerw 0061 v 1 out 0061 e 0
+typew 0061 v 1 bits 0382 e 0
+upperw 00b5 v 1 out 00b5 e 0
+lowerw 00b5 v 1 out 00b5 e 0
+typew 00b5 v 1 bits 0312 e 0
+upperw 00df v 1 out 00df e 0
+lowerw 00df v 1 out 00df e 0
+typew 00df v 1 bits 0302 e 0
+upperw 00e9 v 1 out 00c9 e 0
+lowerw 00e9 v 1 out 00e9 e 0
+typew 00e9 v 1 bits 0302 e 0
+upperw 00c9 v 1 out 00c9 e 0
+lowerw 00c9 v 1 out 00e9 e 0
+typew 00c9 v 1 bits 0301 e 0
+upperw 00ff v 1 out 0178 e 0
+lowerw 00ff v 1 out 00ff e 0
+typew 00ff v 1 bits 0302 e 0
+upperw 0178 v 1 out 0178 e 0
+lowerw 0178 v 1 out 00ff e 0
+typew 0178 v 1 bits 0301 e 0
+upperw 0100 v 1 out 0100 e 0
+lowerw 0100 v 1 out 0101 e 0
+typew 0100 v 1 bits 0301 e 0
+upperw 0101 v 1 out 0100 e 0
+lowerw 0101 v 1 out 0101 e 0
+typew 0101 v 1 bits 0302 e 0
+upperw 0130 v 1 out 0130 e 0
+lowerw 0130 v 1 out 0130 e 0
+typew 0130 v 1 bits 0301 e 0
+upperw 0131 v 1 out 0131 e 0
+lowerw 0131 v 1 out 0131 e 0
+typew 0131 v 1 bits 0302 e 0
+upperw 0391 v 1 out 0391 e 0
+lowerw 0391 v 1 out 03b1 e 0
+typew 0391 v 1 bits 0301 e 0
+upperw 03b1 v 1 out 0391 e 0
+lowerw 03b1 v 1 out 03b1 e 0
+typew 03b1 v 1 bits 0302 e 0
+upperw 20ac v 1 out 20ac e 0
+lowerw 20ac v 1 out 20ac e 0
+typew 20ac v 1 bits 0200 e 0
+upperw 4e00 v 1 out 4e00 e 0
+lowerw 4e00 v 1 out 4e00 e 0
+typew 4e00 v 1 bits 0300 e 0
+upperw d800 v 1 out d800 e 0
+lowerw d800 v 1 out d800 e 0
+typew d800 v 1 bits 0200 e 0
+kinda 1 v 1 e 0
+kindw 1 v 1 e 0
+kinda 2 v 1 e 0
+kindw 2 v 1 e 0
+kinda 3 v 0 e 87
+kindw 3 v 0 e 87
+kinda 4 v 1 e 0
+kindw 4 v 1 e 0
+maploc 0 v 1 out 41 e 0
+mapwloc 0 v 1 e 0
+typeloc 0 v 1 e 0
+maploc 400 v 1 out 41 e 0
+mapwloc 400 v 1 e 0
+typeloc 400 v 1 e 0
+maploc 800 v 1 out 41 e 0
+mapwloc 800 v 1 e 0
+typeloc 800 v 1 e 0
+maploc 409 v 1 out 41 e 0
+mapwloc 409 v 1 e 0
+typeloc 409 v 1 e 0
+maploc 407 v 1 out 41 e 0
+mapwloc 407 v 1 e 0
+typeloc 407 v 1 e 0
+maploc 7f v 1 out 41 e 0
+mapwloc 7f v 1 e 0
+typeloc 7f v 1 e 0
+mapflag 0 v 0 e 1004
+mapflag 100 v 1 e 0
+mapflag 200 v 1 e 0
+mapflag 300 v 0 e 1004
+mapflag 400 v 7 e 0
+mapflag ffff0000 v 0 e 0
+b0 00 v 1 unit 0000 e 0
+b1 00 v 1 unit 0000 e 0
+upper 00 v 1 out 00 e 0
+lower 00 v 1 out 00 e 0
+type1 00 v 1 bits 0220 e 0
+b0 01 v 1 unit 0001 e 0
+b1 01 v 1 unit 0001 e 0
+upper 01 v 1 out 01 e 0
+lower 01 v 1 out 01 e 0
+type1 01 v 1 bits 0220 e 0
+b0 02 v 1 unit 0002 e 0
+b1 02 v 1 unit 0002 e 0
+upper 02 v 1 out 02 e 0
+lower 02 v 1 out 02 e 0
+type1 02 v 1 bits 0220 e 0
+b0 03 v 1 unit 0003 e 0
+b1 03 v 1 unit 0003 e 0
+upper 03 v 1 out 03 e 0
+lower 03 v 1 out 03 e 0
+type1 03 v 1 bits 0220 e 0
+b0 04 v 1 unit 0004 e 0
+b1 04 v 1 unit 0004 e 0
+upper 04 v 1 out 04 e 0
+lower 04 v 1 out 04 e 0
+type1 04 v 1 bits 0220 e 0
+b0 05 v 1 unit 0005 e 0
+b1 05 v 1 unit 0005 e 0
+upper 05 v 1 out 05 e 0
+lower 05 v 1 out 05 e 0
+type1 05 v 1 bits 0220 e 0
+b0 06 v 1 unit 0006 e 0
+b1 06 v 1 unit 0006 e 0
+upper 06 v 1 out 06 e 0
+lower 06 v 1 out 06 e 0
+type1 06 v 1 bits 0220 e 0
+b0 07 v 1 unit 0007 e 0
+b1 07 v 1 unit 0007 e 0
+upper 07 v 1 out 07 e 0
+lower 07 v 1 out 07 e 0
+type1 07 v 1 bits 0220 e 0
+b0 08 v 1 unit 0008 e 0
+b1 08 v 1 unit 0008 e 0
+upper 08 v 1 out 08 e 0
+lower 08 v 1 out 08 e 0
+type1 08 v 1 bits 0220 e 0
+b0 09 v 1 unit 0009 e 0
+b1 09 v 1 unit 0009 e 0
+upper 09 v 1 out 09 e 0
+lower 09 v 1 out 09 e 0
+type1 09 v 1 bits 0268 e 0
+b0 0a v 1 unit 000a e 0
+b1 0a v 1 unit 000a e 0
+upper 0a v 1 out 0a e 0
+lower 0a v 1 out 0a e 0
+type1 0a v 1 bits 0228 e 0
+b0 0b v 1 unit 000b e 0
+b1 0b v 1 unit 000b e 0
+upper 0b v 1 out 0b e 0
+lower 0b v 1 out 0b e 0
+type1 0b v 1 bits 0228 e 0
+b0 0c v 1 unit 000c e 0
+b1 0c v 1 unit 000c e 0
+upper 0c v 1 out 0c e 0
+lower 0c v 1 out 0c e 0
+type1 0c v 1 bits 0228 e 0
+b0 0d v 1 unit 000d e 0
+b1 0d v 1 unit 000d e 0
+upper 0d v 1 out 0d e 0
+lower 0d v 1 out 0d e 0
+type1 0d v 1 bits 0228 e 0
+b0 0e v 1 unit 000e e 0
+b1 0e v 1 unit 000e e 0
+upper 0e v 1 out 0e e 0
+lower 0e v 1 out 0e e 0
+type1 0e v 1 bits 0220 e 0
+b0 0f v 1 unit 000f e 0
+b1 0f v 1 unit 000f e 0
+upper 0f v 1 out 0f e 0
+lower 0f v 1 out 0f e 0
+type1 0f v 1 bits 0220 e 0
+b0 10 v 1 unit 0010 e 0
+b1 10 v 1 unit 0010 e 0
+upper 10 v 1 out 10 e 0
+lower 10 v 1 out 10 e 0
+type1 10 v 1 bits 0220 e 0
+b0 11 v 1 unit 0011 e 0
+b1 11 v 1 unit 0011 e 0
+upper 11 v 1 out 11 e 0
+lower 11 v 1 out 11 e 0
+type1 11 v 1 bits 0220 e 0
+b0 12 v 1 unit 0012 e 0
+b1 12 v 1 unit 0012 e 0
+upper 12 v 1 out 12 e 0
+lower 12 v 1 out 12 e 0
+type1 12 v 1 bits 0220 e 0
+b0 13 v 1 unit 0013 e 0
+b1 13 v 1 unit 0013 e 0
+upper 13 v 1 out 13 e 0
+lower 13 v 1 out 13 e 0
+type1 13 v 1 bits 0220 e 0
+b0 14 v 1 unit 0014 e 0
+b1 14 v 1 unit 0014 e 0
+upper 14 v 1 out 14 e 0
+lower 14 v 1 out 14 e 0
+type1 14 v 1 bits 0220 e 0
+b0 15 v 1 unit 0015 e 0
+b1 15 v 1 unit 0015 e 0
+upper 15 v 1 out 15 e 0
+lower 15 v 1 out 15 e 0
+type1 15 v 1 bits 0220 e 0
+b0 16 v 1 unit 0016 e 0
+b1 16 v 1 unit 0016 e 0
+upper 16 v 1 out 16 e 0
+lower 16 v 1 out 16 e 0
+type1 16 v 1 bits 0220 e 0
+b0 17 v 1 unit 0017 e 0
+b1 17 v 1 unit 0017 e 0
+upper 17 v 1 out 17 e 0
+lower 17 v 1 out 17 e 0
+type1 17 v 1 bits 0220 e 0
+b0 18 v 1 unit 0018 e 0
+b1 18 v 1 unit 0018 e 0
+upper 18 v 1 out 18 e 0
+lower 18 v 1 out 18 e 0
+type1 18 v 1 bits 0220 e 0
+b0 19 v 1 unit 0019 e 0
+b1 19 v 1 unit 0019 e 0
+upper 19 v 1 out 19 e 0
+lower 19 v 1 out 19 e 0
+type1 19 v 1 bits 0220 e 0
+b0 1a v 1 unit 001a e 0
+b1 1a v 1 unit 001a e 0
+upper 1a v 1 out 1a e 0
+lower 1a v 1 out 1a e 0
+type1 1a v 1 bits 0220 e 0
+b0 1b v 1 unit 001b e 0
+b1 1b v 1 unit 001b e 0
+upper 1b v 1 out 1b e 0
+lower 1b v 1 out 1b e 0
+type1 1b v 1 bits 0220 e 0
+b0 1c v 1 unit 001c e 0
+b1 1c v 1 unit 001c e 0
+upper 1c v 1 out 1c e 0
+lower 1c v 1 out 1c e 0
+type1 1c v 1 bits 0220 e 0
+b0 1d v 1 unit 001d e 0
+b1 1d v 1 unit 001d e 0
+upper 1d v 1 out 1d e 0
+lower 1d v 1 out 1d e 0
+type1 1d v 1 bits 0220 e 0
+b0 1e v 1 unit 001e e 0
+b1 1e v 1 unit 001e e 0
+upper 1e v 1 out 1e e 0
+lower 1e v 1 out 1e e 0
+type1 1e v 1 bits 0220 e 0
+b0 1f v 1 unit 001f e 0
+b1 1f v 1 unit 001f e 0
+upper 1f v 1 out 1f e 0
+lower 1f v 1 out 1f e 0
+type1 1f v 1 bits 0220 e 0
+b0 20 v 1 unit 0020 e 0
+b1 20 v 1 unit 0020 e 0
+upper 20 v 1 out 20 e 0
+lower 20 v 1 out 20 e 0
+type1 20 v 1 bits 0248 e 0
+b0 21 v 1 unit 0021 e 0
+b1 21 v 1 unit 0021 e 0
+upper 21 v 1 out 21 e 0
+lower 21 v 1 out 21 e 0
+type1 21 v 1 bits 0210 e 0
+b0 22 v 1 unit 0022 e 0
+b1 22 v 1 unit 0022 e 0
+upper 22 v 1 out 22 e 0
+lower 22 v 1 out 22 e 0
+type1 22 v 1 bits 0210 e 0
+b0 23 v 1 unit 0023 e 0
+b1 23 v 1 unit 0023 e 0
+upper 23 v 1 out 23 e 0
+lower 23 v 1 out 23 e 0
+type1 23 v 1 bits 0210 e 0
+b0 24 v 1 unit 0024 e 0
+b1 24 v 1 unit 0024 e 0
+upper 24 v 1 out 24 e 0
+lower 24 v 1 out 24 e 0
+type1 24 v 1 bits 0210 e 0
+b0 25 v 1 unit 0025 e 0
+b1 25 v 1 unit 0025 e 0
+upper 25 v 1 out 25 e 0
+lower 25 v 1 out 25 e 0
+type1 25 v 1 bits 0210 e 0
+b0 26 v 1 unit 0026 e 0
+b1 26 v 1 unit 0026 e 0
+upper 26 v 1 out 26 e 0
+lower 26 v 1 out 26 e 0
+type1 26 v 1 bits 0210 e 0
+b0 27 v 1 unit 0027 e 0
+b1 27 v 1 unit 0027 e 0
+upper 27 v 1 out 27 e 0
+lower 27 v 1 out 27 e 0
+type1 27 v 1 bits 0210 e 0
+b0 28 v 1 unit 0028 e 0
+b1 28 v 1 unit 0028 e 0
+upper 28 v 1 out 28 e 0
+lower 28 v 1 out 28 e 0
+type1 28 v 1 bits 0210 e 0
+b0 29 v 1 unit 0029 e 0
+b1 29 v 1 unit 0029 e 0
+upper 29 v 1 out 29 e 0
+lower 29 v 1 out 29 e 0
+type1 29 v 1 bits 0210 e 0
+b0 2a v 1 unit 002a e 0
+b1 2a v 1 unit 002a e 0
+upper 2a v 1 out 2a e 0
+lower 2a v 1 out 2a e 0
+type1 2a v 1 bits 0210 e 0
+b0 2b v 1 unit 002b e 0
+b1 2b v 1 unit 002b e 0
+upper 2b v 1 out 2b e 0
+lower 2b v 1 out 2b e 0
+type1 2b v 1 bits 0210 e 0
+b0 2c v 1 unit 002c e 0
+b1 2c v 1 unit 002c e 0
+upper 2c v 1 out 2c e 0
+lower 2c v 1 out 2c e 0
+type1 2c v 1 bits 0210 e 0
+b0 2d v 1 unit 002d e 0
+b1 2d v 1 unit 002d e 0
+upper 2d v 1 out 2d e 0
+lower 2d v 1 out 2d e 0
+type1 2d v 1 bits 0210 e 0
+b0 2e v 1 unit 002e e 0
+b1 2e v 1 unit 002e e 0
+upper 2e v 1 out 2e e 0
+lower 2e v 1 out 2e e 0
+type1 2e v 1 bits 0210 e 0
+b0 2f v 1 unit 002f e 0
+b1 2f v 1 unit 002f e 0
+upper 2f v 1 out 2f e 0
+lower 2f v 1 out 2f e 0
+type1 2f v 1 bits 0210 e 0
+b0 30 v 1 unit 0030 e 0
+b1 30 v 1 unit 0030 e 0
+upper 30 v 1 out 30 e 0
+lower 30 v 1 out 30 e 0
+type1 30 v 1 bits 0284 e 0
+b0 31 v 1 unit 0031 e 0
+b1 31 v 1 unit 0031 e 0
+upper 31 v 1 out 31 e 0
+lower 31 v 1 out 31 e 0
+type1 31 v 1 bits 0284 e 0
+b0 32 v 1 unit 0032 e 0
+b1 32 v 1 unit 0032 e 0
+upper 32 v 1 out 32 e 0
+lower 32 v 1 out 32 e 0
+type1 32 v 1 bits 0284 e 0
+b0 33 v 1 unit 0033 e 0
+b1 33 v 1 unit 0033 e 0
+upper 33 v 1 out 33 e 0
+lower 33 v 1 out 33 e 0
+type1 33 v 1 bits 0284 e 0
+b0 34 v 1 unit 0034 e 0
+b1 34 v 1 unit 0034 e 0
+upper 34 v 1 out 34 e 0
+lower 34 v 1 out 34 e 0
+type1 34 v 1 bits 0284 e 0
+b0 35 v 1 unit 0035 e 0
+b1 35 v 1 unit 0035 e 0
+upper 35 v 1 out 35 e 0
+lower 35 v 1 out 35 e 0
+type1 35 v 1 bits 0284 e 0
+b0 36 v 1 unit 0036 e 0
+b1 36 v 1 unit 0036 e 0
+upper 36 v 1 out 36 e 0
+lower 36 v 1 out 36 e 0
+type1 36 v 1 bits 0284 e 0
+b0 37 v 1 unit 0037 e 0
+b1 37 v 1 unit 0037 e 0
+upper 37 v 1 out 37 e 0
+lower 37 v 1 out 37 e 0
+type1 37 v 1 bits 0284 e 0
+b0 38 v 1 unit 0038 e 0
+b1 38 v 1 unit 0038 e 0
+upper 38 v 1 out 38 e 0
+lower 38 v 1 out 38 e 0
+type1 38 v 1 bits 0284 e 0
+b0 39 v 1 unit 0039 e 0
+b1 39 v 1 unit 0039 e 0
+upper 39 v 1 out 39 e 0
+lower 39 v 1 out 39 e 0
+type1 39 v 1 bits 0284 e 0
+b0 3a v 1 unit 003a e 0
+b1 3a v 1 unit 003a e 0
+upper 3a v 1 out 3a e 0
+lower 3a v 1 out 3a e 0
+type1 3a v 1 bits 0210 e 0
+b0 3b v 1 unit 003b e 0
+b1 3b v 1 unit 003b e 0
+upper 3b v 1 out 3b e 0
+lower 3b v 1 out 3b e 0
+type1 3b v 1 bits 0210 e 0
+b0 3c v 1 unit 003c e 0
+b1 3c v 1 unit 003c e 0
+upper 3c v 1 out 3c e 0
+lower 3c v 1 out 3c e 0
+type1 3c v 1 bits 0210 e 0
+b0 3d v 1 unit 003d e 0
+b1 3d v 1 unit 003d e 0
+upper 3d v 1 out 3d e 0
+lower 3d v 1 out 3d e 0
+type1 3d v 1 bits 0210 e 0
+b0 3e v 1 unit 003e e 0
+b1 3e v 1 unit 003e e 0
+upper 3e v 1 out 3e e 0
+lower 3e v 1 out 3e e 0
+type1 3e v 1 bits 0210 e 0
+b0 3f v 1 unit 003f e 0
+b1 3f v 1 unit 003f e 0
+upper 3f v 1 out 3f e 0
+lower 3f v 1 out 3f e 0
+type1 3f v 1 bits 0210 e 0
+b0 40 v 1 unit 0040 e 0
+b1 40 v 1 unit 0040 e 0
+upper 40 v 1 out 40 e 0
+lower 40 v 1 out 40 e 0
+type1 40 v 1 bits 0210 e 0
+b0 41 v 1 unit 0041 e 0
+b1 41 v 1 unit 0041 e 0
+upper 41 v 1 out 41 e 0
+lower 41 v 1 out 61 e 0
+type1 41 v 1 bits 0381 e 0
+b0 42 v 1 unit 0042 e 0
+b1 42 v 1 unit 0042 e 0
+upper 42 v 1 out 42 e 0
+lower 42 v 1 out 62 e 0
+type1 42 v 1 bits 0381 e 0
+b0 43 v 1 unit 0043 e 0
+b1 43 v 1 unit 0043 e 0
+upper 43 v 1 out 43 e 0
+lower 43 v 1 out 63 e 0
+type1 43 v 1 bits 0381 e 0
+b0 44 v 1 unit 0044 e 0
+b1 44 v 1 unit 0044 e 0
+upper 44 v 1 out 44 e 0
+lower 44 v 1 out 64 e 0
+type1 44 v 1 bits 0381 e 0
+b0 45 v 1 unit 0045 e 0
+b1 45 v 1 unit 0045 e 0
+upper 45 v 1 out 45 e 0
+lower 45 v 1 out 65 e 0
+type1 45 v 1 bits 0381 e 0
+b0 46 v 1 unit 0046 e 0
+b1 46 v 1 unit 0046 e 0
+upper 46 v 1 out 46 e 0
+lower 46 v 1 out 66 e 0
+type1 46 v 1 bits 0381 e 0
+b0 47 v 1 unit 0047 e 0
+b1 47 v 1 unit 0047 e 0
+upper 47 v 1 out 47 e 0
+lower 47 v 1 out 67 e 0
+type1 47 v 1 bits 0301 e 0
+b0 48 v 1 unit 0048 e 0
+b1 48 v 1 unit 0048 e 0
+upper 48 v 1 out 48 e 0
+lower 48 v 1 out 68 e 0
+type1 48 v 1 bits 0301 e 0
+b0 49 v 1 unit 0049 e 0
+b1 49 v 1 unit 0049 e 0
+upper 49 v 1 out 49 e 0
+lower 49 v 1 out 69 e 0
+type1 49 v 1 bits 0301 e 0
+b0 4a v 1 unit 004a e 0
+b1 4a v 1 unit 004a e 0
+upper 4a v 1 out 4a e 0
+lower 4a v 1 out 6a e 0
+type1 4a v 1 bits 0301 e 0
+b0 4b v 1 unit 004b e 0
+b1 4b v 1 unit 004b e 0
+upper 4b v 1 out 4b e 0
+lower 4b v 1 out 6b e 0
+type1 4b v 1 bits 0301 e 0
+b0 4c v 1 unit 004c e 0
+b1 4c v 1 unit 004c e 0
+upper 4c v 1 out 4c e 0
+lower 4c v 1 out 6c e 0
+type1 4c v 1 bits 0301 e 0
+b0 4d v 1 unit 004d e 0
+b1 4d v 1 unit 004d e 0
+upper 4d v 1 out 4d e 0
+lower 4d v 1 out 6d e 0
+type1 4d v 1 bits 0301 e 0
+b0 4e v 1 unit 004e e 0
+b1 4e v 1 unit 004e e 0
+upper 4e v 1 out 4e e 0
+lower 4e v 1 out 6e e 0
+type1 4e v 1 bits 0301 e 0
+b0 4f v 1 unit 004f e 0
+b1 4f v 1 unit 004f e 0
+upper 4f v 1 out 4f e 0
+lower 4f v 1 out 6f e 0
+type1 4f v 1 bits 0301 e 0
+b0 50 v 1 unit 0050 e 0
+b1 50 v 1 unit 0050 e 0
+upper 50 v 1 out 50 e 0
+lower 50 v 1 out 70 e 0
+type1 50 v 1 bits 0301 e 0
+b0 51 v 1 unit 0051 e 0
+b1 51 v 1 unit 0051 e 0
+upper 51 v 1 out 51 e 0
+lower 51 v 1 out 71 e 0
+type1 51 v 1 bits 0301 e 0
+b0 52 v 1 unit 0052 e 0
+b1 52 v 1 unit 0052 e 0
+upper 52 v 1 out 52 e 0
+lower 52 v 1 out 72 e 0
+type1 52 v 1 bits 0301 e 0
+b0 53 v 1 unit 0053 e 0
+b1 53 v 1 unit 0053 e 0
+upper 53 v 1 out 53 e 0
+lower 53 v 1 out 73 e 0
+type1 53 v 1 bits 0301 e 0
+b0 54 v 1 unit 0054 e 0
+b1 54 v 1 unit 0054 e 0
+upper 54 v 1 out 54 e 0
+lower 54 v 1 out 74 e 0
+type1 54 v 1 bits 0301 e 0
+b0 55 v 1 unit 0055 e 0
+b1 55 v 1 unit 0055 e 0
+upper 55 v 1 out 55 e 0
+lower 55 v 1 out 75 e 0
+type1 55 v 1 bits 0301 e 0
+b0 56 v 1 unit 0056 e 0
+b1 56 v 1 unit 0056 e 0
+upper 56 v 1 out 56 e 0
+lower 56 v 1 out 76 e 0
+type1 56 v 1 bits 0301 e 0
+b0 57 v 1 unit 0057 e 0
+b1 57 v 1 unit 0057 e 0
+upper 57 v 1 out 57 e 0
+lower 57 v 1 out 77 e 0
+type1 57 v 1 bits 0301 e 0
+b0 58 v 1 unit 0058 e 0
+b1 58 v 1 unit 0058 e 0
+upper 58 v 1 out 58 e 0
+lower 58 v 1 out 78 e 0
+type1 58 v 1 bits 0301 e 0
+b0 59 v 1 unit 0059 e 0
+b1 59 v 1 unit 0059 e 0
+upper 59 v 1 out 59 e 0
+lower 59 v 1 out 79 e 0
+type1 59 v 1 bits 0301 e 0
+b0 5a v 1 unit 005a e 0
+b1 5a v 1 unit 005a e 0
+upper 5a v 1 out 5a e 0
+lower 5a v 1 out 7a e 0
+type1 5a v 1 bits 0301 e 0
+b0 5b v 1 unit 005b e 0
+b1 5b v 1 unit 005b e 0
+upper 5b v 1 out 5b e 0
+lower 5b v 1 out 5b e 0
+type1 5b v 1 bits 0210 e 0
+b0 5c v 1 unit 005c e 0
+b1 5c v 1 unit 005c e 0
+upper 5c v 1 out 5c e 0
+lower 5c v 1 out 5c e 0
+type1 5c v 1 bits 0210 e 0
+b0 5d v 1 unit 005d e 0
+b1 5d v 1 unit 005d e 0
+upper 5d v 1 out 5d e 0
+lower 5d v 1 out 5d e 0
+type1 5d v 1 bits 0210 e 0
+b0 5e v 1 unit 005e e 0
+b1 5e v 1 unit 005e e 0
+upper 5e v 1 out 5e e 0
+lower 5e v 1 out 5e e 0
+type1 5e v 1 bits 0210 e 0
+b0 5f v 1 unit 005f e 0
+b1 5f v 1 unit 005f e 0
+upper 5f v 1 out 5f e 0
+lower 5f v 1 out 5f e 0
+type1 5f v 1 bits 0210 e 0
+b0 60 v 1 unit 0060 e 0
+b1 60 v 1 unit 0060 e 0
+upper 60 v 1 out 60 e 0
+lower 60 v 1 out 60 e 0
+type1 60 v 1 bits 0210 e 0
+b0 61 v 1 unit 0061 e 0
+b1 61 v 1 unit 0061 e 0
+upper 61 v 1 out 41 e 0
+lower 61 v 1 out 61 e 0
+type1 61 v 1 bits 0382 e 0
+b0 62 v 1 unit 0062 e 0
+b1 62 v 1 unit 0062 e 0
+upper 62 v 1 out 42 e 0
+lower 62 v 1 out 62 e 0
+type1 62 v 1 bits 0382 e 0
+b0 63 v 1 unit 0063 e 0
+b1 63 v 1 unit 0063 e 0
+upper 63 v 1 out 43 e 0
+lower 63 v 1 out 63 e 0
+type1 63 v 1 bits 0382 e 0
+b0 64 v 1 unit 0064 e 0
+b1 64 v 1 unit 0064 e 0
+upper 64 v 1 out 44 e 0
+lower 64 v 1 out 64 e 0
+type1 64 v 1 bits 0382 e 0
+b0 65 v 1 unit 0065 e 0
+b1 65 v 1 unit 0065 e 0
+upper 65 v 1 out 45 e 0
+lower 65 v 1 out 65 e 0
+type1 65 v 1 bits 0382 e 0
+b0 66 v 1 unit 0066 e 0
+b1 66 v 1 unit 0066 e 0
+upper 66 v 1 out 46 e 0
+lower 66 v 1 out 66 e 0
+type1 66 v 1 bits 0382 e 0
+b0 67 v 1 unit 0067 e 0
+b1 67 v 1 unit 0067 e 0
+upper 67 v 1 out 47 e 0
+lower 67 v 1 out 67 e 0
+type1 67 v 1 bits 0302 e 0
+b0 68 v 1 unit 0068 e 0
+b1 68 v 1 unit 0068 e 0
+upper 68 v 1 out 48 e 0
+lower 68 v 1 out 68 e 0
+type1 68 v 1 bits 0302 e 0
+b0 69 v 1 unit 0069 e 0
+b1 69 v 1 unit 0069 e 0
+upper 69 v 1 out 49 e 0
+lower 69 v 1 out 69 e 0
+type1 69 v 1 bits 0302 e 0
+b0 6a v 1 unit 006a e 0
+b1 6a v 1 unit 006a e 0
+upper 6a v 1 out 4a e 0
+lower 6a v 1 out 6a e 0
+type1 6a v 1 bits 0302 e 0
+b0 6b v 1 unit 006b e 0
+b1 6b v 1 unit 006b e 0
+upper 6b v 1 out 4b e 0
+lower 6b v 1 out 6b e 0
+type1 6b v 1 bits 0302 e 0
+b0 6c v 1 unit 006c e 0
+b1 6c v 1 unit 006c e 0
+upper 6c v 1 out 4c e 0
+lower 6c v 1 out 6c e 0
+type1 6c v 1 bits 0302 e 0
+b0 6d v 1 unit 006d e 0
+b1 6d v 1 unit 006d e 0
+upper 6d v 1 out 4d e 0
+lower 6d v 1 out 6d e 0
+type1 6d v 1 bits 0302 e 0
+b0 6e v 1 unit 006e e 0
+b1 6e v 1 unit 006e e 0
+upper 6e v 1 out 4e e 0
+lower 6e v 1 out 6e e 0
+type1 6e v 1 bits 0302 e 0
+b0 6f v 1 unit 006f e 0
+b1 6f v 1 unit 006f e 0
+upper 6f v 1 out 4f e 0
+lower 6f v 1 out 6f e 0
+type1 6f v 1 bits 0302 e 0
+b0 70 v 1 unit 0070 e 0
+b1 70 v 1 unit 0070 e 0
+upper 70 v 1 out 50 e 0
+lower 70 v 1 out 70 e 0
+type1 70 v 1 bits 0302 e 0
+b0 71 v 1 unit 0071 e 0
+b1 71 v 1 unit 0071 e 0
+upper 71 v 1 out 51 e 0
+lower 71 v 1 out 71 e 0
+type1 71 v 1 bits 0302 e 0
+b0 72 v 1 unit 0072 e 0
+b1 72 v 1 unit 0072 e 0
+upper 72 v 1 out 52 e 0
+lower 72 v 1 out 72 e 0
+type1 72 v 1 bits 0302 e 0
+b0 73 v 1 unit 0073 e 0
+b1 73 v 1 unit 0073 e 0
+upper 73 v 1 out 53 e 0
+lower 73 v 1 out 73 e 0
+type1 73 v 1 bits 0302 e 0
+b0 74 v 1 unit 0074 e 0
+b1 74 v 1 unit 0074 e 0
+upper 74 v 1 out 54 e 0
+lower 74 v 1 out 74 e 0
+type1 74 v 1 bits 0302 e 0
+b0 75 v 1 unit 0075 e 0
+b1 75 v 1 unit 0075 e 0
+upper 75 v 1 out 55 e 0
+lower 75 v 1 out 75 e 0
+type1 75 v 1 bits 0302 e 0
+b0 76 v 1 unit 0076 e 0
+b1 76 v 1 unit 0076 e 0
+upper 76 v 1 out 56 e 0
+lower 76 v 1 out 76 e 0
+type1 76 v 1 bits 0302 e 0
+b0 77 v 1 unit 0077 e 0
+b1 77 v 1 unit 0077 e 0
+upper 77 v 1 out 57 e 0
+lower 77 v 1 out 77 e 0
+type1 77 v 1 bits 0302 e 0
+b0 78 v 1 unit 0078 e 0
+b1 78 v 1 unit 0078 e 0
+upper 78 v 1 out 58 e 0
+lower 78 v 1 out 78 e 0
+type1 78 v 1 bits 0302 e 0
+b0 79 v 1 unit 0079 e 0
+b1 79 v 1 unit 0079 e 0
+upper 79 v 1 out 59 e 0
+lower 79 v 1 out 79 e 0
+type1 79 v 1 bits 0302 e 0
+b0 7a v 1 unit 007a e 0
+b1 7a v 1 unit 007a e 0
+upper 7a v 1 out 5a e 0
+lower 7a v 1 out 7a e 0
+type1 7a v 1 bits 0302 e 0
+b0 7b v 1 unit 007b e 0
+b1 7b v 1 unit 007b e 0
+upper 7b v 1 out 7b e 0
+lower 7b v 1 out 7b e 0
+type1 7b v 1 bits 0210 e 0
+b0 7c v 1 unit 007c e 0
+b1 7c v 1 unit 007c e 0
+upper 7c v 1 out 7c e 0
+lower 7c v 1 out 7c e 0
+type1 7c v 1 bits 0210 e 0
+b0 7d v 1 unit 007d e 0
+b1 7d v 1 unit 007d e 0
+upper 7d v 1 out 7d e 0
+lower 7d v 1 out 7d e 0
+type1 7d v 1 bits 0210 e 0
+b0 7e v 1 unit 007e e 0
+b1 7e v 1 unit 007e e 0
+upper 7e v 1 out 7e e 0
+lower 7e v 1 out 7e e 0
+type1 7e v 1 bits 0210 e 0
+b0 7f v 1 unit 007f e 0
+b1 7f v 1 unit 007f e 0
+upper 7f v 1 out 7f e 0
+lower 7f v 1 out 7f e 0
+type1 7f v 1 bits 0220 e 0
+b0 80 v 1 unit 20ac e 0
+b1 80 v 1 unit 20ac e 0
+upper 80 v 1 out 80 e 0
+lower 80 v 1 out 80 e 0
+type1 80 v 1 bits 0200 e 0
+b0 81 v 1 unit 0081 e 0
+b1 81 v 1 unit 0081 e 0
+upper 81 v 1 out 81 e 0
+lower 81 v 1 out 81 e 0
+type1 81 v 1 bits 0220 e 0
+b0 82 v 1 unit 201a e 0
+b1 82 v 1 unit 201a e 0
+upper 82 v 1 out 82 e 0
+lower 82 v 1 out 82 e 0
+type1 82 v 1 bits 0210 e 0
+b0 83 v 1 unit 0192 e 0
+b1 83 v 1 unit 0192 e 0
+upper 83 v 1 out 83 e 0
+lower 83 v 1 out 83 e 0
+type1 83 v 1 bits 0302 e 0
+b0 84 v 1 unit 201e e 0
+b1 84 v 1 unit 201e e 0
+upper 84 v 1 out 84 e 0
+lower 84 v 1 out 84 e 0
+type1 84 v 1 bits 0210 e 0
+b0 85 v 1 unit 2026 e 0
+b1 85 v 1 unit 2026 e 0
+upper 85 v 1 out 85 e 0
+lower 85 v 1 out 85 e 0
+type1 85 v 1 bits 0210 e 0
+b0 86 v 1 unit 2020 e 0
+b1 86 v 1 unit 2020 e 0
+upper 86 v 1 out 86 e 0
+lower 86 v 1 out 86 e 0
+type1 86 v 1 bits 0210 e 0
+b0 87 v 1 unit 2021 e 0
+b1 87 v 1 unit 2021 e 0
+upper 87 v 1 out 87 e 0
+lower 87 v 1 out 87 e 0
+type1 87 v 1 bits 0210 e 0
+b0 88 v 1 unit 02c6 e 0
+b1 88 v 1 unit 02c6 e 0
+upper 88 v 1 out 88 e 0
+lower 88 v 1 out 88 e 0
+type1 88 v 1 bits 0300 e 0
+b0 89 v 1 unit 2030 e 0
+b1 89 v 1 unit 2030 e 0
+upper 89 v 1 out 89 e 0
+lower 89 v 1 out 89 e 0
+type1 89 v 1 bits 0210 e 0
+b0 8a v 1 unit 0160 e 0
+b1 8a v 1 unit 0160 e 0
+upper 8a v 1 out 8a e 0
+lower 8a v 1 out 9a e 0
+type1 8a v 1 bits 0301 e 0
+b0 8b v 1 unit 2039 e 0
+b1 8b v 1 unit 2039 e 0
+upper 8b v 1 out 8b e 0
+lower 8b v 1 out 8b e 0
+type1 8b v 1 bits 0210 e 0
+b0 8c v 1 unit 0152 e 0
+b1 8c v 1 unit 0152 e 0
+upper 8c v 1 out 8c e 0
+lower 8c v 1 out 9c e 0
+type1 8c v 1 bits 0301 e 0
+b0 8d v 1 unit 008d e 0
+b1 8d v 1 unit 008d e 0
+upper 8d v 1 out 8d e 0
+lower 8d v 1 out 8d e 0
+type1 8d v 1 bits 0220 e 0
+b0 8e v 1 unit 017d e 0
+b1 8e v 1 unit 017d e 0
+upper 8e v 1 out 8e e 0
+lower 8e v 1 out 9e e 0
+type1 8e v 1 bits 0301 e 0
+b0 8f v 1 unit 008f e 0
+b1 8f v 1 unit 008f e 0
+upper 8f v 1 out 8f e 0
+lower 8f v 1 out 8f e 0
+type1 8f v 1 bits 0220 e 0
+b0 90 v 1 unit 0090 e 0
+b1 90 v 1 unit 0090 e 0
+upper 90 v 1 out 90 e 0
+lower 90 v 1 out 90 e 0
+type1 90 v 1 bits 0220 e 0
+b0 91 v 1 unit 2018 e 0
+b1 91 v 1 unit 2018 e 0
+upper 91 v 1 out 91 e 0
+lower 91 v 1 out 91 e 0
+type1 91 v 1 bits 0210 e 0
+b0 92 v 1 unit 2019 e 0
+b1 92 v 1 unit 2019 e 0
+upper 92 v 1 out 92 e 0
+lower 92 v 1 out 92 e 0
+type1 92 v 1 bits 0210 e 0
+b0 93 v 1 unit 201c e 0
+b1 93 v 1 unit 201c e 0
+upper 93 v 1 out 93 e 0
+lower 93 v 1 out 93 e 0
+type1 93 v 1 bits 0210 e 0
+b0 94 v 1 unit 201d e 0
+b1 94 v 1 unit 201d e 0
+upper 94 v 1 out 94 e 0
+lower 94 v 1 out 94 e 0
+type1 94 v 1 bits 0210 e 0
+b0 95 v 1 unit 2022 e 0
+b1 95 v 1 unit 2022 e 0
+upper 95 v 1 out 95 e 0
+lower 95 v 1 out 95 e 0
+type1 95 v 1 bits 0210 e 0
+b0 96 v 1 unit 2013 e 0
+b1 96 v 1 unit 2013 e 0
+upper 96 v 1 out 96 e 0
+lower 96 v 1 out 96 e 0
+type1 96 v 1 bits 0210 e 0
+b0 97 v 1 unit 2014 e 0
+b1 97 v 1 unit 2014 e 0
+upper 97 v 1 out 97 e 0
+lower 97 v 1 out 97 e 0
+type1 97 v 1 bits 0210 e 0
+b0 98 v 1 unit 02dc e 0
+b1 98 v 1 unit 02dc e 0
+upper 98 v 1 out 98 e 0
+lower 98 v 1 out 98 e 0
+type1 98 v 1 bits 0200 e 0
+b0 99 v 1 unit 2122 e 0
+b1 99 v 1 unit 2122 e 0
+upper 99 v 1 out 99 e 0
+lower 99 v 1 out 99 e 0
+type1 99 v 1 bits 0200 e 0
+b0 9a v 1 unit 0161 e 0
+b1 9a v 1 unit 0161 e 0
+upper 9a v 1 out 8a e 0
+lower 9a v 1 out 9a e 0
+type1 9a v 1 bits 0302 e 0
+b0 9b v 1 unit 203a e 0
+b1 9b v 1 unit 203a e 0
+upper 9b v 1 out 9b e 0
+lower 9b v 1 out 9b e 0
+type1 9b v 1 bits 0210 e 0
+b0 9c v 1 unit 0153 e 0
+b1 9c v 1 unit 0153 e 0
+upper 9c v 1 out 8c e 0
+lower 9c v 1 out 9c e 0
+type1 9c v 1 bits 0302 e 0
+b0 9d v 1 unit 009d e 0
+b1 9d v 1 unit 009d e 0
+upper 9d v 1 out 9d e 0
+lower 9d v 1 out 9d e 0
+type1 9d v 1 bits 0220 e 0
+b0 9e v 1 unit 017e e 0
+b1 9e v 1 unit 017e e 0
+upper 9e v 1 out 8e e 0
+lower 9e v 1 out 9e e 0
+type1 9e v 1 bits 0302 e 0
+b0 9f v 1 unit 0178 e 0
+b1 9f v 1 unit 0178 e 0
+upper 9f v 1 out 9f e 0
+lower 9f v 1 out ff e 0
+type1 9f v 1 bits 0301 e 0
+b0 a0 v 1 unit 00a0 e 0
+b1 a0 v 1 unit 00a0 e 0
+upper a0 v 1 out a0 e 0
+lower a0 v 1 out a0 e 0
+type1 a0 v 1 bits 0248 e 0
+b0 a1 v 1 unit 00a1 e 0
+b1 a1 v 1 unit 00a1 e 0
+upper a1 v 1 out a1 e 0
+lower a1 v 1 out a1 e 0
+type1 a1 v 1 bits 0210 e 0
+b0 a2 v 1 unit 00a2 e 0
+b1 a2 v 1 unit 00a2 e 0
+upper a2 v 1 out a2 e 0
+lower a2 v 1 out a2 e 0
+type1 a2 v 1 bits 0210 e 0
+b0 a3 v 1 unit 00a3 e 0
+b1 a3 v 1 unit 00a3 e 0
+upper a3 v 1 out a3 e 0
+lower a3 v 1 out a3 e 0
+type1 a3 v 1 bits 0210 e 0
+b0 a4 v 1 unit 00a4 e 0
+b1 a4 v 1 unit 00a4 e 0
+upper a4 v 1 out a4 e 0
+lower a4 v 1 out a4 e 0
+type1 a4 v 1 bits 0210 e 0
+b0 a5 v 1 unit 00a5 e 0
+b1 a5 v 1 unit 00a5 e 0
+upper a5 v 1 out a5 e 0
+lower a5 v 1 out a5 e 0
+type1 a5 v 1 bits 0210 e 0
+b0 a6 v 1 unit 00a6 e 0
+b1 a6 v 1 unit 00a6 e 0
+upper a6 v 1 out a6 e 0
+lower a6 v 1 out a6 e 0
+type1 a6 v 1 bits 0210 e 0
+b0 a7 v 1 unit 00a7 e 0
+b1 a7 v 1 unit 00a7 e 0
+upper a7 v 1 out a7 e 0
+lower a7 v 1 out a7 e 0
+type1 a7 v 1 bits 0210 e 0
+b0 a8 v 1 unit 00a8 e 0
+b1 a8 v 1 unit 00a8 e 0
+upper a8 v 1 out a8 e 0
+lower a8 v 1 out a8 e 0
+type1 a8 v 1 bits 0210 e 0
+b0 a9 v 1 unit 00a9 e 0
+b1 a9 v 1 unit 00a9 e 0
+upper a9 v 1 out a9 e 0
+lower a9 v 1 out a9 e 0
+type1 a9 v 1 bits 0210 e 0
+b0 aa v 1 unit 00aa e 0
+b1 aa v 1 unit 00aa e 0
+upper aa v 1 out aa e 0
+lower aa v 1 out aa e 0
+type1 aa v 1 bits 0312 e 0
+b0 ab v 1 unit 00ab e 0
+b1 ab v 1 unit 00ab e 0
+upper ab v 1 out ab e 0
+lower ab v 1 out ab e 0
+type1 ab v 1 bits 0210 e 0
+b0 ac v 1 unit 00ac e 0
+b1 ac v 1 unit 00ac e 0
+upper ac v 1 out ac e 0
+lower ac v 1 out ac e 0
+type1 ac v 1 bits 0210 e 0
+b0 ad v 1 unit 00ad e 0
+b1 ad v 1 unit 00ad e 0
+upper ad v 1 out ad e 0
+lower ad v 1 out ad e 0
+type1 ad v 1 bits 0230 e 0
+b0 ae v 1 unit 00ae e 0
+b1 ae v 1 unit 00ae e 0
+upper ae v 1 out ae e 0
+lower ae v 1 out ae e 0
+type1 ae v 1 bits 0210 e 0
+b0 af v 1 unit 00af e 0
+b1 af v 1 unit 00af e 0
+upper af v 1 out af e 0
+lower af v 1 out af e 0
+type1 af v 1 bits 0210 e 0
+b0 b0 v 1 unit 00b0 e 0
+b1 b0 v 1 unit 00b0 e 0
+upper b0 v 1 out b0 e 0
+lower b0 v 1 out b0 e 0
+type1 b0 v 1 bits 0210 e 0
+b0 b1 v 1 unit 00b1 e 0
+b1 b1 v 1 unit 00b1 e 0
+upper b1 v 1 out b1 e 0
+lower b1 v 1 out b1 e 0
+type1 b1 v 1 bits 0210 e 0
+b0 b2 v 1 unit 00b2 e 0
+b1 b2 v 1 unit 00b2 e 0
+upper b2 v 1 out b2 e 0
+lower b2 v 1 out b2 e 0
+type1 b2 v 1 bits 0214 e 0
+b0 b3 v 1 unit 00b3 e 0
+b1 b3 v 1 unit 00b3 e 0
+upper b3 v 1 out b3 e 0
+lower b3 v 1 out b3 e 0
+type1 b3 v 1 bits 0214 e 0
+b0 b4 v 1 unit 00b4 e 0
+b1 b4 v 1 unit 00b4 e 0
+upper b4 v 1 out b4 e 0
+lower b4 v 1 out b4 e 0
+type1 b4 v 1 bits 0210 e 0
+b0 b5 v 1 unit 00b5 e 0
+b1 b5 v 1 unit 00b5 e 0
+upper b5 v 1 out b5 e 0
+lower b5 v 1 out b5 e 0
+type1 b5 v 1 bits 0312 e 0
+b0 b6 v 1 unit 00b6 e 0
+b1 b6 v 1 unit 00b6 e 0
+upper b6 v 1 out b6 e 0
+lower b6 v 1 out b6 e 0
+type1 b6 v 1 bits 0210 e 0
+b0 b7 v 1 unit 00b7 e 0
+b1 b7 v 1 unit 00b7 e 0
+upper b7 v 1 out b7 e 0
+lower b7 v 1 out b7 e 0
+type1 b7 v 1 bits 0210 e 0
+b0 b8 v 1 unit 00b8 e 0
+b1 b8 v 1 unit 00b8 e 0
+upper b8 v 1 out b8 e 0
+lower b8 v 1 out b8 e 0
+type1 b8 v 1 bits 0210 e 0
+b0 b9 v 1 unit 00b9 e 0
+b1 b9 v 1 unit 00b9 e 0
+upper b9 v 1 out b9 e 0
+lower b9 v 1 out b9 e 0
+type1 b9 v 1 bits 0214 e 0
+b0 ba v 1 unit 00ba e 0
+b1 ba v 1 unit 00ba e 0
+upper ba v 1 out ba e 0
+lower ba v 1 out ba e 0
+type1 ba v 1 bits 0312 e 0
+b0 bb v 1 unit 00bb e 0
+b1 bb v 1 unit 00bb e 0
+upper bb v 1 out bb e 0
+lower bb v 1 out bb e 0
+type1 bb v 1 bits 0210 e 0
+b0 bc v 1 unit 00bc e 0
+b1 bc v 1 unit 00bc e 0
+upper bc v 1 out bc e 0
+lower bc v 1 out bc e 0
+type1 bc v 1 bits 0210 e 0
+b0 bd v 1 unit 00bd e 0
+b1 bd v 1 unit 00bd e 0
+upper bd v 1 out bd e 0
+lower bd v 1 out bd e 0
+type1 bd v 1 bits 0210 e 0
+b0 be v 1 unit 00be e 0
+b1 be v 1 unit 00be e 0
+upper be v 1 out be e 0
+lower be v 1 out be e 0
+type1 be v 1 bits 0210 e 0
+b0 bf v 1 unit 00bf e 0
+b1 bf v 1 unit 00bf e 0
+upper bf v 1 out bf e 0
+lower bf v 1 out bf e 0
+type1 bf v 1 bits 0210 e 0
+b0 c0 v 1 unit 00c0 e 0
+b1 c0 v 1 unit 00c0 e 0
+upper c0 v 1 out c0 e 0
+lower c0 v 1 out e0 e 0
+type1 c0 v 1 bits 0301 e 0
+b0 c1 v 1 unit 00c1 e 0
+b1 c1 v 1 unit 00c1 e 0
+upper c1 v 1 out c1 e 0
+lower c1 v 1 out e1 e 0
+type1 c1 v 1 bits 0301 e 0
+b0 c2 v 1 unit 00c2 e 0
+b1 c2 v 1 unit 00c2 e 0
+upper c2 v 1 out c2 e 0
+lower c2 v 1 out e2 e 0
+type1 c2 v 1 bits 0301 e 0
+b0 c3 v 1 unit 00c3 e 0
+b1 c3 v 1 unit 00c3 e 0
+upper c3 v 1 out c3 e 0
+lower c3 v 1 out e3 e 0
+type1 c3 v 1 bits 0301 e 0
+b0 c4 v 1 unit 00c4 e 0
+b1 c4 v 1 unit 00c4 e 0
+upper c4 v 1 out c4 e 0
+lower c4 v 1 out e4 e 0
+type1 c4 v 1 bits 0301 e 0
+b0 c5 v 1 unit 00c5 e 0
+b1 c5 v 1 unit 00c5 e 0
+upper c5 v 1 out c5 e 0
+lower c5 v 1 out e5 e 0
+type1 c5 v 1 bits 0301 e 0
+b0 c6 v 1 unit 00c6 e 0
+b1 c6 v 1 unit 00c6 e 0
+upper c6 v 1 out c6 e 0
+lower c6 v 1 out e6 e 0
+type1 c6 v 1 bits 0301 e 0
+b0 c7 v 1 unit 00c7 e 0
+b1 c7 v 1 unit 00c7 e 0
+upper c7 v 1 out c7 e 0
+lower c7 v 1 out e7 e 0
+type1 c7 v 1 bits 0301 e 0
+b0 c8 v 1 unit 00c8 e 0
+b1 c8 v 1 unit 00c8 e 0
+upper c8 v 1 out c8 e 0
+lower c8 v 1 out e8 e 0
+type1 c8 v 1 bits 0301 e 0
+b0 c9 v 1 unit 00c9 e 0
+b1 c9 v 1 unit 00c9 e 0
+upper c9 v 1 out c9 e 0
+lower c9 v 1 out e9 e 0
+type1 c9 v 1 bits 0301 e 0
+b0 ca v 1 unit 00ca e 0
+b1 ca v 1 unit 00ca e 0
+upper ca v 1 out ca e 0
+lower ca v 1 out ea e 0
+type1 ca v 1 bits 0301 e 0
+b0 cb v 1 unit 00cb e 0
+b1 cb v 1 unit 00cb e 0
+upper cb v 1 out cb e 0
+lower cb v 1 out eb e 0
+type1 cb v 1 bits 0301 e 0
+b0 cc v 1 unit 00cc e 0
+b1 cc v 1 unit 00cc e 0
+upper cc v 1 out cc e 0
+lower cc v 1 out ec e 0
+type1 cc v 1 bits 0301 e 0
+b0 cd v 1 unit 00cd e 0
+b1 cd v 1 unit 00cd e 0
+upper cd v 1 out cd e 0
+lower cd v 1 out ed e 0
+type1 cd v 1 bits 0301 e 0
+b0 ce v 1 unit 00ce e 0
+b1 ce v 1 unit 00ce e 0
+upper ce v 1 out ce e 0
+lower ce v 1 out ee e 0
+type1 ce v 1 bits 0301 e 0
+b0 cf v 1 unit 00cf e 0
+b1 cf v 1 unit 00cf e 0
+upper cf v 1 out cf e 0
+lower cf v 1 out ef e 0
+type1 cf v 1 bits 0301 e 0
+b0 d0 v 1 unit 00d0 e 0
+b1 d0 v 1 unit 00d0 e 0
+upper d0 v 1 out d0 e 0
+lower d0 v 1 out f0 e 0
+type1 d0 v 1 bits 0301 e 0
+b0 d1 v 1 unit 00d1 e 0
+b1 d1 v 1 unit 00d1 e 0
+upper d1 v 1 out d1 e 0
+lower d1 v 1 out f1 e 0
+type1 d1 v 1 bits 0301 e 0
+b0 d2 v 1 unit 00d2 e 0
+b1 d2 v 1 unit 00d2 e 0
+upper d2 v 1 out d2 e 0
+lower d2 v 1 out f2 e 0
+type1 d2 v 1 bits 0301 e 0
+b0 d3 v 1 unit 00d3 e 0
+b1 d3 v 1 unit 00d3 e 0
+upper d3 v 1 out d3 e 0
+lower d3 v 1 out f3 e 0
+type1 d3 v 1 bits 0301 e 0
+b0 d4 v 1 unit 00d4 e 0
+b1 d4 v 1 unit 00d4 e 0
+upper d4 v 1 out d4 e 0
+lower d4 v 1 out f4 e 0
+type1 d4 v 1 bits 0301 e 0
+b0 d5 v 1 unit 00d5 e 0
+b1 d5 v 1 unit 00d5 e 0
+upper d5 v 1 out d5 e 0
+lower d5 v 1 out f5 e 0
+type1 d5 v 1 bits 0301 e 0
+b0 d6 v 1 unit 00d6 e 0
+b1 d6 v 1 unit 00d6 e 0
+upper d6 v 1 out d6 e 0
+lower d6 v 1 out f6 e 0
+type1 d6 v 1 bits 0301 e 0
+b0 d7 v 1 unit 00d7 e 0
+b1 d7 v 1 unit 00d7 e 0
+upper d7 v 1 out d7 e 0
+lower d7 v 1 out d7 e 0
+type1 d7 v 1 bits 0210 e 0
+b0 d8 v 1 unit 00d8 e 0
+b1 d8 v 1 unit 00d8 e 0
+upper d8 v 1 out d8 e 0
+lower d8 v 1 out f8 e 0
+type1 d8 v 1 bits 0301 e 0
+b0 d9 v 1 unit 00d9 e 0
+b1 d9 v 1 unit 00d9 e 0
+upper d9 v 1 out d9 e 0
+lower d9 v 1 out f9 e 0
+type1 d9 v 1 bits 0301 e 0
+b0 da v 1 unit 00da e 0
+b1 da v 1 unit 00da e 0
+upper da v 1 out da e 0
+lower da v 1 out fa e 0
+type1 da v 1 bits 0301 e 0
+b0 db v 1 unit 00db e 0
+b1 db v 1 unit 00db e 0
+upper db v 1 out db e 0
+lower db v 1 out fb e 0
+type1 db v 1 bits 0301 e 0
+b0 dc v 1 unit 00dc e 0
+b1 dc v 1 unit 00dc e 0
+upper dc v 1 out dc e 0
+lower dc v 1 out fc e 0
+type1 dc v 1 bits 0301 e 0
+b0 dd v 1 unit 00dd e 0
+b1 dd v 1 unit 00dd e 0
+upper dd v 1 out dd e 0
+lower dd v 1 out fd e 0
+type1 dd v 1 bits 0301 e 0
+b0 de v 1 unit 00de e 0
+b1 de v 1 unit 00de e 0
+upper de v 1 out de e 0
+lower de v 1 out fe e 0
+type1 de v 1 bits 0301 e 0
+b0 df v 1 unit 00df e 0
+b1 df v 1 unit 00df e 0
+upper df v 1 out df e 0
+lower df v 1 out df e 0
+type1 df v 1 bits 0302 e 0
+b0 e0 v 1 unit 00e0 e 0
+b1 e0 v 1 unit 00e0 e 0
+upper e0 v 1 out c0 e 0
+lower e0 v 1 out e0 e 0
+type1 e0 v 1 bits 0302 e 0
+b0 e1 v 1 unit 00e1 e 0
+b1 e1 v 1 unit 00e1 e 0
+upper e1 v 1 out c1 e 0
+lower e1 v 1 out e1 e 0
+type1 e1 v 1 bits 0302 e 0
+b0 e2 v 1 unit 00e2 e 0
+b1 e2 v 1 unit 00e2 e 0
+upper e2 v 1 out c2 e 0
+lower e2 v 1 out e2 e 0
+type1 e2 v 1 bits 0302 e 0
+b0 e3 v 1 unit 00e3 e 0
+b1 e3 v 1 unit 00e3 e 0
+upper e3 v 1 out c3 e 0
+lower e3 v 1 out e3 e 0
+type1 e3 v 1 bits 0302 e 0
+b0 e4 v 1 unit 00e4 e 0
+b1 e4 v 1 unit 00e4 e 0
+upper e4 v 1 out c4 e 0
+lower e4 v 1 out e4 e 0
+type1 e4 v 1 bits 0302 e 0
+b0 e5 v 1 unit 00e5 e 0
+b1 e5 v 1 unit 00e5 e 0
+upper e5 v 1 out c5 e 0
+lower e5 v 1 out e5 e 0
+type1 e5 v 1 bits 0302 e 0
+b0 e6 v 1 unit 00e6 e 0
+b1 e6 v 1 unit 00e6 e 0
+upper e6 v 1 out c6 e 0
+lower e6 v 1 out e6 e 0
+type1 e6 v 1 bits 0302 e 0
+b0 e7 v 1 unit 00e7 e 0
+b1 e7 v 1 unit 00e7 e 0
+upper e7 v 1 out c7 e 0
+lower e7 v 1 out e7 e 0
+type1 e7 v 1 bits 0302 e 0
+b0 e8 v 1 unit 00e8 e 0
+b1 e8 v 1 unit 00e8 e 0
+upper e8 v 1 out c8 e 0
+lower e8 v 1 out e8 e 0
+type1 e8 v 1 bits 0302 e 0
+b0 e9 v 1 unit 00e9 e 0
+b1 e9 v 1 unit 00e9 e 0
+upper e9 v 1 out c9 e 0
+lower e9 v 1 out e9 e 0
+type1 e9 v 1 bits 0302 e 0
+b0 ea v 1 unit 00ea e 0
+b1 ea v 1 unit 00ea e 0
+upper ea v 1 out ca e 0
+lower ea v 1 out ea e 0
+type1 ea v 1 bits 0302 e 0
+b0 eb v 1 unit 00eb e 0
+b1 eb v 1 unit 00eb e 0
+upper eb v 1 out cb e 0
+lower eb v 1 out eb e 0
+type1 eb v 1 bits 0302 e 0
+b0 ec v 1 unit 00ec e 0
+b1 ec v 1 unit 00ec e 0
+upper ec v 1 out cc e 0
+lower ec v 1 out ec e 0
+type1 ec v 1 bits 0302 e 0
+b0 ed v 1 unit 00ed e 0
+b1 ed v 1 unit 00ed e 0
+upper ed v 1 out cd e 0
+lower ed v 1 out ed e 0
+type1 ed v 1 bits 0302 e 0
+b0 ee v 1 unit 00ee e 0
+b1 ee v 1 unit 00ee e 0
+upper ee v 1 out ce e 0
+lower ee v 1 out ee e 0
+type1 ee v 1 bits 0302 e 0
+b0 ef v 1 unit 00ef e 0
+b1 ef v 1 unit 00ef e 0
+upper ef v 1 out cf e 0
+lower ef v 1 out ef e 0
+type1 ef v 1 bits 0302 e 0
+b0 f0 v 1 unit 00f0 e 0
+b1 f0 v 1 unit 00f0 e 0
+upper f0 v 1 out d0 e 0
+lower f0 v 1 out f0 e 0
+type1 f0 v 1 bits 0302 e 0
+b0 f1 v 1 unit 00f1 e 0
+b1 f1 v 1 unit 00f1 e 0
+upper f1 v 1 out d1 e 0
+lower f1 v 1 out f1 e 0
+type1 f1 v 1 bits 0302 e 0
+b0 f2 v 1 unit 00f2 e 0
+b1 f2 v 1 unit 00f2 e 0
+upper f2 v 1 out d2 e 0
+lower f2 v 1 out f2 e 0
+type1 f2 v 1 bits 0302 e 0
+b0 f3 v 1 unit 00f3 e 0
+b1 f3 v 1 unit 00f3 e 0
+upper f3 v 1 out d3 e 0
+lower f3 v 1 out f3 e 0
+type1 f3 v 1 bits 0302 e 0
+b0 f4 v 1 unit 00f4 e 0
+b1 f4 v 1 unit 00f4 e 0
+upper f4 v 1 out d4 e 0
+lower f4 v 1 out f4 e 0
+type1 f4 v 1 bits 0302 e 0
+b0 f5 v 1 unit 00f5 e 0
+b1 f5 v 1 unit 00f5 e 0
+upper f5 v 1 out d5 e 0
+lower f5 v 1 out f5 e 0
+type1 f5 v 1 bits 0302 e 0
+b0 f6 v 1 unit 00f6 e 0
+b1 f6 v 1 unit 00f6 e 0
+upper f6 v 1 out d6 e 0
+lower f6 v 1 out f6 e 0
+type1 f6 v 1 bits 0302 e 0
+b0 f7 v 1 unit 00f7 e 0
+b1 f7 v 1 unit 00f7 e 0
+upper f7 v 1 out f7 e 0
+lower f7 v 1 out f7 e 0
+type1 f7 v 1 bits 0210 e 0
+b0 f8 v 1 unit 00f8 e 0
+b1 f8 v 1 unit 00f8 e 0
+upper f8 v 1 out d8 e 0
+lower f8 v 1 out f8 e 0
+type1 f8 v 1 bits 0302 e 0
+b0 f9 v 1 unit 00f9 e 0
+b1 f9 v 1 unit 00f9 e 0
+upper f9 v 1 out d9 e 0
+lower f9 v 1 out f9 e 0
+type1 f9 v 1 bits 0302 e 0
+b0 fa v 1 unit 00fa e 0
+b1 fa v 1 unit 00fa e 0
+upper fa v 1 out da e 0
+lower fa v 1 out fa e 0
+type1 fa v 1 bits 0302 e 0
+b0 fb v 1 unit 00fb e 0
+b1 fb v 1 unit 00fb e 0
+upper fb v 1 out db e 0
+lower fb v 1 out fb e 0
+type1 fb v 1 bits 0302 e 0
+b0 fc v 1 unit 00fc e 0
+b1 fc v 1 unit 00fc e 0
+upper fc v 1 out dc e 0
+lower fc v 1 out fc e 0
+type1 fc v 1 bits 0302 e 0
+b0 fd v 1 unit 00fd e 0
+b1 fd v 1 unit 00fd e 0
+upper fd v 1 out dd e 0
+lower fd v 1 out fd e 0
+type1 fd v 1 bits 0302 e 0
+b0 fe v 1 unit 00fe e 0
+b1 fe v 1 unit 00fe e 0
+upper fe v 1 out de e 0
+lower fe v 1 out fe e 0
+type1 fe v 1 bits 0302 e 0
+b0 ff v 1 unit 00ff e 0
+b1 ff v 1 unit 00ff e 0
+upper ff v 1 out 9f e 0
+lower ff v 1 out ff e 0
+type1 ff v 1 bits 0302 e 0
+end

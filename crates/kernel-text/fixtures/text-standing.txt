@@ -1,0 +1,465 @@
+# Where the crate differs from Wine and that stands, told and not fixed: row|reason|the crate's got.
+# Harvested from the crate's own run. A fix moves a got here, and the row goes red to say so.
+# best-fit: the page holds no best fit, so a unit past it answers the default with its flag.
+# page-refused: a page the row names or Wine serves, which the portable back does not hold.
+# flag-refused: a flag Wine takes and the front refuses with invalid_flags.
+# error-code: both refuse; the front's error is not Wine's.
+# empty-text: an empty text reads as a short buffer, where Wine answers invalid_parameter.
+# short-buffer: both refuse a short buffer; Wine fills what fits and the front writes nothing.
+# room-zero: room 0 with a buffer is refused here, where Wine answers the size alone.
+# locale-unserved: a locale past the row's, which the front refuses and Wine serves.
+# sort-flag: a compare flag Wine takes and the front refuses.
+# sort-weights: the front compares by the page's units, Wine by its sort's weights.
+# case-past-page: Unicode's case where Wine's table keeps the unit.
+# class-bit: C1_DEFINED, 0x200, which the front's table does not set, and no other bit.
+# class-past-bit: the front's class differs past C1_DEFINED as well.
+pagebytes_0|best-fit|v 3 out 80e93f e 0
+pageused_0|best-fit|v 3 used 1 e 0
+cpinfo_1|page-refused|v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide_1|page-refused|v 0 out - e 87
+pagebytes_1|page-refused|v 0 out - e 87
+pageused_1|page-refused|v 0 used 0 e 87
+pagebytes_3|best-fit|v 3 out 80e93f e 0
+pageused_3|best-fit|v 3 used 1 e 0
+cpinfo_2|page-refused|v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide_2|page-refused|v 0 out - e 87
+pagebytes_2|page-refused|v 0 out - e 87
+pageused_2|page-refused|v 0 used 0 e 87
+pagewide_42|page-refused|v 0 out - e 87
+pagebytes_42|page-refused|v 0 out - e 87
+cpinfo_437|page-refused|v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide_437|page-refused|v 0 out - e 87
+pagebytes_437|page-refused|v 0 out - e 87
+pageused_437|page-refused|v 0 used 0 e 87
+pagebytes_1252|best-fit|v 3 out 80e93f e 0
+pageused_1252|best-fit|v 3 used 1 e 0
+cpinfo_1253|page-refused|v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide_1253|page-refused|v 0 out - e 87
+pagebytes_1253|page-refused|v 0 out - e 87
+pageused_1253|page-refused|v 0 used 0 e 87
+cpinfo_65001|page-refused|v 0 max 0 default 0000 lead 000000000000000000000000 e 87
+pagewide_65001|page-refused|v 0 out - e 87
+pagebytes_65001|page-refused|v 0 out - e 87
+pageused_65001|page-refused|v 0 used 0 e 87
+wideflag_2|flag-refused|v 0 e 1004
+wideflag_4|flag-refused|v 0 e 1004
+wideflag_8|flag-refused|v 0 e 1004
+byteflag_20|flag-refused|v 0 e 1004
+byteflag_40|flag-refused|v 0 e 1004
+byteflag_80|flag-refused|v 0 e 1004
+byteflag_200|flag-refused|v 0 e 1004
+byteflag_400|flag-refused|v 0 e 1004
+empty_wide|empty-text|v 0 e 122 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+empty_bytes|empty-text|v 0 e 122 left aaaaaaaaaaaaaaaa
+empty_map|empty-text|v 0 e 122 left aaaaaaaaaaaaaaaa
+empty_mapw|empty-text|v 0 e 122 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+short_wide|short-buffer|v 0 e 122 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+short_bytes|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+short_map|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+short_mapw|short-buffer|v 0 e 122 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+room0_wide|room-zero|v 0 e 122 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+room0_bytes|room-zero|v 0 e 122 left aaaaaaaaaaaaaaaa
+room0_map|room-zero|v 0 e 122 left aaaaaaaaaaaaaaaa
+room0_mapw|room-zero|v 0 e 122 left aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa.aaaa
+infoshort_409_1004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_409_b|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_409_3|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_409_80001004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+info_409_7777|error-code|v 0 out - e 87
+infow_409_7777|error-code|v 0 out - e 87
+infoalone_409_7777|error-code|v 0 e 87
+infoshort_409_7777|error-code|v 0 e 87 left aaaaaaaaaaaaaaaa
+infoshort_0_1004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_0_b|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_0_3|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_0_80001004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+info_0_7777|error-code|v 0 out - e 87
+infow_0_7777|error-code|v 0 out - e 87
+infoalone_0_7777|error-code|v 0 e 87
+infoshort_0_7777|error-code|v 0 e 87 left aaaaaaaaaaaaaaaa
+infoshort_400_1004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_400_b|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_400_3|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_400_80001004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+info_400_7777|error-code|v 0 out - e 87
+infow_400_7777|error-code|v 0 out - e 87
+infoalone_400_7777|error-code|v 0 e 87
+infoshort_400_7777|error-code|v 0 e 87 left aaaaaaaaaaaaaaaa
+infoshort_800_1004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_800_b|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_800_3|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+infoshort_800_80001004|short-buffer|v 0 e 122 left aaaaaaaaaaaaaaaa
+info_800_7777|error-code|v 0 out - e 87
+infow_800_7777|error-code|v 0 out - e 87
+infoalone_800_7777|error-code|v 0 e 87
+infoshort_800_7777|error-code|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_7f_1004|locale-unserved|v 0 out - e 87
+infow_7f_1004|locale-unserved|v 0 out - e 87
+infoalone_7f_1004|locale-unserved|v 0 e 87
+infoshort_7f_1004|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_7f_b|locale-unserved|v 0 out - e 87
+infow_7f_b|locale-unserved|v 0 out - e 87
+infoalone_7f_b|locale-unserved|v 0 e 87
+infoshort_7f_b|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_7f_3|locale-unserved|v 0 out - e 87
+infow_7f_3|locale-unserved|v 0 out - e 87
+infoalone_7f_3|locale-unserved|v 0 e 87
+infoshort_7f_3|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_7f_80001004|locale-unserved|v 0 out - e 87
+infow_7f_80001004|locale-unserved|v 0 out - e 87
+infoalone_7f_80001004|locale-unserved|v 0 e 87
+infoshort_7f_80001004|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_7f_7777|error-code|v 0 out - e 87
+infow_7f_7777|error-code|v 0 out - e 87
+infoalone_7f_7777|error-code|v 0 e 87
+infoshort_7f_7777|error-code|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_407_1004|locale-unserved|v 0 out - e 87
+infow_407_1004|locale-unserved|v 0 out - e 87
+infoalone_407_1004|locale-unserved|v 0 e 87
+infoshort_407_1004|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_407_b|locale-unserved|v 0 out - e 87
+infow_407_b|locale-unserved|v 0 out - e 87
+infoalone_407_b|locale-unserved|v 0 e 87
+infoshort_407_b|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_407_3|locale-unserved|v 0 out - e 87
+infow_407_3|locale-unserved|v 0 out - e 87
+infoalone_407_3|locale-unserved|v 0 e 87
+infoshort_407_3|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_407_80001004|locale-unserved|v 0 out - e 87
+infow_407_80001004|locale-unserved|v 0 out - e 87
+infoalone_407_80001004|locale-unserved|v 0 e 87
+infoshort_407_80001004|locale-unserved|v 0 e 87 left aaaaaaaaaaaaaaaa
+info_407_7777|error-code|v 0 out - e 87
+infow_407_7777|error-code|v 0 out - e 87
+infoalone_407_7777|error-code|v 0 e 87
+infoshort_407_7777|error-code|v 0 e 87 left aaaaaaaaaaaaaaaa
+after_info|error-code|v 0 e 87 then v 5 e 87
+cmpa_409_0_61_42|sort-weights|v 3 e 0
+cmpw_409_0_61_42|sort-weights|v 3 e 0
+cmpa_409_0_61_41|sort-weights|v 3 e 0
+cmpw_409_0_61_41|sort-weights|v 3 e 0
+cmpa_409_0_612d62_6162|sort-weights|v 1 e 0
+cmpw_409_0_612d62_6162|sort-weights|v 1 e 0
+cmpa_409_1000_5a_61|sort-flag|v 0 e 1004
+cmpw_409_1000_5a_61|sort-flag|v 0 e 1004
+cmpa_409_0_42_61|sort-weights|v 1 e 0
+cmpw_409_0_42_61|sort-weights|v 1 e 0
+cmpa_409_0_41_61|sort-weights|v 1 e 0
+cmpw_409_0_41_61|sort-weights|v 1 e 0
+cmpa_409_0_6162_6142|sort-weights|v 3 e 0
+cmpw_409_0_6162_6142|sort-weights|v 3 e 0
+cmpa_409_0_6142_6162|sort-weights|v 1 e 0
+cmpw_409_0_6142_6162|sort-weights|v 1 e 0
+cmpa_409_0_636f2d6f70_636f6f70|sort-weights|v 1 e 0
+cmpw_409_0_636f2d6f70_636f6f70|sort-weights|v 1 e 0
+cmpa_409_0_69742773_697473|sort-weights|v 1 e 0
+cmpw_409_0_69742773_697473|sort-weights|v 1 e 0
+cmpa_409_1_69742773_697473|sort-weights|v 1 e 0
+cmpw_409_1_69742773_697473|sort-weights|v 1 e 0
+cmpa_409_0_80_e9|sort-weights|v 3 e 0
+cmpw_409_0_80_e9|sort-weights|v 3 e 0
+cmpa_409_0_e9_80|sort-weights|v 1 e 0
+cmpw_409_0_e9_80|sort-weights|v 1 e 0
+cmpa_409_0_e9_c9|sort-weights|v 3 e 0
+cmpw_409_0_e9_c9|sort-weights|v 3 e 0
+cmpa_409_0_6100_61|sort-weights|v 3 e 0
+cmpw_409_0_6100_61|sort-weights|v 3 e 0
+cmpa_0_0_61_42|sort-weights|v 3 e 0
+cmpw_0_0_61_42|sort-weights|v 3 e 0
+cmpa_400_0_61_42|sort-weights|v 3 e 0
+cmpw_400_0_61_42|sort-weights|v 3 e 0
+cmpa_800_0_61_42|sort-weights|v 3 e 0
+cmpw_800_0_61_42|sort-weights|v 3 e 0
+cmpa_407_0_61_42|locale-unserved|v 0 e 87
+cmpw_407_0_61_42|locale-unserved|v 0 e 87
+cmpa_7f_0_61_42|locale-unserved|v 0 e 87
+cmpw_7f_0_61_42|locale-unserved|v 0 e 87
+typew_0041|class-bit|v 1 bits 0181 e 0
+typew_0061|class-bit|v 1 bits 0182 e 0
+upperw_00b5|case-past-page|v 1 out 039c e 0
+typew_00b5|class-past-bit|v 1 bits 0102 e 0
+typew_00df|class-bit|v 1 bits 0102 e 0
+typew_00e9|class-bit|v 1 bits 0102 e 0
+typew_00c9|class-bit|v 1 bits 0101 e 0
+typew_00ff|class-bit|v 1 bits 0102 e 0
+typew_0178|class-bit|v 1 bits 0101 e 0
+typew_0100|class-bit|v 1 bits 0101 e 0
+typew_0101|class-bit|v 1 bits 0102 e 0
+typew_0130|class-bit|v 1 bits 0101 e 0
+upperw_0131|case-past-page|v 1 out 0049 e 0
+typew_0131|class-bit|v 1 bits 0102 e 0
+typew_0391|class-bit|v 1 bits 0101 e 0
+typew_03b1|class-bit|v 1 bits 0102 e 0
+typew_20ac|class-past-bit|v 1 bits 0010 e 0
+typew_4e00|class-bit|v 1 bits 0100 e 0
+typew_d800|class-bit|v 1 bits 0000 e 0
+kinda_2|flag-refused|v 0 e 1004
+kindw_2|flag-refused|v 0 e 1004
+kinda_3|error-code|v 0 e 1004
+kindw_3|error-code|v 0 e 1004
+kinda_4|flag-refused|v 0 e 1004
+kindw_4|flag-refused|v 0 e 1004
+maploc_407|locale-unserved|v 0 out - e 87
+mapwloc_407|locale-unserved|v 0 e 87
+typeloc_407|locale-unserved|v 0 e 87
+maploc_7f|locale-unserved|v 0 out - e 87
+mapwloc_7f|locale-unserved|v 0 e 87
+typeloc_7f|locale-unserved|v 0 e 87
+mapflag_400|flag-refused|v 0 e 1004
+mapflag_ffff0000|flag-refused|v 0 e 1004
+type1_00|class-bit|v 1 bits 0020 e 0
+type1_01|class-bit|v 1 bits 0020 e 0
+type1_02|class-bit|v 1 bits 0020 e 0
+type1_03|class-bit|v 1 bits 0020 e 0
+type1_04|class-bit|v 1 bits 0020 e 0
+type1_05|class-bit|v 1 bits 0020 e 0
+type1_06|class-bit|v 1 bits 0020 e 0
+type1_07|class-bit|v 1 bits 0020 e 0
+type1_08|class-bit|v 1 bits 0020 e 0
+type1_09|class-bit|v 1 bits 0068 e 0
+type1_0a|class-bit|v 1 bits 0028 e 0
+type1_0b|class-bit|v 1 bits 0028 e 0
+type1_0c|class-bit|v 1 bits 0028 e 0
+type1_0d|class-bit|v 1 bits 0028 e 0
+type1_0e|class-bit|v 1 bits 0020 e 0
+type1_0f|class-bit|v 1 bits 0020 e 0
+type1_10|class-bit|v 1 bits 0020 e 0
+type1_11|class-bit|v 1 bits 0020 e 0
+type1_12|class-bit|v 1 bits 0020 e 0
+type1_13|class-bit|v 1 bits 0020 e 0
+type1_14|class-bit|v 1 bits 0020 e 0
+type1_15|class-bit|v 1 bits 0020 e 0
+type1_16|class-bit|v 1 bits 0020 e 0
+type1_17|class-bit|v 1 bits 0020 e 0
+type1_18|class-bit|v 1 bits 0020 e 0
+type1_19|class-bit|v 1 bits 0020 e 0
+type1_1a|class-bit|v 1 bits 0020 e 0
+type1_1b|class-bit|v 1 bits 0020 e 0
+type1_1c|class-bit|v 1 bits 0020 e 0
+type1_1d|class-bit|v 1 bits 0020 e 0
+type1_1e|class-bit|v 1 bits 0020 e 0
+type1_1f|class-bit|v 1 bits 0020 e 0
+type1_20|class-bit|v 1 bits 0048 e 0
+type1_21|class-bit|v 1 bits 0010 e 0
+type1_22|class-bit|v 1 bits 0010 e 0
+type1_23|class-bit|v 1 bits 0010 e 0
+type1_24|class-bit|v 1 bits 0010 e 0
+type1_25|class-bit|v 1 bits 0010 e 0
+type1_26|class-bit|v 1 bits 0010 e 0
+type1_27|class-bit|v 1 bits 0010 e 0
+type1_28|class-bit|v 1 bits 0010 e 0
+type1_29|class-bit|v 1 bits 0010 e 0
+type1_2a|class-bit|v 1 bits 0010 e 0
+type1_2b|class-bit|v 1 bits 0010 e 0
+type1_2c|class-bit|v 1 bits 0010 e 0
+type1_2d|class-bit|v 1 bits 0010 e 0
+type1_2e|class-bit|v 1 bits 0010 e 0
+type1_2f|class-bit|v 1 bits 0010 e 0
+type1_30|class-bit|v 1 bits 0084 e 0
+type1_31|class-bit|v 1 bits 0084 e 0
+type1_32|class-bit|v 1 bits 0084 e 0
+type1_33|class-bit|v 1 bits 0084 e 0
+type1_34|class-bit|v 1 bits 0084 e 0
+type1_35|class-bit|v 1 bits 0084 e 0
+type1_36|class-bit|v 1 bits 0084 e 0
+type1_37|class-bit|v 1 bits 0084 e 0
+type1_38|class-bit|v 1 bits 0084 e 0
+type1_39|class-bit|v 1 bits 0084 e 0
+type1_3a|class-bit|v 1 bits 0010 e 0
+type1_3b|class-bit|v 1 bits 0010 e 0
+type1_3c|class-bit|v 1 bits 0010 e 0
+type1_3d|class-bit|v 1 bits 0010 e 0
+type1_3e|class-bit|v 1 bits 0010 e 0
+type1_3f|class-bit|v 1 bits 0010 e 0
+type1_40|class-bit|v 1 bits 0010 e 0
+type1_41|class-bit|v 1 bits 0181 e 0
+type1_42|class-bit|v 1 bits 0181 e 0
+type1_43|class-bit|v 1 bits 0181 e 0
+type1_44|class-bit|v 1 bits 0181 e 0
+type1_45|class-bit|v 1 bits 0181 e 0
+type1_46|class-bit|v 1 bits 0181 e 0
+type1_47|class-bit|v 1 bits 0101 e 0
+type1_48|class-bit|v 1 bits 0101 e 0
+type1_49|class-bit|v 1 bits 0101 e 0
+type1_4a|class-bit|v 1 bits 0101 e 0
+type1_4b|class-bit|v 1 bits 0101 e 0
+type1_4c|class-bit|v 1 bits 0101 e 0
+type1_4d|class-bit|v 1 bits 0101 e 0
+type1_4e|class-bit|v 1 bits 0101 e 0
+type1_4f|class-bit|v 1 bits 0101 e 0
+type1_50|class-bit|v 1 bits 0101 e 0
+type1_51|class-bit|v 1 bits 0101 e 0
+type1_52|class-bit|v 1 bits 0101 e 0
+type1_53|class-bit|v 1 bits 0101 e 0
+type1_54|class-bit|v 1 bits 0101 e 0
+type1_55|class-bit|v 1 bits 0101 e 0
+type1_56|class-bit|v 1 bits 0101 e 0
+type1_57|class-bit|v 1 bits 0101 e 0
+type1_58|class-bit|v 1 bits 0101 e 0
+type1_59|class-bit|v 1 bits 0101 e 0
+type1_5a|class-bit|v 1 bits 0101 e 0
+type1_5b|class-bit|v 1 bits 0010 e 0
+type1_5c|class-bit|v 1 bits 0010 e 0
+type1_5d|class-bit|v 1 bits 0010 e 0
+type1_5e|class-bit|v 1 bits 0010 e 0
+type1_5f|class-bit|v 1 bits 0010 e 0
+type1_60|class-bit|v 1 bits 0010 e 0
+type1_61|class-bit|v 1 bits 0182 e 0
+type1_62|class-bit|v 1 bits 0182 e 0
+type1_63|class-bit|v 1 bits 0182 e 0
+type1_64|class-bit|v 1 bits 0182 e 0
+type1_65|class-bit|v 1 bits 0182 e 0
+type1_66|class-bit|v 1 bits 0182 e 0
+type1_67|class-bit|v 1 bits 0102 e 0
+type1_68|class-bit|v 1 bits 0102 e 0
+type1_69|class-bit|v 1 bits 0102 e 0
+type1_6a|class-bit|v 1 bits 0102 e 0
+type1_6b|class-bit|v 1 bits 0102 e 0
+type1_6c|class-bit|v 1 bits 0102 e 0
+type1_6d|class-bit|v 1 bits 0102 e 0
+type1_6e|class-bit|v 1 bits 0102 e 0
+type1_6f|class-bit|v 1 bits 0102 e 0
+type1_70|class-bit|v 1 bits 0102 e 0
+type1_71|class-bit|v 1 bits 0102 e 0
+type1_72|class-bit|v 1 bits 0102 e 0
+type1_73|class-bit|v 1 bits 0102 e 0
+type1_74|class-bit|v 1 bits 0102 e 0
+type1_75|class-bit|v 1 bits 0102 e 0
+type1_76|class-bit|v 1 bits 0102 e 0
+type1_77|class-bit|v 1 bits 0102 e 0
+type1_78|class-bit|v 1 bits 0102 e 0
+type1_79|class-bit|v 1 bits 0102 e 0
+type1_7a|class-bit|v 1 bits 0102 e 0
+type1_7b|class-bit|v 1 bits 0010 e 0
+type1_7c|class-bit|v 1 bits 0010 e 0
+type1_7d|class-bit|v 1 bits 0010 e 0
+type1_7e|class-bit|v 1 bits 0010 e 0
+type1_7f|class-bit|v 1 bits 0020 e 0
+type1_80|class-past-bit|v 1 bits 0010 e 0
+type1_81|class-bit|v 1 bits 0020 e 0
+type1_82|class-bit|v 1 bits 0010 e 0
+type1_83|class-bit|v 1 bits 0102 e 0
+type1_84|class-bit|v 1 bits 0010 e 0
+type1_85|class-bit|v 1 bits 0010 e 0
+type1_86|class-bit|v 1 bits 0010 e 0
+type1_87|class-bit|v 1 bits 0010 e 0
+type1_88|class-bit|v 1 bits 0100 e 0
+type1_89|class-bit|v 1 bits 0010 e 0
+type1_8a|class-bit|v 1 bits 0101 e 0
+type1_8b|class-bit|v 1 bits 0010 e 0
+type1_8c|class-bit|v 1 bits 0101 e 0
+type1_8d|class-bit|v 1 bits 0020 e 0
+type1_8e|class-bit|v 1 bits 0101 e 0
+type1_8f|class-bit|v 1 bits 0020 e 0
+type1_90|class-bit|v 1 bits 0020 e 0
+type1_91|class-bit|v 1 bits 0010 e 0
+type1_92|class-bit|v 1 bits 0010 e 0
+type1_93|class-bit|v 1 bits 0010 e 0
+type1_94|class-bit|v 1 bits 0010 e 0
+type1_95|class-bit|v 1 bits 0010 e 0
+type1_96|class-bit|v 1 bits 0010 e 0
+type1_97|class-bit|v 1 bits 0010 e 0
+type1_98|class-past-bit|v 1 bits 0010 e 0
+type1_99|class-past-bit|v 1 bits 0010 e 0
+type1_9a|class-bit|v 1 bits 0102 e 0
+type1_9b|class-bit|v 1 bits 0010 e 0
+type1_9c|class-bit|v 1 bits 0102 e 0
+type1_9d|class-bit|v 1 bits 0020 e 0
+type1_9e|class-bit|v 1 bits 0102 e 0
+type1_9f|class-bit|v 1 bits 0101 e 0
+type1_a0|class-past-bit|v 1 bits 0008 e 0
+type1_a1|class-bit|v 1 bits 0010 e 0
+type1_a2|class-bit|v 1 bits 0010 e 0
+type1_a3|class-bit|v 1 bits 0010 e 0
+type1_a4|class-bit|v 1 bits 0010 e 0
+type1_a5|class-bit|v 1 bits 0010 e 0
+type1_a6|class-bit|v 1 bits 0010 e 0
+type1_a7|class-bit|v 1 bits 0010 e 0
+type1_a8|class-bit|v 1 bits 0010 e 0
+type1_a9|class-bit|v 1 bits 0010 e 0
+type1_aa|class-past-bit|v 1 bits 0102 e 0
+type1_ab|class-bit|v 1 bits 0010 e 0
+type1_ac|class-bit|v 1 bits 0010 e 0
+type1_ad|class-past-bit|v 1 bits 0010 e 0
+type1_ae|class-bit|v 1 bits 0010 e 0
+type1_af|class-bit|v 1 bits 0010 e 0
+type1_b0|class-bit|v 1 bits 0010 e 0
+type1_b1|class-bit|v 1 bits 0010 e 0
+type1_b2|class-past-bit|v 1 bits 0000 e 0
+type1_b3|class-past-bit|v 1 bits 0000 e 0
+type1_b4|class-bit|v 1 bits 0010 e 0
+type1_b5|class-past-bit|v 1 bits 0102 e 0
+type1_b6|class-bit|v 1 bits 0010 e 0
+type1_b7|class-bit|v 1 bits 0010 e 0
+type1_b8|class-bit|v 1 bits 0010 e 0
+type1_b9|class-past-bit|v 1 bits 0000 e 0
+type1_ba|class-past-bit|v 1 bits 0102 e 0
+type1_bb|class-bit|v 1 bits 0010 e 0
+type1_bc|class-past-bit|v 1 bits 0000 e 0
+type1_bd|class-past-bit|v 1 bits 0000 e 0
+type1_be|class-past-bit|v 1 bits 0000 e 0
+type1_bf|class-bit|v 1 bits 0010 e 0
+type1_c0|class-bit|v 1 bits 0101 e 0
+type1_c1|class-bit|v 1 bits 0101 e 0
+type1_c2|class-bit|v 1 bits 0101 e 0
+type1_c3|class-bit|v 1 bits 0101 e 0
+type1_c4|class-bit|v 1 bits 0101 e 0
+type1_c5|class-bit|v 1 bits 0101 e 0
+type1_c6|class-bit|v 1 bits 0101 e 0
+type1_c7|class-bit|v 1 bits 0101 e 0
+type1_c8|class-bit|v 1 bits 0101 e 0
+type1_c9|class-bit|v 1 bits 0101 e 0
+type1_ca|class-bit|v 1 bits 0101 e 0
+type1_cb|class-bit|v 1 bits 0101 e 0
+type1_cc|class-bit|v 1 bits 0101 e 0
+type1_cd|class-bit|v 1 bits 0101 e 0
+type1_ce|class-bit|v 1 bits 0101 e 0
+type1_cf|class-bit|v 1 bits 0101 e 0
+type1_d0|class-bit|v 1 bits 0101 e 0
+type1_d1|class-bit|v 1 bits 0101 e 0
+type1_d2|class-bit|v 1 bits 0101 e 0
+type1_d3|class-bit|v 1 bits 0101 e 0
+type1_d4|class-bit|v 1 bits 0101 e 0
+type1_d5|class-bit|v 1 bits 0101 e 0
+type1_d6|class-bit|v 1 bits 0101 e 0
+type1_d7|class-bit|v 1 bits 0010 e 0
+type1_d8|class-bit|v 1 bits 0101 e 0
+type1_d9|class-bit|v 1 bits 0101 e 0
+type1_da|class-bit|v 1 bits 0101 e 0
+type1_db|class-bit|v 1 bits 0101 e 0
+type1_dc|class-bit|v 1 bits 0101 e 0
+type1_dd|class-bit|v 1 bits 0101 e 0
+type1_de|class-bit|v 1 bits 0101 e 0
+type1_df|class-bit|v 1 bits 0102 e 0
+type1_e0|class-bit|v 1 bits 0102 e 0
+type1_e1|class-bit|v 1 bits 0102 e 0
+type1_e2|class-bit|v 1 bits 0102 e 0
+type1_e3|class-bit|v 1 bits 0102 e 0
+type1_e4|class-bit|v 1 bits 0102 e 0
+type1_e5|class-bit|v 1 bits 0102 e 0
+type1_e6|class-bit|v 1 bits 0102 e 0
+type1_e7|class-bit|v 1 bits 0102 e 0
+type1_e8|class-bit|v 1 bits 0102 e 0
+type1_e9|class-bit|v 1 bits 0102 e 0
+type1_ea|class-bit|v 1 bits 0102 e 0
+type1_eb|class-bit|v 1 bits 0102 e 0
+type1_ec|class-bit|v 1 bits 0102 e 0
+type1_ed|class-bit|v 1 bits 0102 e 0
+type1_ee|class-bit|v 1 bits 0102 e 0
+type1_ef|class-bit|v 1 bits 0102 e 0
+type1_f0|class-bit|v 1 bits 0102 e 0
+type1_f1|class-bit|v 1 bits 0102 e 0
+type1_f2|class-bit|v 1 bits 0102 e 0
+type1_f3|class-bit|v 1 bits 0102 e 0
+type1_f4|class-bit|v 1 bits 0102 e 0
+type1_f5|class-bit|v 1 bits 0102 e 0
+type1_f6|class-bit|v 1 bits 0102 e 0
+type1_f7|class-bit|v 1 bits 0010 e 0
+type1_f8|class-bit|v 1 bits 0102 e 0
+type1_f9|class-bit|v 1 bits 0102 e 0
+type1_fa|class-bit|v 1 bits 0102 e 0
+type1_fb|class-bit|v 1 bits 0102 e 0
+type1_fc|class-bit|v 1 bits 0102 e 0
+type1_fd|class-bit|v 1 bits 0102 e 0
+type1_fe|class-bit|v 1 bits 0102 e 0
+type1_ff|class-bit|v 1 bits 0102 e 0
