@@ -3,12 +3,17 @@
 // Space, Return, Escape. It acts by key presses only; `page.evaluate` only reads.
 // One browser and one page, so no workers. Exits non-zero at the first check that
 // fails, the output so far kept. A green walk is not a conformance claim: no
-// person walked it and no screen reader ran; the tree read is the browser's own.
+// person walked it and no screen reader ran. In Chromium the tree read is the
+// browser's own, by CDP. In Firefox no Playwright call reads the browser's tree,
+// so the read is Playwright's ariaSnapshot, a reckoning from the page's markup:
+// it lists what an open modal box makes inert, so while the page reports the box
+// `:modal` the read is the box alone, the HTML rule that a modal box blocks the
+// rest. A state ariaSnapshot prints only when true reads as false.
 //
 // Call: PLAYWRIGHT=<playwright's index.mjs> [AXE=<axe.min.js>]
-//   node walk-browser.mjs <page_walk.wasm> [<output folder>]
-// With no AXE the gate says it did not run. Writes walk-output.txt and
-// walk-ax.json to the folder.
+//   node walk-browser.mjs [--engine chromium|firefox] <page_walk.wasm> [<folder>]
+// Chromium by default. With no AXE the gate says it did not run. Writes
+// walk-output.txt and walk-ax.json to the folder.
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { createServer } from "node:http";
@@ -71,17 +76,69 @@ async function axTree(cdp) {
     .map(axRow);
 }
 
+// One ariaSnapshot line, `- role "name" [mark]` or `- role: words`.
+const ARIA_LINE =
+  /^\s*- (\w+)(?: "((?:[^"\\]|\\.)*)")?((?: \[[^\]]+\])*)(?::\s*(.*))?$/;
+const NO_FOCUS = { role: "none", name: "" };
+
+// The rows axTree gives, from an ariaSnapshot: its words become StaticText rows,
+// and checked, expanded and pressed read false where the snapshot prints none.
+function ariaRows(text) {
+  return text.split("\n").flatMap((line) => {
+    const match = line.match(ARIA_LINE);
+    if (!match) return [];
+    const [, role, quoted, marks, words] = match;
+    const has = (mark) => marks.includes(`[${mark}]`);
+    const staticText = (name) => ({ role: "StaticText", name });
+    if (role === "text") return [staticText(words ?? "")];
+    const row = {
+      role,
+      name: quoted === undefined ? "" : JSON.parse(`"${quoted}"`),
+      checked: String(has("checked")),
+      expanded: has("expanded"),
+      pressed: String(has("pressed")),
+    };
+    if (has("disabled")) row.disabled = true;
+    return words ? [row, staticText(words)] : [row];
+  });
+}
+
+// Chromium's own tree, and its focus, by CDP.
+function cdpReader(cdp) {
+  return {
+    rows: () => axTree(cdp),
+    focused: async () =>
+      (await axTree(cdp))
+        .filter((row) => row.focused && row.role !== "RootWebArea")
+        .at(-1) ?? NO_FOCUS,
+  };
+}
+
+// The page's markup as Playwright reads it: the box alone while it is `:modal`,
+// and the focus from the focused element's own snapshot.
+function ariaReader(page) {
+  const scope = async () =>
+    (await page.evaluate(() => document.querySelector("dialog:modal") !== null))
+      ? "dialog"
+      : "body";
+  return {
+    rows: async () => ariaRows(await page.locator(await scope()).ariaSnapshot()),
+    focused: async () => {
+      const at = page.locator(":focus");
+      if ((await at.count()) === 0) return NO_FOCUS;
+      return ariaRows(await at.ariaSnapshot())[0] ?? NO_FOCUS;
+    },
+  };
+}
+
 const named = (tree, role, name) =>
   tree.find((row) => row.role === role && row.name === name);
 
-async function walk(page, cdp, out, kept, axePath) {
+async function walk(page, reader, out, kept, axePath) {
   const read = (name) =>
     page.evaluate((exportName) => window.pageWalk[exportName]() >>> 0, name);
 
-  const focused = async () =>
-    (await axTree(cdp))
-      .filter((row) => row.focused && row.role !== "RootWebArea")
-      .at(-1) ?? { role: "none", name: "" };
+  const focused = () => reader.focused();
 
   const go = async (key, role, name) => {
     await page.keyboard.press(key);
@@ -91,7 +148,7 @@ async function walk(page, cdp, out, kept, axePath) {
   };
 
   const keep = async (state) => {
-    const tree = await axTree(cdp);
+    const tree = await reader.rows();
     kept[state] = tree;
     return tree;
   };
@@ -231,7 +288,7 @@ async function walk(page, cdp, out, kept, axePath) {
   await go("Tab", "checkbox", "First choice");
   await go("Space", "checkbox", "First choice");
   assert.equal(
-    named(await axTree(cdp), "checkbox", "First choice").checked,
+    named(await reader.rows(), "checkbox", "First choice").checked,
     "true",
   );
   assert.equal(await crateChecked(), true, "the crate holds the check");
@@ -286,7 +343,11 @@ async function walk(page, cdp, out, kept, axePath) {
 }
 
 async function main() {
-  const [wasmPath, folder] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const flag = args.indexOf("--engine");
+  const engine = flag === -1 ? "chromium" : args.splice(flag, 2)[1];
+  assert.ok(["chromium", "firefox"].includes(engine), `engine ${engine}`);
+  const [wasmPath, folder] = args;
   const lines = [];
   const out = (line) => {
     lines.push(line);
@@ -294,8 +355,8 @@ async function main() {
   };
   const kept = {};
   const server = await serve(wasmPath);
-  const { chromium } = await import(pathToFileURL(process.env.PLAYWRIGHT));
-  const browser = await chromium.launch({ headless: true });
+  const playwright = await import(pathToFileURL(process.env.PLAYWRIGHT));
+  const browser = await playwright[engine].launch({ headless: true });
   let failed = false;
   try {
     const page = await browser.newPage({
@@ -309,10 +370,15 @@ async function main() {
     await page.waitForSelector("html[data-ready]");
     const axePath = process.env.AXE;
     if (axePath) await page.addScriptTag({ path: axePath });
-    const cdp = await page.context().newCDPSession(page);
-    await cdp.send("Accessibility.enable");
-    out(`chromium ${browser.version()}, axe ${axePath ? "on" : "off"}`);
-    await walk(page, cdp, out, kept, axePath);
+    let reader = ariaReader(page);
+    if (engine === "chromium") {
+      const cdp = await page.context().newCDPSession(page);
+      await cdp.send("Accessibility.enable");
+      reader = cdpReader(cdp);
+    }
+    const how = engine === "chromium" ? "" : ", tree by Playwright's ariaSnapshot";
+    out(`${engine} ${browser.version()}, axe ${axePath ? "on" : "off"}${how}`);
+    await walk(page, reader, out, kept, axePath);
     assert.deepEqual(errors, [], "no page error");
     out("walk: every check held, by the keyboard alone");
   } catch (error) {
