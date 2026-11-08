@@ -29,9 +29,17 @@ video_smacker = { path = "../video-smacker" }
 log = { version = "0.4", features = ["kv"] }
 
 [dev-dependencies]
+draw = { path = "../draw", features = ["page"] }
 oxide_logline = { path = "../oxide-logline" }
 
 # One clip on the host's own clock, timed from outside by `bench/pace_and_door.py`.
 [[example]]
 name = "pace_and_door"
 path = "bench/pace_and_door.rs"
+
+# A clip in a browser's wasm, for a script outside the page to judge: `cargo build --example
+# clip_page --target wasm32-unknown-unknown --release`. Empty on any other target.
+[[example]]
+name = "clip_page"
+path = "page/clip_page.rs"
+crate-type = ["cdylib"]

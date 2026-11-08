@@ -140,7 +140,7 @@ fn cuts() -> Vec<(&'static str, Vec<u8>)> {
         ),
         ("cut-header", sound[..50].to_vec()),
         ("cut-tables", sound[..HEADER_BYTES + 2].to_vec()),
-        ("cut-trees", sound[..HEADER_BYTES + frames * 5 + 1].to_vec()),
+        ("cut-trees", sound[..=HEADER_BYTES + frames * 5].to_vec()),
         ("trees-word-0", with_word(&blocks, TREES_SIZE_WORD, 0)),
         ("cut-frames", blocks[..blocks.len() - 1].to_vec()),
         ("sound-frame-cut", with_size(&sound, 1, 4)),

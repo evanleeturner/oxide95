@@ -11,6 +11,7 @@ mod disc;
 mod fakes;
 mod fronts;
 mod mix;
+mod page_clips;
 mod probes;
 mod sound;
 mod test_log;
