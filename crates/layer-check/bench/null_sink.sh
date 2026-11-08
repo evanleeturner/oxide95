@@ -8,8 +8,8 @@
 # `muted` silences the recording, to show C9's red. The computer's default output, default
 # input and volumes are never touched: the script reads them before and after, and exits
 # non-zero if they moved. Prints on stdout one `stream` line for each new sound stream, on
-# any output, naming its program and process, then `others_before=N`, the streams already
-# on other outputs. A process is this run's when its own environment names the private
+# any output, naming that output's index and name, its program and its process, then
+# `others_before=N`, the streams already on other outputs. A process is this run's when its own environment names the private
 # output; `ours=unread` means it could not be read, so nobody knows. A stream of this run on
 # another output could reach the room: the command is stopped at once, and the exit is 5.
 # Read 10 times a second, so a stream shorter than that goes unseen.
@@ -103,10 +103,18 @@ stream_owner() {
   fi
 }
 
+# The name of the output with this index, or `-` when no output has it.
+sink_name() {
+  LC_ALL=C pactl list short sinks | awk -v wanted="$1" '
+    $1 == wanted { found = $2 }
+    END { print found == "" ? "-" : found }
+  '
+}
+
 # Prints a stream the first time it is read on an output, so a move prints again.
 note_streams() {
   local own=$1
-  local list id sink binary name pid where prefix ours
+  local list id sink binary name pid where prefix ours sink_label
   list=$(streams) || return 1
   while read -r id sink binary name pid; do
     [[ -n "${id}" && -z "${seen["${id}:${sink}"]:-}" ]] || continue
@@ -116,8 +124,9 @@ note_streams() {
     ours=$(stream_owner "${pid}")
     prefix=$(process_env "${pid}" WINEPREFIX)
     prefix=${prefix// /_}
-    printf 'stream id=%s on=%s binary=%s name=%s pid=%s prefix=%s ours=%s\n' \
-      "${id}" "${where}" "${binary}" "${name}" "${pid}" "${prefix:--}" "${ours}"
+    sink_label=$(sink_name "${sink}")
+    printf 'stream id=%s on=%s sink=%s sink_name=%s binary=%s name=%s pid=%s prefix=%s ours=%s\n' \
+      "${id}" "${where}" "${sink}" "${sink_label}" "${binary}" "${name}" "${pid}" "${prefix:--}" "${ours}"
     if [[ "${where}" == "other" && "${ours}" == "yes" ]]; then
       err "a stream of this run reached another output: stopping it now"
       return 5
