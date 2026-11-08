@@ -4,7 +4,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { LEAD_CAP_S, planBlock, toChannels } from "./sound.mjs";
+import { LEAD_CAP_S, planBlock, sinkRoute, toChannels } from "./sound.mjs";
 
 const RATE = 44100;
 const BLOCK_S = 1024 / RATE;
@@ -128,4 +128,141 @@ test("a raw when off the clock reads red on the whole-frame fence", () => {
   assert.ok(offWholeFrame(raw, RATE) > WHOLE_FRAME_TOLERANCE);
   const plan = planBlock(0, 735, 1.000123, RATE);
   assert.ok(offWholeFrame(plan.when, RATE) <= WHOLE_FRAME_TOLERANCE);
+});
+
+// The speaker's two routes, on stubs: a stub shows what this code does with an answer.
+// Whether a browser gives that answer is the browser arm's to find.
+const refuse = (name) => () => Promise.reject(Object.assign(new Error(name), { name }));
+const throwNow = (name) => () => {
+  throw Object.assign(new Error(name), { name });
+};
+const takes = () => Promise.resolve();
+
+/** A node that records what it is joined to, and refuses to leave what it is not. */
+function aNode(name) {
+  const node = { name, joined: new Set() };
+  node.connect = (to) => {
+    node.joined.add(to.name);
+    return to;
+  };
+  node.disconnect = (to) => {
+    if (!node.joined.delete(to.name)) throwNow("InvalidAccessError")();
+  };
+  return node;
+}
+
+/** A context as Chromium's when `answer` is given, else as Firefox's: no setSinkId. */
+function aContext(answer) {
+  const context = { destination: aNode("destination"), streams: 0, asked: [] };
+  context.createMediaStreamDestination = () => {
+    context.streams += 1;
+    return { ...aNode("stream"), stream: { number: context.streams } };
+  };
+  if (answer) {
+    context.sinkId = "";
+    context.setSinkId = (id) => {
+      context.asked.push(id);
+      return answer(id).then(() => {
+        context.sinkId = id;
+      });
+    };
+  }
+  return context;
+}
+
+function aDocument(answer = takes) {
+  const made = [];
+  const createElement = (tag) => {
+    const element = { tag, sinkId: "", plays: 0, srcObject: null };
+    element.setSinkId = (id) =>
+      answer(id).then(() => {
+        element.sinkId = id;
+      });
+    element.play = () => {
+      element.plays += 1;
+      return Promise.resolve();
+    };
+    made.push(element);
+    return element;
+  };
+  return { made, createElement };
+}
+
+function aRoute(context, document = aDocument()) {
+  const gain = aNode("gain");
+  gain.connect(context.destination);
+  const lines = [];
+  const logger = { info: (...values) => lines.push(values), debug: () => {} };
+  return { gain, document, lines, sink: sinkRoute({ context, gain, document, logger }) };
+}
+
+test("a context that takes a speaker is moved itself, and reads the id back", async () => {
+  const context = aContext(takes);
+  const { gain, document, sink } = aRoute(context);
+  assert.deepEqual(await sink.setSink("id-b"), { sinkId: "id-b", refusal: null });
+  assert.deepEqual(context.asked, ["id-b"]);
+  assert.equal(sink.sinkId, "id-b");
+  assert.equal(document.made.length, 0, "no element on this route");
+  assert.deepEqual([...gain.joined], ["destination"]);
+});
+
+test("without one, gain goes by one element's stream, and a second choice makes no second", async () => {
+  const context = aContext();
+  const { gain, document, sink } = aRoute(context);
+  assert.equal(sink.sinkId, "", "the default before any choice");
+  assert.deepEqual(await sink.setSink("id-b"), { sinkId: "id-b", refusal: null });
+  assert.equal(document.made.length, 1);
+  const [element] = document.made;
+  assert.equal(element.tag, "audio");
+  assert.deepEqual(element.srcObject, { number: 1 });
+  assert.equal(element.plays, 1);
+  assert.deepEqual([...gain.joined], ["stream"], "off the destination, onto the stream");
+  assert.deepEqual(await sink.setSink("id-a"), { sinkId: "id-a", refusal: null });
+  assert.equal(document.made.length, 1, "still 1 element");
+  assert.equal(context.streams, 1, "still 1 stream");
+  assert.equal(element.plays, 1);
+  assert.deepEqual([...gain.joined], ["stream"]);
+});
+
+test("two choices made at once run in order, and the last one stands", async () => {
+  const context = aContext();
+  const { gain, document, sink } = aRoute(context);
+  const answers = await Promise.all([sink.setSink("id-a"), sink.setSink("id-b")]);
+  assert.deepEqual(answers, [
+    { sinkId: "id-a", refusal: null },
+    { sinkId: "id-b", refusal: null },
+  ]);
+  assert.equal(document.made.length, 1);
+  assert.deepEqual([...gain.joined], ["stream"]);
+});
+
+test("a refusal on either route answers its name, never throws, and moves nothing", async () => {
+  for (const answer of [refuse("NotAllowedError"), throwNow("NotAllowedError")]) {
+    const { gain, sink } = aRoute(aContext(answer));
+    assert.deepEqual(await sink.setSink("id-b"), { sinkId: "", refusal: "NotAllowedError" });
+    assert.deepEqual([...gain.joined], ["destination"]);
+  }
+  for (const answer of [refuse("NotFoundError"), throwNow("NotFoundError")]) {
+    const { gain, sink } = aRoute(aContext(), aDocument(answer));
+    assert.deepEqual(await sink.setSink("id-b"), { sinkId: "", refusal: "NotFoundError" });
+    assert.deepEqual([...gain.joined], ["destination"], "the sound stays where it was");
+  }
+  const bare = aContext();
+  delete bare.createMediaStreamDestination;
+  const { sink } = aRoute(bare);
+  assert.deepEqual(await sink.setSink("id-b"), { sinkId: "", refusal: "TypeError" });
+});
+
+test("the log holds the route, the refusal and whether it took, never the id", async () => {
+  const { lines, sink } = aRoute(aContext(refuse("NotFoundError")));
+  await sink.setSink("id-secret");
+  const moved = aRoute(aContext());
+  await moved.sink.setSink("id-secret");
+  assert.deepEqual(lines, [
+    ["sound.page.sink", { route: "context", refusal: "NotFoundError", taken: false }],
+  ]);
+  assert.deepEqual(moved.lines, [
+    ["sound.page.sink", { route: "element", refusal: null, taken: true }],
+  ]);
+  assert.doesNotMatch(JSON.stringify([lines, moved.lines]), /id-secret/);
 });

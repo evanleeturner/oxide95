@@ -136,6 +136,24 @@ test("the copy's pad script is the joystick crate's, and the page ships devices.
   );
 });
 
+// The game's two sound routes ship as their crates' own files, byte for byte.
+test("the copy's sound and disc scripts are their crates' own", () => {
+  const out = join(mkdtempSync(join(tmpdir(), "layer-check-")), "out");
+  const crates = join(PAGE_DIR, "..", "..");
+  copyPage(crates, PAGE_DIR, out);
+  for (const [crate, name] of [
+    ["sound-mix", "sound.mjs"],
+    ["cd-audio", "cd-player.mjs"],
+  ]) {
+    assert.ok(
+      readFileSync(join(out, name)).equals(
+        readFileSync(join(crates, crate, "page", name)),
+      ),
+      name,
+    );
+  }
+});
+
 test("the copy refuses when two loggers differ", () => {
   const root = mkdtempSync(join(tmpdir(), "layer-check-"));
   const crates = join(root, "crates");

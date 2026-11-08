@@ -190,6 +190,16 @@
       "template": "a block of {kept} frames starts at {when} s; {dropped} dropped"
     },
     {
+      "id": "sound.page.sink",
+      "level": "I",
+      "fields": {
+        "route": "context, when the context takes a speaker; element, a stream into one <audio>",
+        "refusal": "the name of the browser's refusal, or null",
+        "taken": "true when the speaker read back is the one chosen"
+      },
+      "template": "the mix's speaker chosen by the {route} route, refused {refusal}, taken {taken}"
+    },
+    {
       "id": "sound.witness.block",
       "level": "D",
       "fields": { "frames": "the frames handed to the back in this write", "hash": "the stream's hash so far", "by": "the crate the mix belongs to" },
@@ -440,6 +450,15 @@
       "level": "I",
       "fields": { "why": "the browser's words for refusing the pads" },
       "template": "the browser refused the pads: {why}"
+    },
+    {
+      "id": "check.page.speaker",
+      "level": "I",
+      "fields": {
+        "why": "pick, a person's choice",
+        "refusal": "the first refusal's name, or null"
+      },
+      "template": "a speaker chosen at {why}, refused {refusal}"
     },
     {
       "id": "check.computer.result",

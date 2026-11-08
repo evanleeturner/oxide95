@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // H1, H2, H3 and H6: which speakers, microphones and pads the browser shows this page.
-// The list alone: it chooses no speaker and stores nothing. Each check answers one
-// result and never throws, as `computer.mjs` does. A listing is asked without a press,
-// since it plays nothing. The microphone is asked only from a person's press.
+// H4: whether a speaker a person picks reaches the game's two routes. Nothing is
+// stored. Each check answers one result and never throws, as `computer.mjs` does. A
+// listing is asked without a press, since it plays nothing. The microphone is asked
+// only from a person's press.
 //
 // A device's label may carry a person's name, so a label goes to the page's own row
 // and nowhere else: `listCounts` is what a log may hold.
@@ -10,6 +11,8 @@ import { failed, notRun, passed } from "./computer.mjs";
 import { publicName } from "./report.mjs";
 
 export const NO_ANSWER = "none";
+// The browser's own row for its default speaker: the page offers "" for that.
+export const DEFAULT_ID = "default";
 export const YES = "yes";
 
 const FOLLOW_WAIT_MS = 1000;
@@ -52,6 +55,45 @@ export function deviceRows(devices) {
 export function checkList(mediaDevices, read) {
   if (!mediaDevices) return notRun("H1", NEEDS_SECURE);
   return listCounts(read.devices).outputs > 0 ? passed("H1") : failed("H1");
+}
+
+/**
+ * The speakers a person may pick, each { id, name }, in the browser's order, named as
+ * `deviceRows` names them. The page's first choice is the default, "", so the browser's
+ * own default row and a row with no id are left out. A name goes to the page's own
+ * control and nowhere else.
+ */
+export function speakerChoices(devices) {
+  return devices
+    .filter((device) => device.kind === "audiooutput")
+    .map((device, index) => ({
+      id: device.deviceId,
+      name: device.label || publicName(device, index),
+    }))
+    .filter(({ id }) => id && id !== DEFAULT_ID);
+}
+
+/**
+ * H4. Hands each handle the choice and is red unless every one takes it: no refusal,
+ * and the id read back. A read shows the browser took the choice, never that sound
+ * left that speaker. Answers { result, refusal, taken }: the first refusal's name or
+ * null, and how many handles read the id back. Never throws.
+ */
+export async function checkChoice(handles, id) {
+  let refusal = null;
+  let taken = 0;
+  for (const handle of handles) {
+    let answer = null;
+    try {
+      answer = await handle.setSink(id);
+    } catch (error) {
+      answer = { refusal: error?.name ?? String(error) };
+    }
+    refusal ??= answer?.refusal ?? null;
+    if (answer?.refusal === null && answer.sinkId === id) taken += 1;
+  }
+  const moved = handles.length > 0 && taken === handles.length;
+  return { result: moved ? passed("H4") : failed("H4"), refusal, taken };
 }
 
 /**

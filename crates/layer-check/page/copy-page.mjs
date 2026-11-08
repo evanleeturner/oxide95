@@ -26,7 +26,11 @@ export const SHIPPED = [
 ];
 
 /** Files another crate owns, each as [crate, name]: one source, copied as it stands. */
-export const BORROWED = [["joystick", "gamepads.mjs"]];
+export const BORROWED = [
+  ["cd-audio", "cd-player.mjs"],
+  ["joystick", "gamepads.mjs"],
+  ["sound-mix", "sound.mjs"],
+];
 
 /** Every crate's `page/logger.mjs` under `cratesDir`, sorted by path. */
 function loggerPaths(cratesDir) {

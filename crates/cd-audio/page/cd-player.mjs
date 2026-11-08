@@ -25,6 +25,8 @@
 //       startPlayer(window, tracks, logger) -> apply(words), where words are
 //       [kind, from's track, from's frame, to's track, to's frame], or for a volume
 //       [kind, left, right, 0, 0].
+//       apply.setSink(id) -> a promise of { sinkId, refusal }; it never throws.
+//       apply.sinkId -> the speaker the element reads back, "" the default.
 const PLAY = 1;
 const PAUSE = 2;
 const STOP = 3;
@@ -134,7 +136,7 @@ export function startPlayer(window, tracks, logger) {
     timer = window.setTimeout(() => run(rest), ms);
   };
 
-  return function apply([kind, a, b, c, d]) {
+  function apply([kind, a, b, c, d]) {
     if (kind === PLAY) {
       run(runPieces(tracks, { track: a, frame: b }, { track: c, frame: d }));
     } else if (kind === PAUSE || kind === STOP) {
@@ -145,5 +147,21 @@ export function startPlayer(window, tracks, logger) {
     } else {
       logger.info("cd order unknown", kind);
     }
+  }
+
+  // The speaker the disc's sound goes to, set on the element it already has, so the
+  // choice holds from track to track. A refusal is told by its name alone, never its
+  // words, and leaves the element where it was.
+  apply.setSink = async (id) => {
+    let refusal = null;
+    try {
+      await audio.setSinkId(id);
+    } catch (error) {
+      refusal = error?.name ?? String(error);
+      logger.info("cd sink refused", refusal);
+    }
+    return { sinkId: audio.sinkId ?? "", refusal };
   };
+  Object.defineProperty(apply, "sinkId", { get: () => audio.sinkId ?? "" });
+  return apply;
 }

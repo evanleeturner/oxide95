@@ -6,10 +6,13 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
 
+import { startPlayer } from "../../cd-audio/page/cd-player.mjs";
 import { padWords, startPolling } from "../../joystick/page/gamepads.mjs";
+import { sinkRoute } from "../../sound-mix/page/sound.mjs";
 import { NOT_RUN, PASS, RED } from "./computer.mjs";
 import {
   askMicrophone,
+  checkChoice,
   checkFollows,
   checkList,
   checkPads,
@@ -21,6 +24,7 @@ import {
   padRows,
   padsPresent,
   readList,
+  speakerChoices,
   watchDevices,
   YES,
 } from "./devices.mjs";
@@ -347,4 +351,98 @@ test("padRows names the pads showing, and a refusal shows none", () => {
   assert.deepEqual(padRows(refusing), []);
   assert.deepEqual(padRows({}), []);
   assert.deepEqual(padRows(undefined), []);
+});
+
+// H4, on stub handles and on the two crates' own handles over stubs.
+const H4_PASS =
+  "The sound moved to the speaker you picked. This does not show that it can be heard.";
+const H4_RED =
+  "You picked a speaker, but the sound did not move to it. The fault is in this project.";
+
+/** A handle that takes every choice, or, when it `ignores` them, answers as if none came. */
+function aHandle({ ignores = false } = {}) {
+  const handle = { sinkId: "", asked: [] };
+  handle.setSink = async (id) => {
+    handle.asked.push(id);
+    if (!ignores) handle.sinkId = id;
+    return { sinkId: handle.sinkId, refusal: null };
+  };
+  return handle;
+}
+
+test("H4 passes when both handles take the choice, in the page's words", async () => {
+  const mix = aHandle();
+  const cd = aHandle();
+  const { result, refusal, taken } = await checkChoice([mix, cd], "id-of-2");
+  assert.equal(result.state, PASS);
+  assert.equal(result.words, H4_PASS);
+  assert.equal(passSentence("H4"), H4_PASS);
+  assert.equal(result.name, "Speaker choice");
+  assert.deepEqual([refusal, taken], [null, 2]);
+  assert.deepEqual([mix.asked, cd.asked], [["id-of-2"], ["id-of-2"]]);
+});
+
+test("H4 is red when the mix's handle ignores the choice, and when the disc's does", async () => {
+  const plants = [
+    [aHandle({ ignores: true }), aHandle()],
+    [aHandle(), aHandle({ ignores: true })],
+  ];
+  for (const handles of plants) {
+    const { result, refusal, taken } = await checkChoice(handles, "id-of-2");
+    assert.equal(result.state, RED);
+    assert.equal(result.words, H4_RED);
+    assert.equal(sentence("H4"), H4_RED);
+    assert.deepEqual([refusal, taken], [null, 1]);
+  }
+});
+
+test("H4 answers a refusal as its red and never throws", async () => {
+  const named = (name) => Object.assign(new Error(name), { name });
+  const quiet = { info: () => {}, debug: () => {} };
+  // The route is chosen when it is made, so this context takes a speaker from the
+  // start, and its answer is swapped behind it.
+  let answer = () => Promise.resolve();
+  const context = { destination: {}, sinkId: "", setSinkId: (id) => answer(id) };
+  const mix = sinkRoute({ context, gain: {}, document: {}, logger: quiet });
+  const audio = { sinkId: "" };
+  const cd = startPlayer({ document: { createElement: () => audio } }, [], quiet);
+
+  answer = () => Promise.reject(named("NotAllowedError"));
+  audio.setSinkId = async () => {};
+  const rejected = await checkChoice([mix, cd], "id-of-2");
+  assert.equal(rejected.result.state, RED);
+  assert.equal(rejected.result.words, H4_RED);
+  assert.deepEqual([rejected.refusal, rejected.taken], ["NotAllowedError", 0]);
+
+  answer = () => {
+    throw named("NotAllowedError");
+  };
+  audio.setSinkId = () => {
+    throw named("NotFoundError");
+  };
+  const thrown = await checkChoice([mix, cd], "id-of-2");
+  assert.equal(thrown.result.words, H4_RED);
+  assert.deepEqual([thrown.refusal, thrown.taken], ["NotAllowedError", 0]);
+
+  const broken = { setSink: () => { throw named("Error"); } };
+  const odd = { setSink: async () => undefined };
+  const worst = await checkChoice([broken, odd], "id-of-2");
+  assert.equal(worst.result.state, RED);
+  assert.equal(worst.refusal, "Error");
+  assert.equal((await checkChoice([], "id-of-2")).result.state, RED, "no handle moves nothing");
+});
+
+test("the picker offers each speaker by id; the default row and a blank id are left out", () => {
+  const listed = [
+    { kind: "audiooutput", label: "", deviceId: "default" },
+    SPEAKER,
+    NAMELESS,
+    MICROPHONE,
+    { kind: "audiooutput", label: "", deviceId: "" },
+  ];
+  assert.deepEqual(speakerChoices(listed), [
+    { id: "id-of-1", name: FAKE_LABEL },
+    { id: "id-of-2", name: "Speaker 3" },
+  ]);
+  assert.deepEqual(speakerChoices([]), []);
 });

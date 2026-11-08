@@ -378,3 +378,45 @@ test("the script's numbers are the ones page.rs posts", () => {
     assert.match(source, new RegExp(`pub const ${name}: u32 = ${value};`));
   }
 });
+
+test("the disc's speaker is set on its one element and read back; a refusal answers its name", async () => {
+  const asked = [];
+  const audio = { sinkId: "" };
+  audio.setSinkId = async (id) => {
+    asked.push(id);
+    audio.sinkId = id;
+  };
+  const made = [];
+  const window = {
+    document: {
+      createElement: (tag) => {
+        made.push(tag);
+        return audio;
+      },
+    },
+  };
+  const lines = [];
+  const apply = startPlayer(window, [], { info: (...values) => lines.push(values) });
+  assert.equal(apply.sinkId, "");
+  assert.deepEqual(await apply.setSink("id-b"), { sinkId: "id-b", refusal: null });
+  assert.deepEqual(asked, ["id-b"]);
+  assert.equal(apply.sinkId, "id-b");
+  const named = (name) => Object.assign(new Error(`words with id-c in them`), { name });
+  audio.setSinkId = async () => {
+    throw named("NotFoundError");
+  };
+  assert.deepEqual(await apply.setSink("id-c"), { sinkId: "id-b", refusal: "NotFoundError" });
+  audio.setSinkId = () => {
+    throw named("NotAllowedError");
+  };
+  assert.deepEqual(await apply.setSink("id-c"), { sinkId: "id-b", refusal: "NotAllowedError" });
+  delete audio.setSinkId;
+  assert.deepEqual(await apply.setSink("id-c"), { sinkId: "id-b", refusal: "TypeError" });
+  assert.deepEqual(made, ["audio"], "one element, made at the start");
+  assert.deepEqual(lines, [
+    ["cd sink refused", "NotFoundError"],
+    ["cd sink refused", "NotAllowedError"],
+    ["cd sink refused", "TypeError"],
+  ]);
+  assert.doesNotMatch(JSON.stringify(lines), /id-/);
+});

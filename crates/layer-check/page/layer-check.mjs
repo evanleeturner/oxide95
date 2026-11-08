@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 // The page's wiring: buttons to checks, results to the list. It decides nothing the
 // other modules can decide. No key handler exists here and none may: a Tab key counts
-// as a gesture to a browser, and no sound may start before the button.
+// as a gesture to a browser, and no sound may start before the button. The mix's own
+// listeners, in `sound.mjs`, join only at that press.
 import {
   BEEP_HZ,
   countMatches,
@@ -9,6 +10,7 @@ import {
   pickCount,
   playBeeps,
 } from "./beep.mjs";
+import { startPlayer } from "./cd-player.mjs";
 import {
   checkClock,
   checkFeatures,
@@ -22,6 +24,7 @@ import {
 } from "./computer.mjs";
 import {
   askMicrophone,
+  checkChoice,
   checkFollows,
   checkList,
   checkPads,
@@ -31,6 +34,7 @@ import {
   listCounts,
   NO_ANSWER,
   padRows,
+  speakerChoices,
   watchDevices,
   YES,
 } from "./devices.mjs";
@@ -42,10 +46,22 @@ import {
   reportHoldsName,
   sentence,
 } from "./report.mjs";
+import { attachSound } from "./sound.mjs";
 
 const REPORT_FOR_EVERYONE = false;
 const NEEDS_ENGINE = "This check needs the sound engine, which did not start.";
 const NOT_ASKED = "not asked";
+// The mix's rate, and a program of the page's own that never hands the mix a frame:
+// the speaker choice moves the game's two routes with no game and no sound.
+const MIX_RATE = 44100;
+const QUIET_PROGRAM = {
+  memory: null,
+  rate: () => MIX_RATE,
+  tick: () => {},
+  gesture: () => {},
+  read_frames: () => 0,
+  frames_ptr: () => 0,
+};
 
 const part = (name) => document.querySelector(`.js-${name}`);
 const results = new Map();
@@ -54,6 +70,7 @@ let played = 0;
 let violations = 0;
 let deviceNames = [];
 let padNames = [];
+let speakers = [];
 
 function show(found) {
   results.set(found.check, found);
@@ -101,6 +118,7 @@ async function runChecks() {
     );
     part("count").hidden = false;
     if (navigator.mediaDevices) part("mic").hidden = false;
+    startSpeakers();
   }
   await showReport();
   logger.info("check.page.done", { results: results.size });
@@ -143,6 +161,43 @@ async function useMicrophone() {
   );
   await showReport();
   document.body.dataset.micDone = "true";
+}
+
+// The game's two routes, held from the Start press on and never before: the mix's
+// context and the disc's element. Neither plays a sound here.
+function startSpeakers() {
+  if (!navigator.mediaDevices) return;
+  speakers = [
+    attachSound({ wasm: QUIET_PROGRAM, logger }),
+    startPlayer(window, [], logger),
+  ];
+  part("speaker").hidden = false;
+}
+
+// A choice still listed stays chosen; one that left the list shows the default.
+function fillSpeakers(devices) {
+  const box = part("speaker-choice");
+  const picked = box.value;
+  const choices = speakerChoices(devices);
+  const rows = choices.map(({ id, name }) => {
+    const row = document.createElement("option");
+    row.value = id;
+    row.textContent = name;
+    return row;
+  });
+  box.replaceChildren(box.options[0], ...rows);
+  box.value = choices.some(({ id }) => id === picked) ? picked : "";
+}
+
+async function chooseSpeaker() {
+  const { result: found, refusal, taken } = await checkChoice(
+    speakers,
+    part("speaker-choice").value,
+  );
+  logger.info("check.page.speaker", { why: "pick", refusal });
+  show(found);
+  document.body.dataset.speakerTaken = `${taken} of ${speakers.length}`;
+  await showReport();
 }
 
 async function knownDevices() {
@@ -206,6 +261,7 @@ function showRead(read, why, media) {
   logger.debug("check.page.devices", { why, outputs, inputs, labelled });
   deviceNames = deviceRows(read.devices);
   fillRows();
+  fillSpeakers(read.devices);
   show(checkList(media, read));
 }
 
@@ -266,4 +322,5 @@ for (const count of [2, 3, 4]) {
 part("count-skip").addEventListener("click", () => void skipCount());
 part("mic-start").addEventListener("click", () => void useMicrophone());
 part("copy").addEventListener("click", () => void copyReport());
+part("speaker-choice").addEventListener("change", () => void chooseSpeaker());
 void startDevices();

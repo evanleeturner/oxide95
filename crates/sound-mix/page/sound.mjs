@@ -4,12 +4,15 @@
 // `toChannels` are pure and touch no browser; `attachSound` is the thin wiring.
 //
 // Call: attachSound({ wasm, logger, onChange }) -> a handle with `state`, `muted`,
-// `setMuted(boolean)` and `stats`. `wasm` holds the program's exports: `memory`,
-// `rate()`, `tick(now_ms)`, `gesture()`, `read_frames()` and `frames_ptr()`.
-// `onChange` runs when the context's state or the mute changes.
+// `setMuted(boolean)`, `setSink(id)`, `sinkId` and `stats`. `wasm` holds the
+// program's exports: `memory`, `rate()`, `tick(now_ms)`, `gesture()`, `read_frames()`
+// and `frames_ptr()`. `onChange` runs when the context's state or the mute changes.
+//       sinkRoute({ context, gain, document, logger }) -> `setSink` and `sinkId`.
 //
 // The handle's `context` and `gain` are the seam: `gain` is the last node every block
 // passes, the mute included, so a bench lays a tap after it and patches no browser call.
+// A speaker's choice moves only what follows `gain`, so the tap reads the same samples
+// on either route.
 //
 // Who owns an input: the listeners only watch. They are passive, so they cannot
 // call `preventDefault`, and a key still does what it does on any page. A pointer
@@ -57,11 +60,72 @@ export function toChannels(samples, frames) {
   return { left, right };
 }
 
+// Where the mix is heard, "" the default speaker. A context that takes a speaker moves
+// itself, as Chromium's does. One that does not, as Firefox's, sends `gain` by a stream
+// into one `<audio>`, made at the first choice, whose speaker takes it. `gain` leaves
+// the destination only once that element plays, so a refusal leaves the sound where it
+// was. Choices run one after another, in the order made.
+//
+// `setSink(id)` answers a promise of { sinkId, refusal }: `sinkId` read back from the
+// browser, `refusal` an error's name or null. It never throws. A read back shows the
+// browser took the choice, never that sound left that speaker.
+export function sinkRoute({ context, gain, document, logger }) {
+  const route = typeof context.setSinkId === "function" ? "context" : "element";
+  let outlet = null;
+  let element = null;
+  let moved = false;
+  let last = Promise.resolve();
+
+  const readBack = () => {
+    if (route === "context") return context.sinkId ?? "";
+    return moved ? (element.sinkId ?? "") : "";
+  };
+
+  const toElement = async (id) => {
+    if (element === null) {
+      outlet = context.createMediaStreamDestination();
+      element = document.createElement("audio");
+      element.srcObject = outlet.stream;
+    }
+    await element.setSinkId(id);
+    if (moved) return;
+    await element.play();
+    gain.connect(outlet);
+    gain.disconnect(context.destination);
+    moved = true;
+  };
+
+  const attempt = async (id) => {
+    let refusal = null;
+    try {
+      if (route === "context") await context.setSinkId(id);
+      else await toElement(id);
+    } catch (error) {
+      refusal = error?.name ?? String(error);
+    }
+    const sinkId = readBack();
+    logger.info("sound.page.sink", { route, refusal, taken: sinkId === id });
+    return { sinkId, refusal };
+  };
+
+  return {
+    setSink(id) {
+      const answer = last.then(() => attempt(id));
+      last = answer;
+      return answer;
+    },
+    get sinkId() {
+      return readBack();
+    },
+  };
+}
+
 export function attachSound({ wasm, logger, onChange = () => {} }) {
   const rate = wasm.rate();
   const context = new AudioContext({ sampleRate: rate });
   const gain = context.createGain();
   gain.connect(context.destination);
+  const sink = sinkRoute({ context, gain, document: window.document, logger });
   const stats = { frames: 0, dropped: 0, nodes: 0, reads: 0 };
   let next = 0;
   let began = false;
@@ -138,6 +202,10 @@ export function attachSound({ wasm, logger, onChange = () => {} }) {
       muted = value;
       gain.gain.value = muted ? 0 : 1;
       onChange();
+    },
+    setSink: sink.setSink,
+    get sinkId() {
+      return sink.sinkId;
     },
   };
 }
