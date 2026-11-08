@@ -74,7 +74,7 @@ export function attachSound({ wasm, logger, onChange = () => {} }) {
   window.addEventListener("click", wake, LISTEN);
 
   context.addEventListener("statechange", () => {
-    logger.info("sound: the context is", context.state);
+    logger.info("sound.page.state", { state: context.state });
     if (context.state === "running" && !began) {
       began = true;
       wasm.gesture();
@@ -102,7 +102,11 @@ export function attachSound({ wasm, logger, onChange = () => {} }) {
     node.start(plan.when);
     stats.frames += plan.kept;
     stats.nodes += 1;
-    logger.debug("sound: block", plan.when, plan.kept, plan.dropped);
+    logger.debug("sound.page.block", {
+      when: plan.when,
+      kept: plan.kept,
+      dropped: plan.dropped,
+    });
   };
 
   const frame = () => {

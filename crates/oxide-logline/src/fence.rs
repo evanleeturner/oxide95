@@ -39,7 +39,11 @@ const MACROS: [(&str, char); 5] = [
 
 /// The page folders the walk reads. An older page logs sentences and takes no
 /// row, so it stays out of this list until it moves to event ids.
-const PAGES_ON_IDS: [&str; 2] = ["crates/layer-check/page", "crates/web-shell/page"];
+const PAGES_ON_IDS: [&str; 3] = [
+    "crates/layer-check/page",
+    "crates/sound-mix/page",
+    "crates/web-shell/page",
+];
 
 const PAGE_CALLS: [(&str, char); 4] = [
     ("logger.error(", 'E'),

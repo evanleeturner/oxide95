@@ -178,6 +178,18 @@
       "template": "the page's back closed with {frames} frames unread"
     },
     {
+      "id": "sound.page.state",
+      "level": "I",
+      "fields": { "state": "the audio context's state now" },
+      "template": "the page's sound context is {state}"
+    },
+    {
+      "id": "sound.page.block",
+      "level": "D",
+      "fields": { "when": "the context time the block starts at, in seconds", "kept": "the frames scheduled", "dropped": "the frames past the lead cap, counted and not played" },
+      "template": "a block of {kept} frames starts at {when} s; {dropped} dropped"
+    },
+    {
       "id": "sound.witness.block",
       "level": "D",
       "fields": { "frames": "the frames handed to the back in this write", "hash": "the stream's hash so far", "by": "the crate the mix belongs to" },

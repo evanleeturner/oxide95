@@ -57,8 +57,13 @@ fn fails_once(report: &Report, words: &str) {
 
 /// A throwaway workspace holding `rows` and one script in a page folder the walk reads.
 fn walk_page(name: &str, rows: &[Value], script: &str) -> Report {
+    walk_page_in("crates/layer-check/page", name, rows, script)
+}
+
+/// [`walk_page`] with the script in `folder`.
+fn walk_page_in(folder: &str, name: &str, rows: &[Value], script: &str) -> Report {
     let root = Path::new(env!("CARGO_TARGET_TMPDIR")).join(format!("fence-page-{name}"));
-    let page = root.join("crates/layer-check/page");
+    let page = root.join(folder);
     fs::create_dir_all(&page).expect("the temporary tree is writable");
     fs::write(
         root.join("logbook.json"),
@@ -146,6 +151,55 @@ fn a_page_value_outside_one_object_fails() {
     let script = format!("{GOOD_PAGE_CALL}logger.info(\"made.page.result\", found.check);\n");
     let report = walk_page("loose", &[page_row()], &script);
     fails_once(&report, "go in one object");
+}
+
+#[test]
+fn the_sound_page_holds_on_its_row_and_its_old_sentences_fail() {
+    const FOLDER: &str = "crates/sound-mix/page";
+    let holds = walk_page_in(FOLDER, "sound-holds", &[page_row()], GOOD_PAGE_CALL);
+    assert!(holds.problems.is_empty(), "{:?}", holds.problems);
+    assert_eq!((holds.sites, holds.files), (1, 1));
+    let plants = [
+        (
+            "sound-old-state",
+            format!("{GOOD_PAGE_CALL}logger.info(\"sound: the context is\", context.state);\n"),
+            "not a bare event id",
+        ),
+        (
+            "sound-old-block",
+            format!("{GOOD_PAGE_CALL}logger.debug(\"sound: block\", plan.when, plan.kept);\n"),
+            "not a bare event id",
+        ),
+        (
+            "sound-no-row",
+            format!("{GOOD_PAGE_CALL}logger.info(\"made.page.other\");\n"),
+            "uncataloged event",
+        ),
+        (
+            "sound-loose",
+            format!("{GOOD_PAGE_CALL}logger.info(\"made.page.result\", found.check);\n"),
+            "go in one object",
+        ),
+        (
+            "sound-level",
+            "logger.debug(\"made.page.result\", { check: found.check });\n".to_owned(),
+            "logged at D, cataloged at I",
+        ),
+        (
+            "sound-field",
+            "logger.info(\"made.page.result\");\n".to_owned(),
+            "the field `check` is logged nowhere",
+        ),
+        (
+            "sound-extra",
+            "logger.info(\"made.page.result\", { check: found.check, extra: 1 });\n".to_owned(),
+            "the undeclared field `extra`",
+        ),
+        ("sound-orphan", String::new(), "an orphan entry"),
+    ];
+    for (name, script, words) in plants {
+        fails_once(&walk_page_in(FOLDER, name, &[page_row()], &script), words);
+    }
 }
 
 #[test]
