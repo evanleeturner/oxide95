@@ -6,7 +6,7 @@
 //
 // Call: hashSamples(HASH_START, int16s) -> the hash, a BigInt; hand that back as the
 // first argument to go on. hashText(hash) -> 16 hex digits, as the Rust side prints it.
-const PRIME = 0x100000001b3n;
+const PRIME = 0x0000_0100_0000_01b3n;
 const MASK = 0xffffffffffffffffn;
 
 export const HASH_START = 0xcbf29ce484222325n;
