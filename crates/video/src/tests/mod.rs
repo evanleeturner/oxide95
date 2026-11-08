@@ -11,6 +11,7 @@ mod disc;
 mod fakes;
 mod fronts;
 mod mix;
+mod probes;
 mod sound;
 mod test_log;
 #[allow(

@@ -30,3 +30,8 @@ log = { version = "0.4", features = ["kv"] }
 
 [dev-dependencies]
 oxide_logline = { path = "../oxide-logline" }
+
+# One clip on the host's own clock, timed from outside by `bench/pace_and_door.py`.
+[[example]]
+name = "pace_and_door"
+path = "bench/pace_and_door.rs"
