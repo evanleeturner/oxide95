@@ -70,8 +70,10 @@ const KEYS = {
 // page has missed a key and then sees one again, the keyboard gone to the browser's
 // own controls and back, or ROUND_MAX keys have gone. The page's focus reads cannot
 // mark the way back: one engine keeps `activeElement` and `hasFocus()` unchanged
-// while its own controls hold the keys, so the recorder's codes are the judge.
-const onCanvas = (read) => read.role === "application";
+// while its own controls hold the keys, so the recorder's codes are the judge. For
+// the same reason every group starts by a click and the plain key, never on a read
+// that says the page holds the keys, and a round the page never got back ends by a
+// click too.
 const openBy = (key) => [
   ["open", "Shift+Tab"],
   ["open", "Shift+Tab"],
@@ -335,23 +337,32 @@ async function main() {
       .filter(Boolean)
       .pop();
     if (!win) throw new Wall(1, "BENCH: no window of the page's title on the screen");
+    // X's focus to the page by a click inside the canvas, then the focus put on the
+    // canvas, or on the box's first push while the box is open, its backdrop inert.
     const home = async (why) => {
       xdo("windowfocus", win);
       xdo("mousemove", "--window", win, ...CLICK_AT);
       xdo("click", "1");
       await sleep(SETTLE_MS);
-      await page.focus(".js-screen");
-      out(`act ${engine} home, ${why}`);
+      const open = await page.evaluate(() => document.querySelector("dialog").open);
+      await page.focus(open ? "dialog button" : ".js-screen");
+      out(`act ${engine} ${open ? "the box's first push" : "home"}, ${why}`);
+    };
+    // The plain key, before any row and after each click: one that never reaches the
+    // page is the bench's wall, the keyboard held where no row can read it.
+    const plainGate = async (why) => {
+      if (plant !== "no-plain-key") xdo("key", KEYS.Plain[0]);
+      await sleep(SETTLE_MS);
+      const reached = (await page.evaluate(readInPage)).codes.includes("KeyZ");
+      out(`baseline ${engine} ${why}, the plain key reached the page: ${reached}`);
+      if (!reached) {
+        throw new Wall(5, `BENCH WALL: the plain key never reached the page, ${why}`);
+      }
     };
     await home("the start");
     await page.evaluate(installRecorder);
     const born = await page.evaluate(() => performance.timeOrigin);
-
-    if (plant !== "no-plain-key") xdo("key", "z");
-    await sleep(SETTLE_MS);
-    const baseline = (await page.evaluate(readInPage)).codes.includes("KeyZ");
-    out(`baseline ${engine} the plain key reached the page: ${baseline}`);
-    if (!baseline) throw new Wall(5, "BENCH WALL: the plain key never reached the page");
+    await plainGate("the start");
 
     let row = 0;
     let pressed = false;
@@ -397,24 +408,32 @@ async function main() {
       return read;
     };
 
-    for (const [index, [group, steps]] of GROUPS.entries()) {
+    for (const [group, steps] of GROUPS) {
       out(`group ${engine} ${group}`);
       const start = await page.evaluate(readInPage);
       if (start.box) throw new Wall(1, `BENCH: the box left open before "${group}"`);
-      if (index < 2 || !onCanvas(start) || !start.has) await home(`before "${group}"`);
+      await home(`before "${group}"`);
+      await plainGate(`before "${group}"`);
       for (const [check, key, round] of steps) {
         let read = await send(check, key);
         let missed = read.codes.length === 0;
         const back = () => missed && read.codes.length > 0;
-        for (let more = 1; round && !back() && more < ROUND_MAX; more += 1) {
+        let sent = 1;
+        for (; round && !back() && sent < ROUND_MAX; sent += 1) {
           read = await send(check, key);
           missed ||= read.codes.length === 0;
+        }
+        if (round && missed && !back()) {
+          out(`round ${engine} ${check} key=${key} lost: ${sent} keys, none seen again`);
+          await home("after a lost round");
+          await plainGate("after a lost round");
         }
       }
     }
     const after = (await send("plain-after", "Plain")).codes.includes("KeyZ");
     out(`plain-after ${engine} the plain key reached the page: ${after}`);
     out(`rows ${engine} ${row}`);
+    if (!after) throw new Wall(5, "BENCH WALL: the plain key after the rows never reached the page");
   } catch (error) {
     code = error instanceof Wall ? error.code : 1;
     out(error instanceof Wall ? error.message : `FAILED: ${error.message}`);
