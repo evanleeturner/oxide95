@@ -10,6 +10,7 @@ mod fixtures;
 mod palette_runs;
 mod pictures;
 mod probes;
+mod refusal_cuts;
 mod refusals;
 mod sound;
 mod test_log;

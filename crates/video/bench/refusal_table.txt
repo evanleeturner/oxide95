@@ -1,0 +1,37 @@
+# Each hand-cut clip and the name its fault must be refused by, written from the
+# fault and never from an answer. The clips: video-smacker's `write_the_cuts`.
+# clip name
+first-byte not-smacker
+smk4 smk4
+flag-1 ring-frame
+flag-2 interlaced
+flag-4 doubled
+flag-8 unknown-flags
+rate-0 rate
+rate-positive rate
+rate-overflow rate
+width-0 size-not-blocks
+height-6 size-not-blocks
+size-past too-large
+size-just-past too-large
+largest-past too-large
+frames-0 no-frames
+track-eight eight-bit-sound
+track-bink-26 bink-audio
+track-bink-27 bink-audio
+track-raw raw-sound
+track-second second-track
+kind-no-track sound-without-track
+kind-second second-track
+no-trees no-trees
+palette-past palette
+palette-cut truncated-palette
+sound-length-4 sound-chunk
+sound-unpacked-past sound-too-large
+cut-header truncated-header
+cut-tables truncated-tables
+cut-trees truncated-trees
+trees-word-0 truncated-trees
+cut-frames truncated-frames
+sound-frame-cut truncated-sound
+video-chunk-empty truncated-video
