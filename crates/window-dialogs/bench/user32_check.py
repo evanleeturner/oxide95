@@ -33,7 +33,7 @@ HERE = Path(__file__).resolve().parent
 ROWS_FILE = HERE / "user32_rows.txt"
 WINDOWS = "i686-pc-windows-gnu"
 I386 = 0x14C
-MODES = ("menus", "bars", "box", "inside")
+MODES = ("menus", "bars", "box", "inside", "keys")
 BUILD_LIMIT_S = 900
 RUN_LIMIT_S = 300
 
@@ -55,6 +55,13 @@ _THREE = "USER32 keeps a three-state box's third state; Front sets it on 1 alone
 _NO_CHECK = "a push or a label keeps no check under USER32; Front's does"
 _LACKING = "USER32 answers 1 for an id the box lacks; Front answers 0"
 _KEPT = "USER32 keeps the box until its procedure returns; Front closes it at EndDialog"
+_EARLY = (
+    "USER32 sends a key's command inside the key's own handling; Front queues it last"
+)
+_HANDLE = "USER32's command hands the control's handle; Front's hands 0"
+_TAB = "USER32's Tab skips a disabled or hidden control; Front stops on every tab stop"
+_RADIO = "Space flips an auto radio under USER32; Front flips an auto check alone"
+_DOWN = "USER32 clicks at the key's up; Front presses at the down"
 
 STANDING: dict[str, Standing] = {
     "bar.load.version1": Standing(
@@ -111,6 +118,48 @@ STANDING: dict[str, Standing] = {
         "7",
         "USER32 refuses a box holding an unknown class ordinal; Front opens it",
     ),
+    **{
+        f"keys.{case}.0.early": Standing("1", "0", _EARLY)
+        for case in (
+            "return",
+            "returnother",
+            "returnnone",
+            "escape",
+            "escapenone",
+            "spaceauto",
+            "spaceplain",
+            "spaceradio",
+            "spacepush",
+        )
+    },
+    "keys.return.0.commands": Standing("1/0/same-as-id1/0", "1/0/0/0", _HANDLE),
+    "keys.escape.0.commands": Standing("2/0/same-as-id2/0", "2/0/0/0", _HANDLE),
+    "keys.spaceauto.0.commands": Standing("11/0/same-as-id11/1", "11/0/0/1", _HANDLE),
+    "keys.spaceplain.0.commands": Standing("15/0/same-as-id15/0", "15/0/0/0", _HANDLE),
+    "keys.spacepush.0.commands": Standing("13/0/same-as-id13/0", "13/0/0/0", _HANDLE),
+    "keys.returnother.0.commands": Standing(
+        "13/0/same-as-id13/0",
+        "1/0/0/0",
+        "USER32 moves the default push with the focus; Front keeps the template's",
+    ),
+    **{
+        f"keys.tab.{step}.focus": Standing(
+            f"same-as-id{theirs}", f"same-as-id{ours}", _TAB
+        )
+        for step, theirs, ours in (
+            (1, 11, 17),
+            (2, 15, 11),
+            (3, 16, 15),
+            (4, 2, 16),
+            (5, 1, 18),
+            (6, 13, 2),
+            (7, 11, 1),
+        )
+    },
+    "keys.spaceradio.0.commands": Standing("16/0/same-as-id16/1", "16/0/0/0", _RADIO),
+    "keys.spaceradio.checks": Standing("001", "000", _RADIO),
+    "keys.spacedown.0.commands": Standing("none", "11/0/0/1", _DOWN),
+    "keys.spacedown.checks": Standing("000", "100", _DOWN),
 }
 
 
