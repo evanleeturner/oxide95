@@ -26,8 +26,9 @@
 //! not read. A volume or pan set while playing reaches the frames not yet with the
 //! door, so it is heard up to [`buffers::LEAD_US`] late.
 //!
-//! No call here has yet run in a real program: the fronts have run on a host's
-//! tests. A 64-bit host's word from `Lock` is not a pointer, so a host writes through
+//! The fronts have run on a host's tests and, under Wine, in the 32-bit `s6_route`
+//! bench; no real `DirectSound` program has run them. A 64-bit host's word from
+//! `Lock` is not a pointer, so a host writes through
 //! [`buffers::Buffers::with_bytes`]. One thread's calls: a named wall, as
 //! `draw-surfaces`.
 #![cfg_attr(not(test), no_std)]
