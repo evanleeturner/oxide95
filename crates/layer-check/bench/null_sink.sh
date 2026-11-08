@@ -59,7 +59,14 @@ cleanup() {
   exit "${code}"
 }
 
+# The computer's settings, as one line. Inside `private_sound.sh` there are none to guard: that
+# server starts with no output, so the first one added becomes its default, and the computer's
+# own server is read from outside it.
 box_state() {
+  if [[ -n "${PRIVATE_SOUND:-}" ]]; then
+    printf 'private\n'
+    return 0
+  fi
   local sink
   sink=$(pactl get-default-sink)
   printf '%s|%s|%s\n' "${sink}" "$(pactl get-default-source)" "$(pactl get-sink-volume "${sink}")"
