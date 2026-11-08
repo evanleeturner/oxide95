@@ -15,6 +15,7 @@ use core::cell::RefCell;
 use std::path::PathBuf;
 use std::{fs, io};
 use table::{Calls, Errors};
+mod shapes;
 
 const ROOT: u32 = 0x8000_0002;
 
