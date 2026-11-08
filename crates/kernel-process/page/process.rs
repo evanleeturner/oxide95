@@ -176,21 +176,26 @@ fn pointers(rows: &mut Rows) {
     rows.row("pointers.page.code_past", front.bad_code(0x2000));
 }
 
-/// One miss in each crate that keeps a last error, read in that crate and through the process.
+/// One miss in each crate that sets the last error, read in that crate and through the process.
+/// Every crate sets and reads the one shared slot, so the two rows agree. Each miss clears the
+/// slot first: a crate that set nothing would otherwise read the code the miss before it left.
 fn last_error(rows: &mut Rows) {
     let front = process();
     let files = Files::new(&FILES, MemoryFolder::default());
+    kernel_last_error::set(0);
     files.open(c"NO.DAT", 0x8000_0000, 1, OPEN_EXISTING, 0x80);
     rows.row("files.memory.own", files.folder().last_error());
     rows.row("files.memory.through", front.last_error());
 
     let disc = Disc::open(Source::Iso(empty_disc())).expect("the volume opens");
     let files = Files::new(&FILES, disc);
+    kernel_last_error::set(0);
     files.open(c"NO.DAT", 0x8000_0000, 1, OPEN_EXISTING, 0x80);
     rows.row("files.disc.own", files.folder().last_error());
     rows.row("files.disc.through", front.last_error());
 
     let calls = ThreadCalls::new(&THREADS, kernel_threads::page::Page::new());
+    kernel_last_error::set(0);
     let _ = calls.slot_free(0, 0xFFFF_FFF0);
     rows.row("threads.page.own", calls.threads().last_error());
     rows.row("threads.page.through", front.last_error());
@@ -200,11 +205,13 @@ fn last_error(rows: &mut Rows) {
         kernel_time::page::Page::new(Clock::new(u64::MAX, 0), 0),
     );
     let mut date = [0; kernel_time::table::DATE_BYTES];
+    kernel_last_error::set(0);
     times.to_system_time(1 << 63, &mut date);
     rows.row("time.page.own", times.clocks().last_error());
     rows.row("time.page.through", front.last_error());
 
     let text = kernel_text::Front::new(&TEXT, Portable::new(kernel_last_error::set));
+    kernel_last_error::set(0);
     let refused = text.code_page_info(9999).is_none();
     rows.row("text.refused", refused);
     rows.row("text.handed", HANDED.with(Front::last_error));
