@@ -51,6 +51,9 @@
 pub mod debug;
 pub mod table;
 
+#[cfg(test)]
+mod tests;
+
 use core::ptr::null_mut;
 use oxide_trace::{Args, Shown};
 use table::{Helper, Row};
