@@ -50,13 +50,12 @@ struct Find {
     next: usize,
 }
 
-/// The disc's open files and finds, and the last error the front kept.
+/// The disc's open files and finds.
 #[derive(Default)]
 pub(crate) struct Handles {
     open: RefCell<BTreeMap<u32, Open>>,
     finds: RefCell<BTreeMap<u32, Find>>,
     last_handle: Cell<u32>,
-    last_error: Cell<u32>,
 }
 
 impl Handles {
@@ -72,10 +71,10 @@ impl Handles {
 }
 
 impl<R: ReadAt> Disc<R> {
-    /// The last error the front kept.
+    /// The calling thread's last error, the slot every back shares.
     #[must_use]
     pub fn last_error(&self) -> u32 {
-        self.handles.last_error.get()
+        kernel_last_error::get()
     }
 
     fn is_folder(&self, key: &[u8]) -> bool {
@@ -262,7 +261,7 @@ impl<R: ReadAt> Folder for Disc<R> {
     }
 
     fn fail(&self, code: u32) {
-        self.handles.last_error.set(code);
+        kernel_last_error::set(code);
     }
 }
 

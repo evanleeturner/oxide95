@@ -44,6 +44,8 @@ fn a_page_lock_counts_its_takes() {
 
 #[test]
 fn a_page_slot_keeps_its_value_until_freed() {
+    // The slot outlives a store: a fresh 0 is set, not assumed.
+    kernel_last_error::set(0);
     let calls = ThreadCalls::new(&ROW, Page::new());
     let slot = calls.slot_alloc(0);
     assert_eq!(calls.slot_get(0, slot), 0);

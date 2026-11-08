@@ -35,10 +35,6 @@ thread_local! {
     static HANDED: Front<Page> = process();
 }
 
-fn handed(code: u32) {
-    HANDED.with(|process| process.set_last_error(code));
-}
-
 fn entries(_: &Module, name: &str) -> u32 {
     u32::from(name == "Sleep") * 7
 }
@@ -208,7 +204,7 @@ fn last_error(rows: &mut Rows) {
     rows.row("time.page.own", times.clocks().last_error());
     rows.row("time.page.through", front.last_error());
 
-    let text = kernel_text::Front::new(&TEXT, Portable::new(handed));
+    let text = kernel_text::Front::new(&TEXT, Portable::new(kernel_last_error::set));
     let refused = text.code_page_info(9999).is_none();
     rows.row("text.refused", refused);
     rows.row("text.handed", HANDED.with(Front::last_error));

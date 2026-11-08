@@ -109,6 +109,8 @@ fn a_module_name_matches_as_windows_does() {
 
 #[test]
 fn a_name_in_the_table_is_found() {
+    // The slot outlives a store: a fresh 0 is set, not assumed.
+    kernel_last_error::set(0);
     let front = front();
     let handle = front.load_library(b"lib.dll");
     assert_eq!(handle, 0x2000_0000);

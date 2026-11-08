@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 //! A host's process, Linux's, macOS's and Windows', through `std` alone:
-//! no C library call, so no target gate. The entries' numbers are the
-//! owner's, as [`crate::page::Page`]'s; the end is the host's own exit;
-//! the last error one atomic, so a file's three fronts can share it
-//! through `&Host`.
+//! no C library call here, so no target gate. The entries' numbers are
+//! the owner's, as [`crate::page::Page`]'s; the end is the host's own
+//! exit; the last error the calling thread's slot, which every back
+//! shares and which is Windows' own there.
 //!
 //! The memory map is unread here (a named wall): `kernel-memory` keeps no
 //! region list, so a pointer reaches when it is not null and its bytes do
@@ -11,22 +11,17 @@
 //! the only callers of the three `IsBad*Ptr` names.
 use crate::table::Module;
 use crate::{Access, Process};
-use std::sync::atomic::{AtomicU32, Ordering};
 
 /// The process a host's program runs in.
 pub struct Host {
     entries: fn(&Module, &str) -> u32,
-    error: AtomicU32,
 }
 
 impl Host {
     /// The entries' numbers from `entries`, 0 for a name it has none for.
     #[must_use]
     pub const fn new(entries: fn(&Module, &str) -> u32) -> Self {
-        Self {
-            entries,
-            error: AtomicU32::new(0),
-        }
+        Self { entries }
     }
 }
 
@@ -42,11 +37,11 @@ impl Process for Host {
     }
 
     fn fail(&self, code: u32) {
-        self.error.store(code, Ordering::Relaxed);
+        kernel_last_error::set(code);
     }
 
     fn last_error(&self) -> u32 {
-        self.error.load(Ordering::Relaxed)
+        kernel_last_error::get()
     }
 
     fn reaches(&self, address: u32, size: u32, _access: Access) -> bool {

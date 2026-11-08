@@ -55,7 +55,6 @@ fn read_both(back: &str, code: u32, own: u32, through: u32) {
 }
 
 #[test]
-#[ignore = "the memory folder keeps its own last error, so its miss reads 0 through the process"]
 fn a_miss_in_the_memory_folder_reads_through_the_process() {
     let process = page_process();
     let files = Files::new(&FILES, MemoryFolder::default());
@@ -65,7 +64,6 @@ fn a_miss_in_the_memory_folder_reads_through_the_process() {
 }
 
 #[test]
-#[ignore = "the disc keeps its own last error, so its miss reads 0 through the process"]
 fn a_miss_on_the_disc_reads_through_the_process() {
     let process = page_process();
     let disc = Disc::open(Source::Iso(empty_disc())).expect("the volume opens");
@@ -76,7 +74,6 @@ fn a_miss_on_the_disc_reads_through_the_process() {
 }
 
 #[test]
-#[ignore = "the thread back keeps its own last error, so its refusal reads 0 through the process"]
 fn a_refused_slot_on_the_host_reads_through_the_process() {
     let process = host_process();
     let calls = ThreadCalls::new(&THREADS, kernel_threads::host::Host::new());
@@ -86,7 +83,6 @@ fn a_refused_slot_on_the_host_reads_through_the_process() {
 }
 
 #[test]
-#[ignore = "the thread back keeps its own last error, so its refusal reads 0 through the process"]
 fn a_refused_slot_on_the_page_reads_through_the_process() {
     let process = page_process();
     let calls = ThreadCalls::new(&THREADS, kernel_threads::page::Page::new());
@@ -96,7 +92,6 @@ fn a_refused_slot_on_the_page_reads_through_the_process() {
 }
 
 #[test]
-#[ignore = "the time back keeps its own last error, so its refusal reads 0 through the process"]
 fn a_refused_time_on_the_host_reads_through_the_process() {
     let process = host_process();
     let times = Times::new(&TIME, kernel_time::host::Host::new(u64::MAX));
@@ -107,7 +102,6 @@ fn a_refused_time_on_the_host_reads_through_the_process() {
 }
 
 #[test]
-#[ignore = "the time back keeps its own last error, so its refusal reads 0 through the process"]
 fn a_refused_time_on_the_page_reads_through_the_process() {
     let process = page_process();
     let times = Times::new(
@@ -121,7 +115,6 @@ fn a_refused_time_on_the_page_reads_through_the_process() {
 }
 
 #[test]
-#[ignore = "the host back keeps one slot for the whole process, where the promise is one a thread"]
 fn the_host_back_keeps_one_slot_a_thread() {
     let back = Host::new(entries);
     Front::new(&ROW, &back).set_last_error(1234);

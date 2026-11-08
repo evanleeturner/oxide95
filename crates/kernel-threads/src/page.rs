@@ -6,16 +6,15 @@
 use crate::Threads;
 use crate::table::SLOTS;
 use alloc::collections::BTreeMap;
-use core::cell::{Cell, RefCell};
+use core::cell::RefCell;
 
 /// The page's one thread's number.
 pub const PAGE_THREAD: u32 = 1;
 
-/// The one thread's locks, slots and last error.
+/// The one thread's locks and slots.
 pub struct Page {
     takes: RefCell<BTreeMap<u32, u32>>,
     slots: RefCell<[Option<u32>; SLOTS as usize]>,
-    error: Cell<u32>,
 }
 
 impl Page {
@@ -24,7 +23,6 @@ impl Page {
         Self {
             takes: RefCell::new(BTreeMap::new()),
             slots: RefCell::new([None; SLOTS as usize]),
-            error: Cell::new(0),
         }
     }
 
@@ -34,10 +32,10 @@ impl Page {
         self.takes.borrow().get(&lock).copied().unwrap_or(0)
     }
 
-    /// The last error kept.
+    /// The calling thread's last error, the slot every back shares.
     #[must_use]
     pub fn last_error(&self) -> u32 {
-        self.error.get()
+        kernel_last_error::get()
     }
 
     fn slot(&self, slot: u32) -> Option<usize> {
@@ -99,6 +97,6 @@ impl Threads for Page {
     }
 
     fn set_last_error(&self, code: u32) {
-        self.error.set(code);
+        kernel_last_error::set(code);
     }
 }

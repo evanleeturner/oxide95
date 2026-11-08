@@ -29,6 +29,7 @@ unwrap_used = "deny"
 undocumented_unsafe_blocks = "deny"
 
 [dependencies]
+kernel_last_error = { path = "../kernel-last-error" }
 kernel_files = { path = "../kernel-files" }
 log = { version = "0.4", features = ["kv"] }
 

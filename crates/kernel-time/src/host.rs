@@ -6,7 +6,6 @@
 
 use crate::clock::Clock;
 use crate::{Clocks, date};
-use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Mutex, PoisonError};
 use std::thread;
 use std::time::{Duration, Instant, SystemTime};
@@ -23,7 +22,6 @@ fn ticks(span: Duration) -> u64 {
 pub struct Host {
     start: Instant,
     clock: Mutex<Clock>,
-    error: AtomicU32,
 }
 
 impl Host {
@@ -36,14 +34,13 @@ impl Host {
         Self {
             start: Instant::now(),
             clock: Mutex::new(clock),
-            error: AtomicU32::new(0),
         }
     }
 
-    /// The last error kept.
+    /// The calling thread's last error, the slot every back shares.
     #[must_use]
     pub fn last_error(&self) -> u32 {
-        self.error.load(Ordering::Relaxed)
+        kernel_last_error::get()
     }
 }
 
@@ -68,6 +65,6 @@ impl Clocks for Host {
     }
 
     fn fail(&self, code: u32) {
-        self.error.store(code, Ordering::Relaxed);
+        kernel_last_error::set(code);
     }
 }

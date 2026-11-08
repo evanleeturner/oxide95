@@ -15,7 +15,6 @@ use core::cell::Cell;
 pub struct Page {
     clock: Cell<Clock>,
     wall: Cell<u64>,
-    error: Cell<u32>,
     /// The host's instant, called at each read of the game clock; none on a
     /// clock only the owner's frames move.
     read: Option<fn() -> u64>,
@@ -28,7 +27,6 @@ impl Page {
         Self {
             clock: Cell::new(clock),
             wall: Cell::new(wall),
-            error: Cell::new(0),
             read: None,
         }
     }
@@ -40,7 +38,6 @@ impl Page {
         Self {
             clock: Cell::new(clock),
             wall: Cell::new(wall),
-            error: Cell::new(0),
             read: Some(read),
         }
     }
@@ -82,10 +79,10 @@ impl Page {
         self.clock.get()
     }
 
-    /// The last error kept.
+    /// The calling thread's last error, the slot every back shares.
     #[must_use]
     pub fn last_error(&self) -> u32 {
-        self.error.get()
+        kernel_last_error::get()
     }
 }
 
@@ -104,6 +101,6 @@ impl Clocks for Page {
     fn sleep(&self, _millis: u32) {}
 
     fn fail(&self, code: u32) {
-        self.error.set(code);
+        kernel_last_error::set(code);
     }
 }

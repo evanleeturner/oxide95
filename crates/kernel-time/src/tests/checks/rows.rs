@@ -218,6 +218,8 @@ fn words_of(bytes: &[u8; DATE_BYTES]) -> [u16; 8] {
 fn table(book: &mut Book<'_>) {
     for (name, ticks, want) in TABLE {
         let times = fixed(1, 0, 0);
+        // The slot outlives a store: a fresh 0 is set, not assumed.
+        kernel_last_error::set(0);
         let mut bytes = [SENTINEL; DATE_BYTES];
         let ok = times.to_system_time(ticks, &mut bytes);
         let words = words_of(&bytes);

@@ -7,7 +7,7 @@
 //! every thread's old value in it reads 0, as Windows zeroes them.
 use crate::Threads;
 use crate::table::SLOTS;
-use std::cell::{Cell, RefCell};
+use std::cell::RefCell;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
@@ -20,7 +20,6 @@ static NEXT_GENERATION: AtomicU32 = AtomicU32::new(1);
 
 thread_local! {
     static THREAD: u32 = NEXT_THREAD.fetch_add(1, Ordering::Relaxed);
-    static ERROR: Cell<u32> = const { Cell::new(0) };
     /// This thread's (generation, value) a slot.
     static VALUES: RefCell<[(u32, u32); SLOTS as usize]> =
         const { RefCell::new([(0, 0); SLOTS as usize]) };
@@ -137,14 +136,14 @@ impl Threads for Host {
     }
 
     fn set_last_error(&self, code: u32) {
-        ERROR.with(|error| error.set(code));
+        kernel_last_error::set(code);
     }
 }
 
 impl Host {
-    /// The calling thread's last error.
+    /// The calling thread's last error, the slot every back shares.
     #[must_use]
     pub fn last_error(&self) -> u32 {
-        ERROR.with(Cell::get)
+        kernel_last_error::get()
     }
 }

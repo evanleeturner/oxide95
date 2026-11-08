@@ -37,6 +37,7 @@ path = "page/process.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
+kernel_last_error = { path = "../kernel-last-error" }
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }
 

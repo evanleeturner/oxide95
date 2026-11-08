@@ -11,7 +11,6 @@ use core::cell::Cell;
 pub struct Page {
     entries: fn(&Module, &str) -> u32,
     memory: fn(u32, u32, Access) -> bool,
-    error: Cell<u32>,
     ended: Cell<Option<u32>>,
 }
 
@@ -26,7 +25,6 @@ impl Page {
         Self {
             entries,
             memory,
-            error: Cell::new(0),
             ended: Cell::new(None),
         }
     }
@@ -48,11 +46,11 @@ impl Process for Page {
     }
 
     fn fail(&self, code: u32) {
-        self.error.set(code);
+        kernel_last_error::set(code);
     }
 
     fn last_error(&self) -> u32 {
-        self.error.get()
+        kernel_last_error::get()
     }
 
     fn reaches(&self, address: u32, size: u32, access: Access) -> bool {

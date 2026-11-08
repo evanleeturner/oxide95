@@ -715,9 +715,14 @@ dependencies = [
 name = "kernel_files"
 version = "0.1.0"
 dependencies = [
+ "kernel_last_error",
  "log",
  "oxide_trace",
 ]
+
+[[package]]
+name = "kernel_last_error"
+version = "0.1.0"
 
 [[package]]
 name = "kernel_memory"
@@ -732,6 +737,7 @@ name = "kernel_process"
 version = "0.1.0"
 dependencies = [
  "kernel_files",
+ "kernel_last_error",
  "kernel_process",
  "kernel_text",
  "kernel_threads",
@@ -764,6 +770,7 @@ dependencies = [
 name = "kernel_threads"
 version = "0.1.0"
 dependencies = [
+ "kernel_last_error",
  "log",
  "oxide_trace",
 ]
@@ -772,6 +779,7 @@ dependencies = [
 name = "kernel_time"
 version = "0.1.0"
 dependencies = [
+ "kernel_last_error",
  "log",
  "oxide_trace",
 ]
@@ -858,6 +866,7 @@ name = "logical_disc"
 version = "0.1.0"
 dependencies = [
  "kernel_files",
+ "kernel_last_error",
  "log",
 ]
 

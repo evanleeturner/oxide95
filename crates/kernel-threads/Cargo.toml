@@ -39,5 +39,6 @@ crate-type = ["cdylib"]
 required-features = ["page"]
 
 [dependencies]
+kernel_last_error = { path = "../kernel-last-error" }
 oxide_trace = { path = "../oxide-trace" }
 log = { version = "0.4", features = ["kv"] }
