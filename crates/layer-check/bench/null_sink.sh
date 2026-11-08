@@ -50,7 +50,10 @@ stop_command() {
 
 cleanup() {
   local code=$?
-  trap - EXIT TERM INT
+  # A second signal must not stop this half done, or the output and its recorder stay behind.
+  # Nothing it stops ignores signals because of this, as all of it started before.
+  trap '' TERM INT
+  trap - EXIT
   [[ -z "${command_pid}" ]] || stop_command
   [[ -z "${capture_pid}" ]] || kill "${capture_pid}" 2>/dev/null || true
   if [[ -n "${module}" ]]; then
