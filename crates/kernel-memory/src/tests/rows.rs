@@ -542,6 +542,10 @@ fn me1_free(out: &mut Vec<Line>) {
 }
 
 /// Yes retries, no fails, each door by its own reading of `_newmode`.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one list of rows over one shared setup"
+)]
 fn me2_doors(out: &mut Vec<Line>) {
     let retries = [0, 0, B1];
     let yes2 = [true, true];
@@ -681,6 +685,10 @@ fn me2_doors(out: &mut Vec<Line>) {
 }
 
 /// The size a handler sees, and when `_newmode` is read.
+#[allow(
+    clippy::too_many_lines,
+    reason = "one list of rows over one shared setup"
+)]
 fn me2_mode(out: &mut Vec<Line>) {
     let seen = |run: &dyn Fn(&Heap<Spy>)| {
         let h = plain(Spy::new().moded());
