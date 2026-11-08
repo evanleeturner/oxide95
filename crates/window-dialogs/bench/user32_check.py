@@ -33,7 +33,7 @@ HERE = Path(__file__).resolve().parent
 ROWS_FILE = HERE / "user32_rows.txt"
 WINDOWS = "i686-pc-windows-gnu"
 I386 = 0x14C
-MODES = ("menus", "bars", "box")
+MODES = ("menus", "bars", "box", "inside")
 BUILD_LIMIT_S = 900
 RUN_LIMIT_S = 300
 
@@ -50,6 +50,11 @@ class Standing:
 _GONE = "USER32 refuses an owner that is gone; Front opens the box"
 _EXTENDED = "USER32 reads the extended template; Front refuses it"
 _LABEL = "USER32 hands the first tab stop; Front hands the first control"
+_TWO = "USER32 checks a two-state box on 2 and 3; Front sets it on 1 alone"
+_THREE = "USER32 keeps a three-state box's third state; Front sets it on 1 alone"
+_NO_CHECK = "a push or a label keeps no check under USER32; Front's does"
+_LACKING = "USER32 answers 1 for an id the box lacks; Front answers 0"
+_KEPT = "USER32 keeps the box until its procedure returns; Front closes it at EndDialog"
 
 STANDING: dict[str, Standing] = {
     "bar.load.version1": Standing(
@@ -83,6 +88,29 @@ STANDING: dict[str, Standing] = {
     "box.extended.init_l": Standing("51", "none", _EXTENDED),
     "box.extended.focus": Standing("same-as-box", "none", _EXTENDED),
     "box.extended.ended": Standing("1", "none", _EXTENDED),
+    "inside.id18.words": Standing(
+        "none",
+        "Combo",
+        "a drop-down list's text is its selection; Front keeps the template's words",
+    ),
+    "inside.checked.id11.2": Standing("1", "0", _TWO),
+    "inside.checked.id11.3": Standing("1", "0", _TWO),
+    "inside.checked.id12.2": Standing("2", "0", _THREE),
+    "inside.checked.id12.3": Standing("2", "0", _THREE),
+    "inside.checked.id13.1": Standing("0", "1", _NO_CHECK),
+    "inside.checked.id14.1": Standing("0", "1", _NO_CHECK),
+    "inside.check.id99.0": Standing("1", "0", _LACKING),
+    "inside.check.id99.1": Standing("1", "0", _LACKING),
+    "inside.check.id99.2": Standing("1", "0", _LACKING),
+    "inside.check.id99.3": Standing("1", "0", _LACKING),
+    "inside.after_end.item": Standing("live", "0", _KEPT),
+    "inside.after_end.checked": Standing("1", "0", _KEPT),
+    "inside.after_end.end": Standing("1", "0", _KEPT),
+    "inside.unknown.answer": Standing(
+        "-1",
+        "7",
+        "USER32 refuses a box holding an unknown class ordinal; Front opens it",
+    ),
 }
 
 
