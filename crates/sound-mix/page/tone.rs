@@ -175,6 +175,21 @@ pub extern "C" fn witness_frames() -> f64 {
     with(|program| program.seen.summary().frames as f64)
 }
 
+/// The witness's calls to the page's `write`. A float, as [`kept`] is. It moves with the
+/// clock's steps, so it is no fact about the sound.
+#[unsafe(no_mangle)]
+#[allow(clippy::cast_precision_loss)]
+pub extern "C" fn witness_blocks() -> f64 {
+    with(|program| program.seen.summary().blocks as f64)
+}
+
+/// The witness's hash of all it saw. A wasm `i64`, which the page reads as a signed `BigInt`, so
+/// the page takes it through `BigInt.asUintN(64, hash)`.
+#[unsafe(no_mangle)]
+pub extern "C" fn witness_hash() -> u64 {
+    with(|program| program.seen.summary().hash)
+}
+
 /// The clock the program last read, in ms.
 #[unsafe(no_mangle)]
 #[allow(clippy::cast_precision_loss)]
