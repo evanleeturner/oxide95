@@ -7,7 +7,8 @@
 //!   the check. With no device it asks the mapper. Measured on Wine: the mapper and device
 //!   0 both say yes to formats that cannot play, such as 9 channels. So a yes shows the
 //!   call answers and a device is listed; it takes C9's tone to show CD's format plays.
-//! - `tone <hz> <ms> <amplitude>`: plays a tone in CD's format, for C9's recording.
+//! - `tone <hz> <ms> <amplitude> [device name]`: plays a tone in CD's format, for C9's recording;
+//!   a name aims it at the listed output holding that text, for the guard's own check.
 //!
 //! Lines take the log's `imp.call` form, printed as this file links no logger. Exits 0
 //! on a pass, 1 on red, 2 on a call it cannot read.
@@ -63,9 +64,24 @@ struct Header {
     reserved: usize,
 }
 
+/// Windows' `WAVEOUTCAPSA`.
+#[repr(C)]
+#[derive(Default)]
+struct Caps {
+    maker: u16,
+    product: u16,
+    version: u32,
+    name: [u8; 32],
+    formats: u32,
+    channels: u16,
+    reserved: u16,
+    support: u32,
+}
+
 #[link(name = "winmm")]
 unsafe extern "system" {
     fn waveOutGetNumDevs() -> u32;
+    fn waveOutGetDevCapsA(device: usize, caps: *mut Caps, size: u32) -> u32;
     fn waveOutOpen(
         out: *mut usize,
         device: u32,
@@ -138,7 +154,21 @@ fn gate_opens() -> bool {
     receiver.recv_timeout(GATE_LIMIT).unwrap_or(false)
 }
 
-fn tone(hz: f64, ms: u32, amplitude: i16) -> ExitCode {
+/// The first listed output whose name holds this text.
+fn device_named(wanted: &str) -> Option<u32> {
+    // SAFETY: the call takes no arguments and only counts devices.
+    let devices = unsafe { waveOutGetNumDevs() };
+    (0..devices).find(|&device| {
+        let mut caps = Caps::default();
+        // `size_of` this struct of 52 bytes fits a u32, and a device number fits a pointer's width.
+        let size = size_of::<Caps>() as u32;
+        // SAFETY: `caps` lives across the call, and `size` is its size.
+        let answer = unsafe { waveOutGetDevCapsA(device as usize, &raw mut caps, size) };
+        answer == 0 && String::from_utf8_lossy(&caps.name).contains(wanted)
+    })
+}
+
+fn tone(hz: f64, ms: u32, amplitude: i16, device: u32) -> ExitCode {
     let format = Format::pcm(CD_RATE, 2, 16);
     let mut sound = samples(hz, ms, amplitude);
     let Ok(length) = u32::try_from(sound.len()) else {
@@ -146,7 +176,7 @@ fn tone(hz: f64, ms: u32, amplitude: i16) -> ExitCode {
     };
     let mut handle = 0_usize;
     // SAFETY: `handle` and `format` live across the call; no callback is asked for.
-    let opened = unsafe { waveOutOpen(&raw mut handle, WAVE_MAPPER, &raw const format, 0, 0, 0) };
+    let opened = unsafe { waveOutOpen(&raw mut handle, device, &raw const format, 0, 0, 0) };
     println!("imp.call c=WINMM!waveOutOpen a={CD_RATE},2,16 v={opened} by=layer-check");
     if opened != 0 {
         return ExitCode::FAILURE;
@@ -210,8 +240,23 @@ fn run(args: &[&str]) -> Option<ExitCode> {
             channels.parse().ok()?,
             bits.parse().ok()?,
         ),
-        ["tone", hz, ms, amplitude] => {
-            tone(hz.parse().ok()?, ms.parse().ok()?, amplitude.parse().ok()?)
+        ["tone", hz, ms, amplitude] => tone(
+            hz.parse().ok()?,
+            ms.parse().ok()?,
+            amplitude.parse().ok()?,
+            WAVE_MAPPER,
+        ),
+        ["tone", hz, ms, amplitude, name] => {
+            let Some(device) = device_named(name) else {
+                println!("no listed output holds {name}");
+                return Some(ExitCode::from(3));
+            };
+            tone(
+                hz.parse().ok()?,
+                ms.parse().ok()?,
+                amplitude.parse().ok()?,
+                device,
+            )
         }
         _ => return None,
     })
@@ -222,7 +267,7 @@ fn main() -> ExitCode {
     let args: Vec<&str> = args.iter().map(String::as_str).collect();
     run(&args).unwrap_or_else(|| {
         eprintln!(
-            "usage: waveprobe query <rate> <channels> <bits> [device] | tone <hz> <ms> <amplitude>"
+            "usage: waveprobe query <rate> <channels> <bits> [device] | tone <hz> <ms> <amplitude> [device name]"
         );
         ExitCode::from(2)
     })

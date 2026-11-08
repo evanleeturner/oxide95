@@ -12,15 +12,23 @@
 # `others_before=N`, the streams already on other outputs. A process is this run's when its own environment names the private
 # output; `ours=unread` means it could not be read, so nobody knows. A stream of this run on
 # another output could reach the room: the command is stopped at once, and the exit is 5.
-# Read 10 times a second, so a stream shorter than that goes unseen.
+# Read 10 times a second, so a stream shorter than that goes unseen. A stream not linked yet
+# reads `on=unlinked` and stops nothing. Wine's short format probe stops nothing inside
+# `private_sound.sh`, where every output is private; on the computer's own server it may name the
+# real output, so there it stops.
 #
 # The gate: the command's stdin stays silent until its stream is read on the private output,
 # then carries one line, `go`. A command that makes sound opens its stream, waits for that
-# line, and only then makes any, so a stream that lands elsewhere has nothing to play.
+# line, and only then makes any, so a stream that lands elsewhere has nothing to play. A Wine
+# probe never opens the gate: it is not the stream that plays.
 set -euo pipefail
 
 readonly RATE=48000
 readonly SINK="layer_check_$$"
+# What a stream reads as its output before it is linked: no output has this index.
+readonly NOT_LINKED=4294967295
+# Wine opens a stream of this name on each output at its start, and closes it unwritten.
+readonly WINE_PROBE=format_test_stream
 
 module=""
 capture_pid=""
@@ -75,11 +83,12 @@ box_state() {
   printf '%s|%s|%s\n' "${sink}" "$(pactl get-default-source)" "$(pactl get-sink-volume "${sink}")"
 }
 
-# Each sound stream as one line: its id, its output, its program, its name, its process.
+# Each sound stream as one line: its id, its output, its program, its name, its process, its
+# stream's own name.
 streams() {
   LC_ALL=C pactl list sink-inputs | awk '
     function flush() {
-      if (id != "") print id, sink, binary, name, pid
+      if (id != "") print id, sink, binary, name, pid, media
     }
     function quoted(line, part) {
       split(line, part, "\"")
@@ -88,12 +97,13 @@ streams() {
     }
     /^Sink Input #/ {
       flush()
-      id = substr($3, 2); sink = "-"; binary = "-"; name = "-"; pid = "-"
+      id = substr($3, 2); sink = "-"; binary = "-"; name = "-"; pid = "-"; media = "-"
     }
     /^[[:space:]]+Sink: / { sink = $2 }
     /application\.process\.binary = / { binary = quoted($0) }
     /application\.name = / { name = quoted($0) }
     /application\.process\.id = / { pid = quoted($0) }
+    /media\.name = / { media = quoted($0) }
     END { flush() }
   '
 }
@@ -121,27 +131,32 @@ sink_name() {
   '
 }
 
+harmless_probe() {
+  [[ -n "${PRIVATE_SOUND:-}" && "$1" == "${WINE_PROBE}" ]]
+}
+
 # Prints a stream the first time it is read on an output, so a move prints again.
 note_streams() {
   local own=$1
-  local list id sink binary name pid where prefix ours sink_label
+  local list id sink binary name pid media where prefix ours sink_label
   list=$(streams) || return 1
-  while read -r id sink binary name pid; do
+  while read -r id sink binary name pid media; do
     [[ -n "${id}" && -z "${seen["${id}:${sink}"]:-}" ]] || continue
     seen["${id}:${sink}"]=1
     where=other
     [[ "${sink}" != "${own}" ]] || where=private
+    [[ "${sink}" != "${NOT_LINKED}" ]] || where=unlinked
     ours=$(stream_owner "${pid}")
     prefix=$(process_env "${pid}" WINEPREFIX)
     prefix=${prefix// /_}
     sink_label=$(sink_name "${sink}")
-    printf 'stream id=%s on=%s sink=%s sink_name=%s binary=%s name=%s pid=%s prefix=%s ours=%s\n' \
-      "${id}" "${where}" "${sink}" "${sink_label}" "${binary}" "${name}" "${pid}" "${prefix:--}" "${ours}"
-    if [[ "${where}" == "other" && "${ours}" == "yes" ]]; then
+    printf 'stream id=%s on=%s sink=%s sink_name=%s binary=%s name=%s media=%s pid=%s prefix=%s ours=%s\n' \
+      "${id}" "${where}" "${sink}" "${sink_label}" "${binary}" "${name}" "${media}" "${pid}" "${prefix:--}" "${ours}"
+    if [[ "${where}" == "other" && "${ours}" == "yes" ]] && ! harmless_probe "${media}"; then
       err "a stream of this run reached another output: stopping it now"
       return 5
     fi
-    if [[ "${where}" == "private" && "${ours}" == "yes" && -z "${gate_open}" ]]; then
+    if [[ "${where}" == "private" && "${ours}" == "yes" && "${media}" != "${WINE_PROBE}" && -z "${gate_open}" ]]; then
       gate_open=1
       printf 'go\n' >&9
     fi
