@@ -32,6 +32,8 @@ extern crate alloc;
 pub mod memory;
 pub mod names;
 pub mod table;
+#[cfg(test)]
+mod tests;
 
 use core::ffi::CStr;
 use core::fmt;
