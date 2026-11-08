@@ -1239,6 +1239,345 @@ fn first_read(way: u32) {
     );
 }
 
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn SendMessageA(window: usize, message: u32, w: usize, l: isize) -> isize;
+}
+
+/// A box's own way to move its focus, `l` 1 naming the control by `w`: under USER32 a push
+/// that takes the focus this way takes the default with it.
+const WM_NEXTDLGCTL: u32 = 0x28;
+const RETURN: u8 = 0x0d;
+const TAB: u8 = 0x09;
+const ESCAPE: u8 = 0x1b;
+const SPACE: u8 = 0x20;
+const PLAIN_CHECK: u32 = 0x5001_0002;
+const RADIO: u32 = 0x5001_0009;
+/// A push with `WS_DISABLED`, and one without `WS_VISIBLE`, each a tab stop.
+const OFF: u32 = 0x5801_0000;
+const HIDDEN: u32 = 0x4001_0000;
+/// The commands the keys rows' procedure posts itself: once the box is up, after each key, and
+/// after that step, so a command queued behind the step still arrives before the reads.
+const GO: u16 = 0x9a;
+const STEP: u16 = 0x9b;
+const SETTLE: u16 = 0x9c;
+/// `Front`'s keys boxes: the full one at this id, the bare one after it.
+const KEYS_BOX: u32 = 50;
+/// The controls whose check each keys case reads at its end.
+const CHECKS: [u16; 3] = [11, 15, 16];
+
+/// A default push, a label, a push, a disabled push, an auto check, a plain check, an auto
+/// radio, a hidden push and an `IDCANCEL` push; every one a tab stop but the label.
+const KEYS_FULL: &[(u16, u16, u32, &str)] = &[
+    (1, 0x80, DEFAULT, "Ok"),
+    (14, 0x82, LABEL, "Name"),
+    (13, 0x80, PUSH, "Go"),
+    (17, 0x80, OFF, "Off"),
+    (11, 0x80, AUTO, "One"),
+    (15, 0x80, PLAIN_CHECK, "Two"),
+    (16, 0x80, RADIO, "Pick"),
+    (18, 0x80, HIDDEN, "Hid"),
+    (2, 0x80, PUSH, "Cancel"),
+];
+/// No default push and no `IDCANCEL`.
+const KEYS_BARE: &[(u16, u16, u32, &str)] = &[(13, 0x80, PUSH, "Go"), (11, 0x80, AUTO, "One")];
+
+/// One keys case: its row name, the bare box or the full, the control the focus starts on (0
+/// for the box's own choice), and its keys, each a down and an up, or the down alone if false.
+struct KeyCase {
+    name: &'static str,
+    bare: bool,
+    start: u16,
+    keys: &'static [(u8, bool)],
+}
+
+const fn keys_case(name: &'static str, bare: bool, start: u16, key: u8) -> KeyCase {
+    KeyCase {
+        name,
+        bare,
+        start,
+        keys: match key {
+            RETURN => &[(RETURN, true)],
+            ESCAPE => &[(ESCAPE, true)],
+            _ => &[(SPACE, true)],
+        },
+    }
+}
+
+const KEY_CASES: &[KeyCase] = &[
+    keys_case("return", false, 0, RETURN),
+    keys_case("returnother", false, 13, RETURN),
+    keys_case("returnnone", true, 0, RETURN),
+    keys_case("escape", false, 0, ESCAPE),
+    keys_case("escapenone", true, 0, ESCAPE),
+    KeyCase {
+        keys: &[(TAB, true); 8],
+        ..keys_case("tab", false, 1, TAB)
+    },
+    keys_case("spaceauto", false, 11, SPACE),
+    keys_case("spaceplain", false, 15, SPACE),
+    keys_case("spaceradio", false, 16, SPACE),
+    keys_case("spacepush", false, 13, SPACE),
+    KeyCase {
+        keys: &[(SPACE, false)],
+        ..keys_case("spacedown", false, 11, SPACE)
+    },
+];
+
+thread_local! {
+    /// The keys case under way, its next key's place, the commands heard since the last step,
+    /// and each read by its row's last words.
+    static KEYS_NOW: Cell<usize> = const { Cell::new(0) };
+    static KEY_PLACE: Cell<usize> = const { Cell::new(0) };
+    static HEARD: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
+    static READS: RefCell<Vec<(String, String)>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A command the procedure heard: its id, its code, its `l` by kind, and the control's check
+/// as the procedure reads it then.
+fn heard(w: u32, l: &str, checked: u32) -> String {
+    format!("{}/{}/{l}/{checked}", w & 0xffff, w >> 16)
+}
+
+/// One step's reads: the focus after its key, and every command heard since the step before.
+fn step_reads(reads: &mut Vec<(String, String)>, step: usize, focus: String, heard: &[String]) {
+    reads.push((format!("{step}.focus"), focus));
+    let heard = if heard.is_empty() {
+        "none".into()
+    } else {
+        heard.join(",")
+    };
+    reads.push((format!("{step}.commands"), heard));
+}
+
+/// Posts the next key of the case under way to the focus, or to the box when nothing holds it,
+/// then the step marker; false once no key is left.
+fn user32_post_key(window: usize) -> bool {
+    let place = KEY_PLACE.get();
+    let Some(&(key, both)) = KEY_CASES[KEYS_NOW.get()].keys.get(place) else {
+        return false;
+    };
+    KEY_PLACE.set(place + 1);
+    // SAFETY: the box is open while its procedure runs; a post takes any handle and fails softly.
+    unsafe {
+        let focus = GetFocus();
+        let target = if focus == 0 { window } else { focus };
+        PostMessageA(target, WM_KEYDOWN, usize::from(key), 1);
+        if both {
+            PostMessageA(target, WM_KEYUP, usize::from(key), KEY_UP_L);
+        }
+        PostMessageA(window, WM_COMMAND, usize::from(STEP), 0);
+    }
+    true
+}
+
+/// The keys rows' procedure under USER32: up, it moves the focus to the case's start and posts
+/// the first key; at each step it counts the commands heard so far and posts the settle marker;
+/// there it reads the focus and posts the next key, or, none left, reads the checks and ends
+/// the box; every other command is heard. Each key goes through the box's
+/// own loop and its `IsDialogMessage`, as the first step's way 3.
+extern "system" fn keyed(window: usize, message: u32, w: usize, l: isize) -> isize {
+    let id = w & 0xffff;
+    match message {
+        WM_INITDIALOG => {
+            // SAFETY: `window` is the box USER32 is opening; a post fails softly.
+            unsafe { PostMessageA(window, WM_COMMAND, usize::from(GO), 0) };
+            1
+        }
+        WM_COMMAND if id == usize::from(GO) => {
+            let start = KEY_CASES[KEYS_NOW.get()].start;
+            if start != 0 {
+                // SAFETY: the box is open; `GetDlgItem` answers 0 for an id it lacks, and the
+                // focus move takes any handle.
+                unsafe {
+                    let control = GetDlgItem(window, i32::from(start));
+                    SendMessageA(window, WM_NEXTDLGCTL, control, 1);
+                }
+            }
+            HEARD.take();
+            user32_post_key(window);
+            1
+        }
+        WM_COMMAND if id == usize::from(STEP) => {
+            let early = HEARD.with_borrow(Vec::len).to_string();
+            let step = KEY_PLACE.get().saturating_sub(1);
+            READS.with_borrow_mut(|reads| reads.push((format!("{step}.early"), early)));
+            // SAFETY: as above, the box open; a post fails softly.
+            unsafe { PostMessageA(window, WM_COMMAND, usize::from(SETTLE), 0) };
+            1
+        }
+        WM_COMMAND if id == usize::from(SETTLE) => {
+            let names = user32_names(window);
+            // SAFETY: the box is open while its procedure runs; the focus call takes nothing.
+            let focus = named(unsafe { GetFocus() }, &names);
+            let step = KEY_PLACE.get().saturating_sub(1);
+            READS.with_borrow_mut(|reads| step_reads(reads, step, focus, &HEARD.take()));
+            if !user32_post_key(window) {
+                let mut checks = String::new();
+                for control in CHECKS {
+                    // SAFETY: as above, the box open; an id it lacks answers 0.
+                    let checked = unsafe { IsDlgButtonChecked(window, i32::from(control)) };
+                    checks.push_str(&checked.to_string());
+                }
+                READS.with_borrow_mut(|reads| reads.push(("checks".into(), checks)));
+                // SAFETY: as above, the box open.
+                unsafe { EndDialog(window, ENDED) };
+            }
+            1
+        }
+        WM_COMMAND => {
+            let names = user32_names(window);
+            // SAFETY: as above, the box open; an id it lacks answers 0.
+            let checked = unsafe { IsDlgButtonChecked(window, i32::try_from(id).unwrap_or(0)) };
+            let l = named(usize::from_ne_bytes(l.to_ne_bytes()), &names);
+            let w = u32::try_from(w).unwrap_or(u32::MAX);
+            HEARD.with_borrow_mut(|commands| commands.push(heard(w, &l, checked)));
+            1
+        }
+        _ => 0,
+    }
+}
+
+/// Hands `Front` the next key of `case` as a host would, on the owner, then the step marker;
+/// false once no key is left.
+fn front_post_key(desk: &Desk<Page>, case: &KeyCase, window: u32, place: &mut usize) -> bool {
+    let Some(&(key, both)) = case.keys.get(*place) else {
+        return false;
+    };
+    *place += 1;
+    desk.screen().hand(Event::Key {
+        window: TOP,
+        key,
+        down: true,
+    });
+    if both {
+        desk.screen().hand(Event::Key {
+            window: TOP,
+            key,
+            down: false,
+        });
+    }
+    desk.screen().hand(Event::Command { window, id: STEP });
+    true
+}
+
+/// `Front`'s side of a keys case over a fresh desk, the same reads as `keyed`'s in one order.
+fn front_keys(disc: &Disc, case: &KeyCase, ids: &[u16], id: u32) -> (u32, Vec<(String, String)>) {
+    let (desk, tables) = (Desk::new(Page::new(0x280, 0x1e0)), Tables::new());
+    desk.state().windows.push(desk_window(TOP, 0, 0));
+    desk.state().focus = TOP;
+    let front = Front::new(&ROW, &desk, &tables, disc);
+    let (mut reads, mut commands, mut place) = (Vec::new(), Vec::new(), 0);
+    let answer = front.dialog_box_wait([INSTANCE, id, TOP, 0x50, 0x33], |_, sent| {
+        let names = front_names(&front, sent.window, ids, TOP);
+        let (window, id) = (sent.window, sent.w & 0xffff);
+        match sent.message {
+            WM_INITDIALOG => {
+                desk.screen().hand(Event::Command { window, id: GO });
+                1
+            }
+            WM_COMMAND if id == u32::from(GO) => {
+                if case.start != 0 {
+                    let control = front.get_dlg_item(window, u32::from(case.start));
+                    desk.state().focus = control;
+                }
+                front_post_key(&desk, case, window, &mut place);
+                0
+            }
+            WM_COMMAND if id == u32::from(STEP) => {
+                let step = place.saturating_sub(1);
+                reads.push((format!("{step}.early"), commands.len().to_string()));
+                desk.screen().hand(Event::Command { window, id: SETTLE });
+                0
+            }
+            WM_COMMAND if id == u32::from(SETTLE) => {
+                let focus = named(wide(desk.state().focus), &names);
+                let step = place.saturating_sub(1);
+                step_reads(&mut reads, step, focus, &std::mem::take(&mut commands));
+                if !front_post_key(&desk, case, window, &mut place) {
+                    let checks: String = CHECKS
+                        .iter()
+                        .map(|&control| {
+                            let checked = front.is_dlg_button_checked(window, u32::from(control));
+                            checked.to_string()
+                        })
+                        .collect();
+                    reads.push(("checks".into(), checks));
+                    let _ = front.end_dialog(window, 7);
+                }
+                0
+            }
+            WM_COMMAND => {
+                let checked = front.is_dlg_button_checked(window, id);
+                commands.push(heard(sent.w, &named(wide(sent.l), &names), checked));
+                0
+            }
+            _ => 0,
+        }
+    });
+    (answer, reads)
+}
+
+/// A read by its row's last words, `none` if that side never reached it.
+fn read_of(reads: &[(String, String)], last: &str) -> String {
+    reads
+        .iter()
+        .find(|(name, _)| name == last)
+        .map_or_else(|| "none".into(), |(_, value)| value.clone())
+}
+
+/// The keys rows: each case's answer, then after each key the focus and the commands heard,
+/// then the checks, both sides, every key through the box's own loop.
+fn keys() {
+    let bytes = [
+        plant::dialog(BOX_STYLE, "Keys", KEYS_FULL),
+        plant::dialog(BOX_STYLE, "Bare", KEYS_BARE),
+    ];
+    let entries = [
+        (resource::DIALOG, KEYS_BOX, &bytes[0][..]),
+        (resource::DIALOG, KEYS_BOX + 1, &bytes[1][..]),
+    ];
+    let disc = Disc(kernel_process::plant::image(&entries));
+    let templates = [aligned(&bytes[0]), aligned(&bytes[1])];
+    // SAFETY: a null name asks the exe's own module.
+    let instance = unsafe { GetModuleHandleA(std::ptr::null()) };
+    let windows = user32_windows(instance);
+    for (place, case) in KEY_CASES.iter().enumerate() {
+        let controls = if case.bare { KEYS_BARE } else { KEYS_FULL };
+        let ids: Vec<u16> = controls.iter().map(|control| control.0).collect();
+        KEYS_NOW.set(place);
+        KEY_PLACE.set(0);
+        READS.take();
+        IDS.set(ids.clone());
+        OWNER_NOW.set(windows[0]);
+        let template = &templates[usize::from(case.bare)];
+        let theirs = traced(|| {
+            // SAFETY: the template lives across the call, a whole planted template on a 4-byte
+            // boundary; the procedure is `extern "system"`; the owner is the live top window.
+            unsafe {
+                DialogBoxIndirectParamA(instance, template.as_ptr(), windows[0], keyed, PARAM)
+            }
+        });
+        let reads = READS.take();
+        let (ours, own) = front_keys(&disc, case, &ids, KEYS_BOX + u32::from(case.bare));
+        let name = case.name;
+        row_error(&format!("keys.{name}.answer"), &theirs, number(ours));
+        let lasts = (0..case.keys.len())
+            .flat_map(|step| {
+                [
+                    format!("{step}.early"),
+                    format!("{step}.focus"),
+                    format!("{step}.commands"),
+                ]
+            })
+            .chain(["checks".to_string()]);
+        for last in lasts {
+            let (user32, front) = (read_of(&reads, &last), read_of(&own, &last));
+            row(&format!("keys.{name}.{last}"), user32, front);
+        }
+    }
+}
+
 fn main() {
     let arguments: Vec<String> = std::env::args().collect();
     match arguments.get(1).map(String::as_str) {
@@ -1247,6 +1586,7 @@ fn main() {
         Some("bars") => bars(),
         Some("box") => boxes(),
         Some("inside") => inside(),
+        Some("keys") => keys(),
         Some("first") => {
             let way = arguments
                 .get(2)
@@ -1255,7 +1595,9 @@ fn main() {
             first_read(way);
         }
         _ => {
-            eprintln!("usage: user32_probe hello | menus | bars | box | inside | first <0|1|2|3>");
+            eprintln!(
+                "usage: user32_probe hello | menus | bars | box | inside | keys | first <0|1|2|3>"
+            );
             std::process::exit(2);
         }
     }
