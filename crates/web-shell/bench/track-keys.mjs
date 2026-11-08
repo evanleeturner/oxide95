@@ -44,6 +44,12 @@ export const TEXT_PLANTS = {
   "alt-prevented": ["track.mjs", "event.metaKey || event.altKey))", "event.metaKey))"],
   "all-prevented": ["track.mjs", KEY_RULE, "  event.preventDefault();"],
   "repeat-passed": ["track.mjs", "if (event.repeat || held.has", "if (held.has"],
+  // The held set refuses a repeat too, so the whole guard goes for a repeat to pass.
+  "repeat-guard-dropped": [
+    "track.mjs",
+    "  if (event.repeat || held.has(event.code) === down) return;\n",
+    "",
+  ],
   "a-b-swapped": ["keys.mjs", "KeyA: 0x41,\n  KeyB: 0x42,", "KeyA: 0x42,\n  KeyB: 0x41,"],
   "shift-right-sided": ["keys.mjs", "ShiftRight: 0x10,", "ShiftRight: 0xa1,"],
   "one-byte": [
