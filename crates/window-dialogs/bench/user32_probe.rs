@@ -11,7 +11,8 @@ use std::cell::Cell;
 use std::fmt::Display;
 
 use kernel_process::resource;
-use window::desk::Desk;
+use window::Rect;
+use window::desk::{Desk, Window};
 use window::page::Page;
 use window_dialogs::front::Front;
 use window_dialogs::table::{Calls, Row};
@@ -310,6 +311,259 @@ fn menus() {
     }
 }
 
+#[link(name = "user32")]
+unsafe extern "system" {
+    fn LoadMenuA(instance: usize, name: *const u8) -> usize;
+    fn SetMenu(window: usize, menu: usize) -> i32;
+    fn GetMenu(window: usize) -> usize;
+    fn DrawMenuBar(window: usize) -> i32;
+    fn RegisterClassA(class: *const WndClassA) -> u16;
+    #[allow(clippy::too_many_arguments)]
+    fn CreateWindowExA(
+        ex_style: u32,
+        class: *const u8,
+        title: *const u8,
+        style: u32,
+        x: i32,
+        y: i32,
+        width: i32,
+        height: i32,
+        parent: usize,
+        menu: usize,
+        instance: usize,
+        param: *const u8,
+    ) -> usize;
+    fn DestroyWindow(window: usize) -> i32;
+    fn DefWindowProcA(window: usize, message: u32, w: usize, l: isize) -> isize;
+}
+
+#[link(name = "kernel32")]
+unsafe extern "system" {
+    fn GetLastError() -> u32;
+    fn SetLastError(code: u32);
+}
+
+/// USER32's `WNDCLASSA`, as a 32-bit process lays it out.
+#[repr(C)]
+struct WndClassA {
+    style: u32,
+    procedure: Procedure,
+    class_extra: i32,
+    window_extra: i32,
+    instance: usize,
+    icon: usize,
+    cursor: usize,
+    background: usize,
+    menu_name: *const u8,
+    class_name: *const u8,
+}
+
+/// The bar rows' windows on `Front`'s desk: a top window, a second with no bar, a child
+/// control of the first; `GONE` is never placed, so it reads as a window gone.
+const TOP: u32 = 0x77;
+const BARE: u32 = 0x78;
+const CHILD: u32 = 0x79;
+const GONE: u32 = 0x7a;
+/// A menu handle neither side ever handed out.
+const NEVER: u32 = 0x7777;
+const WS_CHILD: u32 = 0x4000_0000;
+/// A menu number the module lacks.
+const LACKING: u32 = 99;
+
+/// The probe's own window procedure: USER32's default for every message.
+extern "system" fn plain(window: usize, message: u32, w: usize, l: isize) -> isize {
+    // SAFETY: USER32 calls this with its own live window and message, passed on unchanged.
+    unsafe { DefWindowProcA(window, message, w, l) }
+}
+
+/// A USER32 call's answer and the error it left, the error word cleared before the call.
+fn traced<T>(call: impl FnOnce() -> T) -> (T, u32) {
+    // SAFETY: the error word is this thread's own.
+    unsafe { SetLastError(0) };
+    let answer = call();
+    // SAFETY: as above.
+    (answer, unsafe { GetLastError() })
+}
+
+/// A row with USER32's error word beside its answer: `Front` keeps none.
+fn row_error(name: &str, user32: &(impl Display, u32), front: impl Display) {
+    println!(
+        "row={name} user32={} front={front} error={}",
+        user32.0, user32.1
+    );
+}
+
+fn desk_window(handle: u32, parent: u32, style: u32) -> Window {
+    Window {
+        handle,
+        class: Vec::new(),
+        procedure: 0,
+        rect: Rect::default(),
+        style,
+        ex_style: 0,
+        user: 0,
+        longs: Vec::new(),
+        title: Vec::new(),
+        parent,
+        shown: true,
+    }
+}
+
+/// USER32's hidden windows for the bar rows: top, bare, child of top, and one destroyed.
+fn user32_windows(instance: usize) -> [usize; 4] {
+    let name = c"probe".as_ptr().cast::<u8>();
+    let class = WndClassA {
+        style: 0,
+        procedure: plain,
+        class_extra: 0,
+        window_extra: 0,
+        instance,
+        icon: 0,
+        cursor: 0,
+        background: 0,
+        menu_name: std::ptr::null(),
+        class_name: name,
+    };
+    // SAFETY: the class and its name live across the call; the procedure is `extern "system"`.
+    if unsafe { RegisterClassA(&raw const class) } == 0 {
+        eprintln!("RegisterClassA refused");
+        std::process::exit(4);
+    }
+    let make = |parent: usize, style: u32| {
+        // SAFETY: the class is registered; its name and the empty title live across the call.
+        unsafe {
+            let title = c"".as_ptr().cast::<u8>();
+            CreateWindowExA(
+                0,
+                name,
+                title,
+                style,
+                0,
+                0,
+                64,
+                48,
+                parent,
+                0,
+                instance,
+                std::ptr::null(),
+            )
+        }
+    };
+    let (top, bare, gone) = (make(0, 0), make(0, 0), make(0, 0));
+    let child = make(top, WS_CHILD);
+    // SAFETY: `gone` is a window this run made; it is never used but as a handle gone.
+    if [top, bare, gone, child].contains(&0) || unsafe { DestroyWindow(gone) } == 0 {
+        eprintln!("a window was refused");
+        std::process::exit(4);
+    }
+    [top, bare, child, gone]
+}
+
+/// An extended menu template, version word 1: its header (the version, an offset of 4, a help
+/// id of 0), then one plain item, id 0x41, words "A", the last. USER32 reads a version word of 1
+/// in this form, so the planted template with only its version word changed is read past its end.
+fn extended_menu() -> Vec<u8> {
+    let mut bytes = Vec::new();
+    bytes.extend_from_slice(&1u16.to_le_bytes());
+    bytes.extend_from_slice(&4u16.to_le_bytes());
+    bytes.extend_from_slice(&0u32.to_le_bytes());
+    for word in [0u32, 0, 0x41] {
+        bytes.extend_from_slice(&word.to_le_bytes());
+    }
+    bytes.extend_from_slice(&0x80u16.to_le_bytes());
+    bytes.extend_from_slice(&[b'A', 0, 0, 0, 0, 0]);
+    bytes
+}
+
+/// The load and bar rows: `LoadMenuA` on a menu lacking, a version word of 1 on a whole extended
+/// template, a version word of 2 on the planted one, then `SetMenu` and `DrawMenuBar` on a top
+/// window, one with no bar, a window gone and a control.
+fn bars() {
+    let bytes = plant::menu(MENU_ROWS);
+    let template = aligned(&bytes);
+    let extended = extended_menu();
+    let extended_template = aligned(&extended);
+    let mut version2 = bytes.clone();
+    version2[0] = 2;
+    let version2_template = aligned(&version2);
+    let disc = Disc(kernel_process::plant::image(&[
+        (resource::MENU, MENU_ID, &bytes),
+        (resource::MENU, MENU_ID + 1, &extended),
+        (resource::MENU, MENU_ID + 2, &version2),
+    ]));
+    let (desk, tables) = (Desk::new(Page::new(0x280, 0x1e0)), Tables::new());
+    for (handle, parent, style) in [(TOP, 0, 0), (BARE, 0, 0), (CHILD, TOP, WS_CHILD)] {
+        desk.state()
+            .windows
+            .push(desk_window(handle, parent, style));
+    }
+    let front = Front::new(&ROW, &desk, &tables, &disc);
+    // SAFETY: a null name asks the exe's own module.
+    let instance = unsafe { GetModuleHandleA(std::ptr::null()) };
+    let lacking = std::ptr::without_provenance::<u8>(LACKING as usize);
+    // SAFETY: a number in a name's place is a resource number, read and never written.
+    let theirs = traced(|| kind(unsafe { LoadMenuA(instance, lacking) }, &[]));
+    row_error(
+        "bar.load.lacking",
+        &theirs,
+        kind(wide(front.load_menu(INSTANCE, LACKING)), &[]),
+    );
+    let theirs = traced(|| {
+        // SAFETY: a whole extended template, on a 4-byte boundary, alive for the call.
+        let menu = unsafe { LoadMenuIndirectA(extended_template.as_ptr()) };
+        kind(menu, &[])
+    });
+    let ours = kind(wide(front.load_menu(INSTANCE, MENU_ID + 1)), &[]);
+    row_error("bar.load.version1", &theirs, ours);
+    let theirs = traced(|| {
+        // SAFETY: a whole planted menu but its version word, on a 4-byte boundary, alive for the
+        // call.
+        let menu = unsafe { LoadMenuIndirectA(version2_template.as_ptr()) };
+        kind(menu, &[])
+    });
+    let ours = kind(wide(front.load_menu(INSTANCE, MENU_ID + 2)), &[]);
+    row_error("bar.load.version2", &theirs, ours);
+    let [top, bare, child, gone] = user32_windows(instance);
+    // SAFETY: as at `menus`' load.
+    let menus = (
+        unsafe { LoadMenuIndirectA(template.as_ptr()) },
+        front.load_menu(INSTANCE, MENU_ID),
+    );
+    let read = |name: &str| {
+        // SAFETY: `top` is this run's live window.
+        let theirs = kind(unsafe { GetMenu(top) }, &[("menu", menus.0)]);
+        let ours = tables.state().bar_mut(TOP).menu;
+        row(name, theirs, kind(wide(ours), &[("menu", wide(menus.1))]));
+    };
+    let never = (wide(NEVER), NEVER);
+    for (name, window, menu) in [
+        ("bar.set.menu", (top, TOP), menus),
+        ("bar.set.zero", (top, TOP), (0, 0)),
+        ("bar.set.never", (top, TOP), never),
+        ("bar.set.again", (top, TOP), menus),
+        ("bar.set.gone", (gone, GONE), menus),
+        ("bar.set.control", (child, CHILD), menus),
+    ] {
+        // SAFETY: each window is this run's, live or destroyed; a menu not there fails softly.
+        let theirs = traced(|| unsafe { SetMenu(window.0, menu.0) });
+        row_error(name, &theirs, front.set_menu(window.1, menu.1));
+        read(&format!("{name}.read"));
+    }
+    for (name, window) in [
+        ("with", (top, TOP)),
+        ("none", (bare, BARE)),
+        ("gone", (gone, GONE)),
+    ] {
+        // SAFETY: as above.
+        let theirs = traced(|| unsafe { DrawMenuBar(window.0) });
+        row_error(
+            &format!("bar.draw.{name}"),
+            &theirs,
+            front.draw_menu_bar(window.1),
+        );
+    }
+}
+
 /// The first read's procedure: way 0 never ends its box, way 1 ends it in `WM_INITDIALOG`,
 /// way 2 posts itself `IDOK`, way 3 posts Return's down and up to the control the focus goes to.
 extern "system" fn first(window: usize, message: u32, w: usize, l: isize) -> isize {
@@ -390,6 +644,7 @@ fn main() {
     match arguments.get(1).map(String::as_str) {
         Some("hello") => println!("hello"),
         Some("menus") => menus(),
+        Some("bars") => bars(),
         Some("first") => {
             let way = arguments
                 .get(2)
@@ -398,7 +653,7 @@ fn main() {
             first_read(way);
         }
         _ => {
-            eprintln!("usage: user32_probe hello | menus | first <0|1|2|3>");
+            eprintln!("usage: user32_probe hello | menus | bars | first <0|1|2|3>");
             std::process::exit(2);
         }
     }
