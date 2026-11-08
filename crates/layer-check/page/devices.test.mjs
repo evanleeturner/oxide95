@@ -17,12 +17,17 @@ import {
   checkList,
   checkPads,
   checkQuestion,
+  checkRemembered,
+  CHOICE_KEY,
   deviceRows,
   followPads,
+  keepChoice,
   listCounts,
+  listsSpeakers,
   NO_ANSWER,
   padRows,
   padsPresent,
+  readChoice,
   readList,
   speakerChoices,
   watchDevices,
@@ -445,4 +450,127 @@ test("the picker offers each speaker by id; the default row and a blank id are l
     { id: "id-of-2", name: "Speaker 3" },
   ]);
   assert.deepEqual(speakerChoices([]), []);
+});
+
+// H5, on a stub store and stub handles: the id alone is kept, and a stale one falls back.
+const H5_PASS = "This page used the speaker you picked last time.";
+const H5_RED =
+  "Your browser could not find your last speaker, so sound uses the default one. Choose again if you like.";
+const named = (name) => Object.assign(new Error(name), { name });
+
+/** A store as `localStorage` is, over a Map; when `refuses` names an error, every call throws it. */
+function aStore({ refuses = null } = {}) {
+  const held = new Map();
+  const guard = () => {
+    if (refuses) throw named(refuses);
+  };
+  const store = {
+    held,
+    getItem: (key) => (guard(), held.has(key) ? held.get(key) : null),
+    setItem: (key, value) => (guard(), void held.set(key, String(value))),
+    removeItem: (key) => (guard(), void held.delete(key)),
+  };
+  return () => store;
+}
+
+/** A handle that refuses every id as `refusal`, and takes "", the default. */
+function aRefusingHandle(refusal) {
+  const handle = { sinkId: "", asked: [] };
+  handle.setSink = async (id) => {
+    handle.asked.push(id);
+    if (id !== "") return { sinkId: handle.sinkId, refusal };
+    handle.sinkId = id;
+    return { sinkId: id, refusal: null };
+  };
+  return handle;
+}
+
+test("H5's store keeps the id alone under one key, and the default clears it", () => {
+  const store = aStore();
+  assert.equal(keepChoice(store, SPEAKER.deviceId), null);
+  assert.deepEqual([...store().held], [[CHOICE_KEY, "id-of-1"]]);
+  assert.ok(![...store().held.values()].some((value) => value.includes(FAKE_LABEL)));
+  assert.equal(readChoice(store), "id-of-1");
+  assert.equal(keepChoice(store, ""), null);
+  assert.equal(store().held.size, 0);
+  assert.equal(readChoice(store), "");
+});
+
+test("a store that throws, or holds nothing, reads as no choice and never throws", () => {
+  assert.equal(readChoice(aStore()), "");
+  assert.equal(readChoice(aStore({ refuses: "SecurityError" })), "");
+  assert.equal(readChoice(() => { throw named("SecurityError"); }), "");
+  const blank = aStore();
+  blank().held.set(CHOICE_KEY, "");
+  assert.equal(readChoice(blank), "");
+});
+
+test("a write that throws answers its name, and the pick stays applied", async () => {
+  const mix = aHandle();
+  const cd = aHandle();
+  const { result } = await checkChoice([mix, cd], "id-of-2");
+  const full = aStore({ refuses: "QuotaExceededError" });
+  assert.equal(keepChoice(full, "id-of-2"), "QuotaExceededError");
+  assert.equal(keepChoice(() => { throw named("SecurityError"); }, "id-of-2"), "SecurityError");
+  assert.equal(result.state, PASS);
+  assert.deepEqual([mix.sinkId, cd.sinkId], ["id-of-2", "id-of-2"]);
+});
+
+test("a stored id waits while no speaker is listed by its id", () => {
+  assert.equal(listsSpeakers([]), false, "Firefox before a grant");
+  assert.equal(listsSpeakers([MICROPHONE]), false);
+  assert.equal(listsSpeakers([{ kind: "audiooutput", label: "", deviceId: "" }]), false);
+  assert.equal(listsSpeakers([NAMELESS]), true);
+});
+
+test("H5 passes when the stored id is listed and both handles take it, each asked once", async () => {
+  const mix = aHandle();
+  const cd = aHandle();
+  const found = await checkRemembered([mix, cd], "id-of-2", [SPEAKER, NAMELESS]);
+  assert.equal(found.result.state, PASS);
+  assert.equal(found.result.words, H5_PASS);
+  assert.equal(passSentence("H5"), H5_PASS);
+  assert.equal(found.result.name, "Remembered speaker");
+  assert.deepEqual([found.refusal, found.taken, found.stale], [null, 2, false]);
+  assert.deepEqual([mix.asked, cd.asked], [["id-of-2"], ["id-of-2"]]);
+});
+
+test("H5 is red, every handle back on the default, on NotFoundError and SecurityError", async () => {
+  for (const name of ["NotFoundError", "SecurityError"]) {
+    const plants = [
+      [aHandle(), aRefusingHandle(name)],
+      [aRefusingHandle(name), aHandle()],
+    ];
+    for (const handles of plants) {
+      const found = await checkRemembered(handles, "id-of-2", [NAMELESS]);
+      assert.equal(found.result.state, RED);
+      assert.equal(found.result.words, H5_RED);
+      assert.equal(sentence("H5"), H5_RED);
+      assert.deepEqual([found.refusal, found.stale], [name, true]);
+      assert.deepEqual(handles.map((handle) => handle.asked), [["id-of-2", ""], ["id-of-2", ""]]);
+      assert.deepEqual(handles.map((handle) => handle.sinkId), ["", ""]);
+    }
+    const thrower = { setSink: () => { throw named(name); } };
+    const thrown = await checkRemembered([thrower, aHandle()], "id-of-2", [NAMELESS]);
+    assert.deepEqual([thrown.result.words, thrown.stale], [H5_RED, true]);
+  }
+});
+
+test("H5 is red, and no handle is asked, when the list lacks the stored id", async () => {
+  const mix = aHandle();
+  const cd = aHandle();
+  const found = await checkRemembered([mix, cd], "id-of-9", [SPEAKER, NAMELESS]);
+  assert.equal(found.result.words, H5_RED);
+  assert.deepEqual([found.refusal, found.stale], [null, true]);
+  assert.deepEqual([mix.asked, cd.asked], [[], []]);
+});
+
+test("another refusal of a stored id is H4's red, not stale, and nothing goes back", async () => {
+  const mix = aRefusingHandle("NotAllowedError");
+  const cd = aHandle();
+  const found = await checkRemembered([mix, cd], "id-of-2", [NAMELESS]);
+  assert.equal(found.result.check, "H4");
+  assert.equal(found.result.words, H4_RED);
+  assert.deepEqual([found.refusal, found.stale], ["NotAllowedError", false]);
+  assert.deepEqual([mix.asked, cd.asked], [["id-of-2"], ["id-of-2"]]);
 });

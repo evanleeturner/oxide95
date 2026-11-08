@@ -455,10 +455,10 @@
       "id": "check.page.speaker",
       "level": "I",
       "fields": {
-        "why": "pick, a person's choice",
-        "refusal": "the first refusal's name, or null"
+        "why": "pick, a person's choice; stored, that choice written to the store; remembered, a stored choice tried; fallback, a stored choice stale, so the default",
+        "refusal": "the first refusal's name, the store's at stored, or null"
       },
-      "template": "a speaker chosen at {why}, refused {refusal}"
+      "template": "the speaker choice at {why}, refused {refusal}"
     },
     {
       "id": "check.computer.result",

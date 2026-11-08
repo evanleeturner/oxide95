@@ -18,6 +18,7 @@ const SENTENCES = {
   H2: "A device was plugged in and this page did not notice. That is a fault in this page.",
   H3: "Your browser never answered about the microphone. The check goes on without it.",
   H4: "You picked a speaker, but the sound did not move to it. The fault is in this project.",
+  H5: "Your browser could not find your last speaker, so sound uses the default one. Choose again if you like.",
   H6: "No gamepad seen yet. Press a button on it: browsers hide a pad until then.",
   P1: "This page started sound before you asked for it. That is a fault in this page.",
   P2: "This page tried to send something out, and it was stopped. That is a fault in this page.",
@@ -37,6 +38,7 @@ const PASSES = {
   H2: "This page reacted to a test signal that a device was plugged in.",
   H3: "Your browser answered about the microphone.",
   H4: "The sound moved to the speaker you picked. This does not show that it can be heard.",
+  H5: "This page used the speaker you picked last time.",
   H6: "Your browser shows this page a gamepad.",
 };
 
@@ -52,6 +54,7 @@ const NAMES = {
   H2: "Plugging in",
   H3: "Microphone question",
   H4: "Speaker choice",
+  H5: "Remembered speaker",
   H6: "Gamepads",
   P2: "Nothing sent",
 };

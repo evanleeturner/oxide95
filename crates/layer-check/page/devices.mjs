@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 // H1, H2, H3 and H6: which speakers, microphones and pads the browser shows this page.
-// H4: whether a speaker a person picks reaches the game's two routes. Nothing is
-// stored. Each check answers one result and never throws, as `computer.mjs` does. A
-// listing is asked without a press, since it plays nothing. The microphone is asked
-// only from a person's press.
+// H4: whether a speaker a person picks reaches the game's two routes. H5: whether the
+// page uses that pick again next time; it stores the device's id alone, in one key of
+// the browser's own store. Each check answers one result and never throws, as
+// `computer.mjs` does. A listing is asked without a press, since it plays nothing. The
+// microphone is asked only from a person's press.
 //
 // A device's label may carry a person's name, so a label goes to the page's own row
-// and nowhere else: `listCounts` is what a log may hold.
-import { failed, notRun, passed } from "./computer.mjs";
+// and nowhere else: `listCounts` is what a log may hold, and the store never holds one.
+import { failed, notRun, PASS, passed } from "./computer.mjs";
 import { publicName } from "./report.mjs";
 
 export const NO_ANSWER = "none";
@@ -20,6 +21,12 @@ const FOLLOW_POLL_MS = 20;
 const QUESTION_WAIT_MS = 30000;
 const WORDS_A_PAD = 11;
 const NEEDS_SECURE = "This check needs a secure address, which this page lacks.";
+export const NO_CHOICE = "No speaker was chosen on this page before.";
+export const CHOICE_KEY = "layer-check.speaker";
+// The refusals that say the stored id names no speaker the page can use now. Neither
+// tells a speaker gone from one the browser renamed: Chromium gives the same speaker a
+// new id at every reload.
+const STALE = new Set(["NotFoundError", "SecurityError"]);
 
 const wait = (ms) => new Promise((done) => setTimeout(done, ms));
 
@@ -94,6 +101,60 @@ export async function checkChoice(handles, id) {
   }
   const moved = handles.length > 0 && taken === handles.length;
   return { result: moved ? passed("H4") : failed("H4"), refusal, taken };
+}
+
+/**
+ * True once the browser lists a speaker by its id. Before a grant Firefox lists none,
+ * and a stored id waits for this rather than read as stale.
+ */
+export function listsSpeakers(devices) {
+  return devices.some((device) => device.kind === "audiooutput" && device.deviceId);
+}
+
+/**
+ * The stored id, or "" when none is stored or the store cannot be read, as a private
+ * window's may not. `store` answers the store, since even reaching it can throw.
+ */
+export function readChoice(store) {
+  try {
+    return store().getItem(CHOICE_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * Stores the id alone, or clears the store for "", the default. Answers the refusal's
+ * name, or null. Never throws: a pick stands without its memory.
+ */
+export function keepChoice(store, id) {
+  try {
+    if (id) store().setItem(CHOICE_KEY, id);
+    else store().removeItem(CHOICE_KEY);
+    return null;
+  } catch (error) {
+    return error?.name ?? String(error);
+  }
+}
+
+/**
+ * H5, asked only once `listsSpeakers` holds. An id the list lacks is stale and no handle
+ * is asked; one a handle refuses as stale sends every handle back to the default. Either
+ * way H5 is red, in words that claim no more than "could not find". Any other failure is
+ * H4's red, as a pick's would be. Answers { result, refusal, taken, stale }. Never throws.
+ */
+export async function checkRemembered(handles, id, devices) {
+  const listed = devices.some(
+    (device) => device.kind === "audiooutput" && device.deviceId === id,
+  );
+  if (!listed) return { result: failed("H5"), refusal: null, taken: 0, stale: true };
+  const { result, refusal, taken } = await checkChoice(handles, id);
+  if (result.state === PASS) {
+    return { result: passed("H5"), refusal, taken, stale: false };
+  }
+  if (!STALE.has(refusal)) return { result, refusal, taken, stale: false };
+  await checkChoice(handles, "");
+  return { result: failed("H5"), refusal, taken, stale: true };
 }
 
 /**

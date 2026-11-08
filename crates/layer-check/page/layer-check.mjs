@@ -29,11 +29,16 @@ import {
   checkList,
   checkPads,
   checkQuestion,
+  checkRemembered,
   deviceRows,
   followPads,
+  keepChoice,
   listCounts,
+  listsSpeakers,
   NO_ANSWER,
+  NO_CHOICE,
   padRows,
+  readChoice,
   speakerChoices,
   watchDevices,
   YES,
@@ -71,6 +76,10 @@ let violations = 0;
 let deviceNames = [];
 let padNames = [];
 let speakers = [];
+// The last list read, and a stored speaker's id while it waits to be tried.
+let listed = [];
+let remembered = "";
+const store = () => window.localStorage;
 
 function show(found) {
   results.set(found.check, found);
@@ -172,6 +181,33 @@ function startSpeakers() {
     startPlayer(window, [], logger),
   ];
   part("speaker").hidden = false;
+  remembered = readChoice(store);
+  if (remembered) void applyRemembered(listed);
+  else show(notRun("H5", NO_CHOICE));
+}
+
+// A stored id waits for a list that holds speakers, then is tried once; before then no
+// words show. A person's pick before then wins.
+async function applyRemembered(devices) {
+  if (!remembered || speakers.length === 0 || !listsSpeakers(devices)) return;
+  const id = remembered;
+  remembered = "";
+  const box = part("speaker-choice");
+  if (speakerChoices(devices).some((choice) => choice.id === id)) box.value = id;
+  const found = await checkRemembered(speakers, id, devices);
+  logger.info("check.page.speaker", {
+    why: found.stale ? "fallback" : "remembered",
+    refusal: found.refusal,
+  });
+  if (found.stale) {
+    keepChoice(store, "");
+    if (box.value === id) box.value = "";
+  }
+  show(found.result);
+  const onDefault = speakers.filter((handle) => handle.sinkId === "").length;
+  document.body.dataset.speakerDefault = `${onDefault} of ${speakers.length}`;
+  document.body.dataset.remembered = `${found.result.check} ${found.result.state}`;
+  await showReport();
 }
 
 // A choice still listed stays chosen; one that left the list shows the default.
@@ -190,11 +226,14 @@ function fillSpeakers(devices) {
 }
 
 async function chooseSpeaker() {
-  const { result: found, refusal, taken } = await checkChoice(
-    speakers,
-    part("speaker-choice").value,
-  );
+  remembered = "";
+  const id = part("speaker-choice").value;
+  const { result: found, refusal, taken } = await checkChoice(speakers, id);
   logger.info("check.page.speaker", { why: "pick", refusal });
+  logger.info("check.page.speaker", {
+    why: "stored",
+    refusal: keepChoice(store, id),
+  });
   show(found);
   document.body.dataset.speakerTaken = `${taken} of ${speakers.length}`;
   await showReport();
@@ -263,6 +302,8 @@ function showRead(read, why, media) {
   fillRows();
   fillSpeakers(read.devices);
   show(checkList(media, read));
+  listed = read.devices;
+  void applyRemembered(read.devices);
 }
 
 function showPads(count) {
