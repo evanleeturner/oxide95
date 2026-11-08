@@ -31,6 +31,10 @@ undocumented_unsafe_blocks = "deny"
 desk = ["window/desk"]
 # Planted templates and files, built in code, for a test or a page's walk.
 plant = ["desk", "kernel_process/plant"]
+# Wine's own USER32 beside the fronts, on the same planted bytes, built for
+# `i686-pc-windows-gnu`. A feature of its own so a native `cargo test --workspace`
+# links no `user32`; it adds no dependency.
+user32-probe = ["plant"]
 
 # The thin export a page's walk runs: `cargo build --example page_walk --features plant
 # --target wasm32-unknown-unknown`. Its file lies with the script, under `page/`.
@@ -39,6 +43,13 @@ name = "page_walk"
 path = "page/walk.rs"
 crate-type = ["cdylib"]
 required-features = ["plant"]
+
+# The fronts beside Wine's USER32: `cargo build --example user32_probe --features
+# user32-probe --target i686-pc-windows-gnu`, run and scored by `bench/user32_check.py`.
+[[example]]
+name = "user32_probe"
+path = "bench/user32_probe.rs"
+required-features = ["user32-probe"]
 
 [dependencies]
 window = { path = "../window" }
