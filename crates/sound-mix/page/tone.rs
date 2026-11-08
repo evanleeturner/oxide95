@@ -15,6 +15,7 @@ use core::cell::{Cell, RefCell};
 
 use sound_mix::page::Page;
 use sound_mix::table::Row;
+use sound_mix::witness::{Seen, Witness};
 use sound_mix::{Front, Host, RING_FRAMES, SMP_DONE};
 
 static ROW: Row = Row {
@@ -54,7 +55,8 @@ impl Host for PageClock {
 
 struct Program {
     page: Page,
-    front: Front<PageClock, Page>,
+    front: Front<PageClock, Witness<Page>>,
+    seen: Seen,
     short: Cell<u32>,
     looped: Cell<u32>,
     frames: RefCell<Vec<i16>>,
@@ -63,10 +65,13 @@ struct Program {
 impl Program {
     fn new() -> Self {
         let page = Page::new();
-        let front = Front::new(&ROW, PageClock, page.clone());
+        let witness = Witness::new(page.clone());
+        let seen = witness.seen();
+        let front = Front::new(&ROW, PageClock, witness);
         Self {
             page,
             front,
+            seen,
             short: Cell::new(0),
             looped: Cell::new(0),
             frames: RefCell::new(vec![0; RING_FRAMES * 2]),
@@ -161,6 +166,13 @@ pub extern "C" fn rate() -> u32 {
 #[allow(clippy::cast_precision_loss)]
 pub extern "C" fn kept() -> f64 {
     with(|program| program.page.kept() as f64)
+}
+
+/// The frames the witness saw handed to the page. A float, as [`kept`] is.
+#[unsafe(no_mangle)]
+#[allow(clippy::cast_precision_loss)]
+pub extern "C" fn witness_frames() -> f64 {
+    with(|program| program.seen.summary().frames as f64)
 }
 
 /// The clock the program last read, in ms.
