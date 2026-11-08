@@ -160,7 +160,12 @@ class Wall extends Error {
 const sleep = (ms) => new Promise((done) => setTimeout(done, ms));
 const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
+// Every X action waits on the outside watcher's word: a real stream seen stops the
+// bench before its next key, click or focus, the start's included.
 function xdo(...args) {
+  if (process.env.STOP && existsSync(process.env.STOP)) {
+    throw new Wall(4, "STOP: the outside watcher saw a real stream");
+  }
   try {
     return execFileSync("xdotool", args, { timeout: 3000, encoding: "utf8" }).trim();
   } catch {
@@ -267,17 +272,34 @@ function readInPage() {
       .join(""),
     has: document.hasFocus(),
     codes: window.keysSeen.splice(0),
+    prevented: window.keysPrevented.splice(0),
+    cancels: window.cancelsSeen.splice(0).length,
     born: performance.timeOrigin,
   };
 }
 
-// A passive recorder of every keydown's code the window sees; it never prevents.
+// Passive recorders, none ever preventing: every keydown's code the window sees, at
+// capture before the page's own handlers; at bubble after them, each code that came
+// back prevented; and each `cancel` the box fired, so a key the page answered and a
+// close the browser made alone read apart.
 function installRecorder() {
   window.keysSeen = [];
+  window.keysPrevented = [];
+  window.cancelsSeen = [];
   window.addEventListener("keydown", (event) => window.keysSeen.push(event.code), {
     capture: true,
     passive: true,
   });
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.defaultPrevented) window.keysPrevented.push(event.code);
+    },
+    { passive: true },
+  );
+  document
+    .querySelector("dialog")
+    .addEventListener("cancel", () => window.cancelsSeen.push(1), { passive: true });
 }
 
 const shown = (value) => (value === NONE ? "none" : String(value));
@@ -402,6 +424,7 @@ async function main() {
           `ended=${shown(read.ended)} picked=${shown(read.picked)}`,
           `checks=${read.checks || "-"} page-focus=${read.has}`,
           `got=${read.codes.join("+") || "-"} browser=${did.join(",") || "-"}`,
+          `prevented=${read.prevented.join("+") || "-"} cancels=${read.cancels}`,
         ].join(" "),
       );
       if (did.includes("reloaded")) throw new Wall(1, "BENCH: the page reloaded");
