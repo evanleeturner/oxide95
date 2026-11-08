@@ -8,6 +8,8 @@ use super::page::Page;
 use super::table::{Calls, Row};
 use core::sync::atomic::{AtomicU64, Ordering};
 
+mod checks;
+
 const ROW: Row = Row {
     file: "test",
     calls: Calls {

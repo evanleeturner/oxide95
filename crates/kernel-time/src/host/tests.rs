@@ -15,6 +15,7 @@ fn date(format: &str) -> String {
     String::from_utf8_lossy(&output.stdout).trim().to_string()
 }
 
+#[cfg_attr(windows, ignore = "date cannot start under Wine")]
 #[test]
 fn the_wall_is_dates() {
     let host = Host::new(u64::MAX);
