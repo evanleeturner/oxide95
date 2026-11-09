@@ -3,8 +3,37 @@
  * Reads the player's pick through `logical_disc`, on a Worker of its own: the
  * disc's one image, or the mounted folder's files by their paths from the
  * disc's top, or the copy of a pick kept in page storage. The page's `?log=`
- * choice rides to the Worker on its address.
+ * choice rides to the Worker on its address, and each line the Worker writes
+ * joins the page's trace. One tab of the page's origin holds the disc at a
+ * time: `holdDisc` asks for it before any act.
  */
+import { logger } from "./track-logger.mjs";
+
+/** The hold's name: one for the origin, so one tab of it reads the disc. */
+const HOLD = "disc";
+
+/**
+ * Asks to hold the disc for this page's life, and resolves true when this
+ * page holds it, false when another tab of the same origin holds it already.
+ * Ask it before any act, so a second tab starts no Worker at all; a closed
+ * tab's hold ends with the tab. Under DEBUG it writes the line of the
+ * starter's own search for another running copy, `v` 1 when another tab
+ * holds the disc and 0 when none does.
+ */
+export function holdDisc() {
+  return new Promise((resolve) => {
+    navigator.locks.request(HOLD, { ifAvailable: true }, (lock) => {
+      logger.debug("imp.call", {
+        c: "USER32!FindWindowA",
+        v: lock === null ? 1 : 0,
+        by: "web-shell",
+      });
+      resolve(lock !== null);
+      // A hold lasts while this callback's promise is pending: it never settles.
+      return lock === null ? undefined : new Promise(() => {});
+    });
+  });
+}
 
 /**
  * A picked file's path from the disc's top. A folder pick's relative path
@@ -22,7 +51,8 @@ function pickedFiles(picked) {
 
 /**
  * Runs one act on a Worker of its own, and resolves to its one answer. A
- * Worker that stopped, or posted the name of the error it met, rejects.
+ * Worker that stopped, or posted the name of the error it met, rejects. The
+ * lines it posts ahead of its answer join the page's trace.
  */
 async function run(message) {
   const module = await WebAssembly.compileStreaming(
@@ -34,8 +64,11 @@ async function run(message) {
   );
   try {
     return await new Promise((resolve, reject) => {
-      worker.onmessage = ({ data }) =>
-        data.failed ? reject(new Error(data.failed)) : resolve(data);
+      worker.onmessage = ({ data }) => {
+        if ("line" in data) logger.take(data.line);
+        else if (data.failed) reject(new Error(data.failed));
+        else resolve(data);
+      };
       worker.onerror = (event) => reject(new Error(event.message));
       worker.postMessage({ module, ...message });
     });

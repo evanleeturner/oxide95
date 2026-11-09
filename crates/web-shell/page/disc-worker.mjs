@@ -12,6 +12,10 @@
 // before its first: a copy a reload or a full store cut off is never read as a disc.
 import { logger } from "./track-logger.mjs";
 
+// Each line goes to the page as written, ahead of the answer, so the page's trace
+// keeps it even when this Worker stops before it answers.
+logger.forward = (line) => postMessage({ line });
+
 const LEVELS = [null, logger.error, logger.warn, logger.info, logger.debug];
 
 /** The kept copy's folder and its record, at the private file system's top. */
