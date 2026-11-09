@@ -5,6 +5,7 @@
 use alloc::string::ToString;
 use alloc::vec::Vec;
 
+use super::test_log::debug_lines;
 use crate::{Finding, Picked, check};
 
 const EXPECTED: [&str; 3] = ["README.TXT", "DATA/LEVEL.DAT", "DATA/SOUND.RAW"];
@@ -123,4 +124,28 @@ fn findings_keep_the_list_order_and_each_sentence_names_its_file() {
     distinct.sort();
     distinct.dedup();
     assert_eq!(distinct.len(), 3);
+}
+
+/// The check writes one `disc.finding` line a finding, in the list's
+/// order, its kind and its expected name, then one `disc.check` line: the
+/// list's count, the pick's and the findings'. A complete pick writes the
+/// count line alone.
+#[test]
+fn the_check_writes_a_line_a_finding_then_its_counts() {
+    let mut picked: Vec<_> = complete()
+        .into_iter()
+        .filter(|f| f.path != "README.TXT")
+        .collect();
+    picked[0].size = Some(0);
+    let lines = debug_lines(|| assert_eq!(check(&EXPECTED, &picked).len(), 2));
+    assert_eq!(
+        lines,
+        [
+            "disc.finding k=missing p=README.TXT",
+            "disc.finding k=empty p=DATA/LEVEL.DAT",
+            "disc.check n=3 m=2 f=2",
+        ]
+    );
+    let lines = debug_lines(|| assert_eq!(check(&EXPECTED, &complete()), []));
+    assert_eq!(lines, ["disc.check n=3 m=3 f=0"]);
 }

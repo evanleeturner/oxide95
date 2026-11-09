@@ -36,7 +36,7 @@ pub enum Finding<'a> {
 }
 
 impl Finding<'_> {
-    /// The finding's kind, as its `disc.check` DEBUG line writes it.
+    /// The finding's kind, as its `disc.finding` DEBUG line writes it.
     #[must_use]
     pub fn kind(&self) -> &'static str {
         match self {
