@@ -86,7 +86,7 @@ impl fmt::Display for Finding<'_> {
 /// means the pick holds every expected file, each readable and non-empty.
 ///
 /// An exact path wins over a case-changed one. Writes one `disc.check`
-/// DEBUG line for the whole check and one for each finding.
+/// DEBUG line for the whole check and one `disc.finding` line a finding.
 #[must_use]
 pub fn check<'a>(expected: &[&'a str], picked: &[Picked<'a>]) -> Vec<Finding<'a>> {
     let mut findings = Vec::new();
@@ -109,7 +109,7 @@ pub fn check<'a>(expected: &[&'a str], picked: &[Picked<'a>]) -> Vec<Finding<'a>
             ),
         };
         if let Some(finding) = finding {
-            log::debug!(k = finding.kind(), p = finding.expected(); "disc.check");
+            log::debug!(k = finding.kind(), p = finding.expected(); "disc.finding");
             findings.push(finding);
         }
     }

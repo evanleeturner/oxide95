@@ -266,6 +266,18 @@
       "template": "the disc's {c} of {a} {p} answered {v}, {n} bytes moved: {e}"
     },
     {
+      "id": "disc.check",
+      "level": "D",
+      "fields": { "n": "the expected names checked", "m": "the picked files they were checked against", "f": "the findings: 0 for a complete pick" },
+      "template": "the check of {n} expected names against {m} picked files found {f}"
+    },
+    {
+      "id": "disc.finding",
+      "level": "D",
+      "fields": { "k": "the finding's kind: missing, case, empty or unreadable", "p": "the expected name it is about" },
+      "template": "the check found {p} {k}"
+    },
+    {
       "id": "draw.table",
       "level": "D",
       "fields": { "c": "the drawing call the entries belong to, as DLL!NAME or INTERFACE::NAME", "i": "the first entry's number", "a": "up to 16 entries, each 32 bits as the caller's memory holds them" },
@@ -603,6 +615,24 @@
       "level": "I",
       "fields": { "t": "the writing thread's number", "n": "the line's number in that thread, 6 digits" },
       "template": "thread {t} wrote its line {n}"
+    },
+    {
+      "id": "serve.listen",
+      "level": "I",
+      "fields": { "a": "the address to open, on loopback", "r": "the folder it serves" },
+      "template": "the local server serves {r} at {a}"
+    },
+    {
+      "id": "serve.answer",
+      "level": "D",
+      "fields": { "m": "the request's method; ? for a line that is no request", "p": "the path asked for, its query dropped; ? as for the method", "s": "the answer's status", "n": "the body's bytes, sent or, for a HEAD, stated" },
+      "template": "{m} {p} answered {s} with {n} bytes"
+    },
+    {
+      "id": "serve.failed",
+      "level": "E",
+      "fields": { "w": "what could not be had: the folder or the port", "e": "the failure, by its kind" },
+      "template": "the local server could not have its {w}: {e}"
     }
   ]
 }
