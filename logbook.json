@@ -278,6 +278,18 @@
       "template": "the check found {p} {k}"
     },
     {
+      "id": "disc.open.failed",
+      "level": "W",
+      "fields": { "e": "the failure, by its kind" },
+      "template": "the picked disc would not open: {e}"
+    },
+    {
+      "id": "disc.place",
+      "level": "D",
+      "fields": { "i": "the place's index in the page's list", "p": "its path from the disc's top, in the kernel's spelling", "b": "the byte read there; -1 when none was" },
+      "template": "the disc's place {i}, {p}, read {b}"
+    },
+    {
       "id": "draw.table",
       "level": "D",
       "fields": { "c": "the drawing call the entries belong to, as DLL!NAME or INTERFACE::NAME", "i": "the first entry's number", "a": "up to 16 entries, each 32 bits as the caller's memory holds them" },

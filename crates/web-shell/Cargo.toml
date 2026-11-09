@@ -30,6 +30,13 @@ name = "page_track"
 path = "page/track.rs"
 crate-type = ["cdylib"]
 
+# The disc's read, run by its Worker: `cargo build --example page_disc --target
+# wasm32-unknown-unknown`, its file with the script under `page/`.
+[[example]]
+name = "page_disc"
+path = "page/disc.rs"
+crate-type = ["cdylib"]
+
 [dependencies]
 draw = { path = "../draw", features = ["page"] }
 kernel_files = { path = "../kernel-files" }
