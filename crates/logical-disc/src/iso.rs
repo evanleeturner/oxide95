@@ -19,13 +19,29 @@ const DESCRIPTOR: u32 = 16;
 /// The one block size this reader takes, a sector's user bytes.
 const BLOCK: u16 = 2048;
 
-/// A file or folder on the volume: its name as the volume spells it, its
-/// first sector, its bytes.
+/// A file or folder on the volume: its name as the volume spells it, where
+/// its bytes lie, their count.
 pub(crate) struct Entry {
     pub(crate) name: Vec<u8>,
-    pub(crate) extent: u32,
+    pub(crate) place: Place,
     pub(crate) size: u32,
-    pub(crate) folder: bool,
+}
+
+/// Where an entry's bytes lie.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum Place {
+    /// A folder: no bytes of its own to read.
+    Folder,
+    /// The data track's sectors, from this one on.
+    Sector(u32),
+    /// The whole of one picked file, by its place among the source's files.
+    File(usize),
+}
+
+impl Entry {
+    pub(crate) fn is_folder(&self) -> bool {
+        self.place == Place::Folder
+    }
 }
 
 /// The volume's label, and every entry by its path's key: each byte
@@ -49,10 +65,10 @@ impl Volume {
             return Err(OpenError::Volume);
         }
         let label = block[40..72].trim_ascii_end().to_vec();
-        let root = record(&block[156..190]).ok_or(OpenError::Volume)?;
+        let (root, root_extent) = record(&block[156..190]).ok_or(OpenError::Volume)?;
         let mut entries = BTreeMap::new();
         let mut read = BTreeSet::new();
-        let mut folders = alloc::vec![(Vec::new(), root.extent, root.size)];
+        let mut folders = alloc::vec![(Vec::new(), root_extent, root.size)];
         while let Some((path, extent, size)) = folders.pop() {
             if !read.insert(extent) {
                 return Err(OpenError::Volume);
@@ -63,7 +79,7 @@ impl Volume {
                 let mut at = 0;
                 while let Some(&length) = block.get(at).filter(|&&length| length != 0) {
                     let length = usize::from(length);
-                    let entry = block
+                    let (entry, extent) = block
                         .get(at..at + length)
                         .and_then(record)
                         .ok_or(OpenError::Volume)?;
@@ -72,18 +88,24 @@ impl Volume {
                         continue;
                     }
                     let mut key = path.clone();
-                    if !key.is_empty() {
-                        key.push(b'\\');
-                    }
-                    key.extend(entry.name.iter().map(|&byte| names::fold(byte)));
-                    if entry.folder {
-                        folders.push((key.clone(), entry.extent, entry.size));
+                    join(&mut key, &entry.name);
+                    if entry.is_folder() {
+                        folders.push((key.clone(), extent, entry.size));
                     }
                     entries.insert(key, entry);
                 }
             }
         }
         Ok(Self { label, entries })
+    }
+
+    /// A table of `entries` made elsewhere, keyed as this one keys them,
+    /// with no label: a picked folder's.
+    pub(crate) fn of_entries(entries: BTreeMap<Vec<u8>, Entry>) -> Self {
+        Self {
+            label: Vec::new(),
+            entries,
+        }
     }
 
     pub(crate) fn label(&self) -> &[u8] {
@@ -118,8 +140,18 @@ pub(crate) fn key(name: &[u8]) -> Vec<u8> {
     name.iter().map(|&byte| names::fold(byte)).collect()
 }
 
-/// A record's entry, or `None` when its fields run past its length.
-fn record(bytes: &[u8]) -> Option<Entry> {
+/// `part` put on the end of `key`, past a `\` unless `key` is the top,
+/// each byte folded.
+pub(crate) fn join(key: &mut Vec<u8>, part: &[u8]) {
+    if !key.is_empty() {
+        key.push(b'\\');
+    }
+    key.extend(part.iter().map(|&byte| names::fold(byte)));
+}
+
+/// A record's entry and its extent, or `None` when its fields run past its
+/// length.
+fn record(bytes: &[u8]) -> Option<(Entry, u32)> {
     let length = usize::from(*bytes.first()?);
     let name_length = usize::from(*bytes.get(32)?);
     if 33 + name_length > length {
@@ -131,10 +163,15 @@ fn record(bytes: &[u8]) -> Option<Entry> {
     let folder = bytes.get(25)? & 2 != 0;
     let name = name.split(|&byte| byte == b';').next().unwrap_or(name);
     let name = name.strip_suffix(b".").unwrap_or(name);
-    Some(Entry {
+    let place = if folder {
+        Place::Folder
+    } else {
+        Place::Sector(extent)
+    };
+    let entry = Entry {
         name: name.to_vec(),
-        extent,
+        place,
         size,
-        folder,
-    })
+    };
+    Some((entry, extent))
 }

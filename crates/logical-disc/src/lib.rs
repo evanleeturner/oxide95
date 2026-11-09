@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 //! The player's own copy of a game's disc, read only and by range:
-//! a cue sheet and its bin
-//! files, or an iso alone. The disc answers what a game reads from it,
+//! a cue sheet and its bin files, an iso alone, or a mounted disc's folder
+//! as picked. The disc answers what a game reads from it,
 //! never a CD drive rebuilt. Its one way to its bytes is [`ReadAt`], a
 //! trait a target; a file's read takes its own sectors and no more, so an
 //! image of 269M is never loaded whole. The data track's files answer as a
@@ -32,6 +32,8 @@ mod disc;
 mod folder;
 #[cfg(any(test, feature = "disc"))]
 mod iso;
+#[cfg(any(test, feature = "disc"))]
+mod picked;
 #[cfg(test)]
 mod tests;
 #[cfg(any(test, feature = "disc"))]

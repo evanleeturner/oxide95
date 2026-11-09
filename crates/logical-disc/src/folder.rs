@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-//! The disc as a [`Folder`]: the data track's files, read
+//! The disc as a [`Folder`]: the data track's files or a picked folder's, read
 //! only, and never read whole. Its rules, the memory folder's where a disc
 //! answers the same:
 //!
@@ -16,7 +16,8 @@
 //!   past the last name `NoMore`; one that matches none `NotFound`. The
 //!   memory folder's finds take files alone.
 //! - **Handles** and finds count from 4 by 4, as Windows' do.
-//! - **A read** takes the file's own sectors, one range a sector.
+//! - **A read** takes the file's own sectors, one range a sector; a picked
+//!   file's own bytes, one range.
 //! - **A seek** before the start fails `BadSeek`; past the end it stands,
 //!   and a read there moves nothing.
 //! - **Every call** writes one `disc.call` line: `c` the
@@ -35,7 +36,7 @@ use kernel_files::{Create, Error, Folder, Kind, Mode, Origin, Text};
 
 use crate::ReadAt;
 use crate::disc::Disc;
-use crate::iso::key;
+use crate::iso::{Entry, key};
 
 /// An open file: its key, its position, whether it was opened to read.
 struct Open {
@@ -78,7 +79,7 @@ impl<R: ReadAt> Disc<R> {
     }
 
     fn is_folder(&self, key: &[u8]) -> bool {
-        key.is_empty() || self.entry(key).is_some_and(|entry| entry.folder)
+        key.is_empty() || self.entry(key).is_some_and(Entry::is_folder)
     }
 
     /// `name`'s key, once its folder is on the volume and it names no

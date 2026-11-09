@@ -12,7 +12,7 @@ use core::ffi::CStr;
 use kernel_files::{Create, Error, Folder, Kind, Mode, Origin};
 
 use super::test_log::debug_lines;
-use super::{FILES, SHEET, fill, image_source, iso};
+use super::{FILES, SHEET, fill, folder_source, image_source, iso};
 use crate::disc::{RAW, USER};
 use crate::{Disc, ReadAt, Source};
 
@@ -23,11 +23,13 @@ const READ: Mode = Mode {
     create: Create::Existing,
 };
 
-/// Both discs the tree makes: the image, then the iso alone.
-fn discs() -> [Disc<Vec<u8>>; 2] {
+/// The three discs the tree makes: the image, the iso alone, the picked
+/// folder.
+fn discs() -> [Disc<Vec<u8>>; 3] {
     [
         Disc::open(image_source(SHEET)).expect("the image opens"),
         Disc::open(Source::Iso(iso())).expect("the iso opens"),
+        Disc::open(folder_source()).expect("the folder opens"),
     ]
 }
 
@@ -76,6 +78,12 @@ fn counted(source: Source<Vec<u8>>, asked: &Asked) -> Source<Counting> {
                 .map(|(name, bytes)| (name.clone(), count(&name, bytes)))
                 .collect(),
         },
+        Source::Folder(files) => Source::Folder(
+            files
+                .into_iter()
+                .map(|(name, bytes)| (name.clone(), count(&name, bytes)))
+                .collect(),
+        ),
     }
 }
 
@@ -242,6 +250,31 @@ fn a_read_takes_its_own_sectors() {
         let spans = [range(22, 2000, 48), range(23, 0, 52)];
         assert_eq!(asked.borrow_mut().split_off(0), spans);
     }
+}
+
+/// A picked folder's open reads nothing; a read takes one range of the
+/// file's own bytes and no other file's; a read at its end asks nothing.
+#[test]
+fn a_picked_read_takes_one_range() {
+    let asked = Asked::default();
+    let folder = Disc::open(counted(folder_source(), &asked)).expect("the folder opens");
+    let handle = folder.open(c"data\\sound.raw", READ).expect("folded");
+    assert!(asked.borrow().is_empty(), "an open reads nothing");
+    let sound = fill(5000, 3);
+    let mut got = vec![0; 6000];
+    assert_eq!(Folder::read(&folder, handle, &mut got), Ok(5000));
+    assert_eq!(got[..5000], sound);
+    let file = "DATA/SOUND.RAW".to_string();
+    assert_eq!(asked.borrow_mut().split_off(0), [(file.clone(), 0, 5000)]);
+
+    assert_eq!(folder.seek(handle, 2000, Origin::Start), Ok(2000));
+    let mut edge = [0; 100];
+    assert_eq!(Folder::read(&folder, handle, &mut edge), Ok(100));
+    assert_eq!(edge[..], sound[2000..2100]);
+    assert_eq!(asked.borrow_mut().split_off(0), [(file, 2000, 100)]);
+    assert_eq!(folder.seek(handle, 0, Origin::End), Ok(5000));
+    assert_eq!(Folder::read(&folder, handle, &mut edge), Ok(0));
+    assert!(asked.borrow().is_empty(), "a read at the end asks nothing");
 }
 
 /// Every call of the 11, answered or refused, writes one

@@ -8,10 +8,12 @@ use alloc::vec;
 use alloc::vec::Vec;
 
 use crate::disc::{RAW, USER};
+use crate::iso::Entry;
 use crate::{Disc, OpenError, Source};
 
 mod check;
 mod folder;
+mod picked;
 mod records;
 mod sheets;
 mod stamped;
@@ -43,6 +45,17 @@ fn fill(length: usize, seed: u8) -> Vec<u8> {
         .take(length)
         .map(|byte| byte.wrapping_mul(7).wrapping_add(seed))
         .collect()
+}
+
+/// The tree as a mounted disc's folder, picked: each file by its path,
+/// its parts joined by `/` as a browser joins them.
+fn folder_source() -> Source<Vec<u8>> {
+    Source::Folder(
+        FILES
+            .iter()
+            .map(|&(name, _, length, seed)| (name.replace('\\', "/"), fill(length, seed)))
+            .collect(),
+    )
 }
 
 /// A folder's record (ECMA-119 9.1): the extent and size both-endian, the
@@ -171,7 +184,7 @@ fn every_file_reads_back_equal() {
         assert_eq!(disc.read(sound, 2000, &mut got), Ok(100));
         assert_eq!(got[..], fill(5000, 3)[2000..2100]);
         assert_eq!(disc.read(sound, 5000, &mut got), Ok(0));
-        assert!(disc.entry(b"DATA").is_some_and(|entry| entry.folder));
+        assert!(disc.entry(b"DATA").is_some_and(Entry::is_folder));
         assert!(disc.entry(b"DATA\\NONE.DAT").is_none());
     }
 }

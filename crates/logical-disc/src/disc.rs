@@ -8,7 +8,8 @@ use kernel_files::{Error, names};
 use crate::ReadAt;
 use crate::cue::{self, Mode};
 use crate::folder::Handles;
-use crate::iso::{Entry, Volume};
+use crate::iso::{Entry, Place, Volume};
+use crate::picked;
 use crate::tracks::{self, Track};
 
 /// A raw sector's bytes, data or audio (ECMA-130).
@@ -26,6 +27,10 @@ pub enum Source<R> {
     Image { cue: R, files: Vec<(String, R)> },
     /// An iso alone: the data track's user bytes, 2,048 a sector.
     Iso(R),
+    /// A mounted disc's folder, picked: each file by its path from the
+    /// disc's top, its parts joined by `/` or `\`. Its folders are the
+    /// ones its paths pass through; it has no label and no audio track.
+    Folder(Vec<(String, R)>),
 }
 
 /// Why a source would not open as a disc.
@@ -43,6 +48,9 @@ pub enum OpenError {
     Volume,
     /// A source file would not read.
     Read(Error),
+    /// A picked path with an empty, `.` or `..` part, or one that names,
+    /// case folded, a file or folder another picked path already names.
+    Path,
 }
 
 /// Where the data track's sectors lie: one source file, its first
@@ -58,7 +66,8 @@ struct Data {
 
 /// A disc, open: read only, and never read whole.
 pub struct Disc<R> {
-    data: Data,
+    /// The data track's sectors; a picked folder has none.
+    data: Option<Data>,
     pub(crate) files: Vec<R>,
     pub(crate) tracks: Vec<Track>,
     volume: Volume,
@@ -83,11 +92,12 @@ impl<R: ReadAt> Disc<R> {
                 (alloc::vec![iso], data, Vec::new())
             }
             Source::Image { cue, files } => image(&cue, files)?,
+            Source::Folder(picked) => return Self::of_folder(picked),
         };
         let tracks = tracks::of_sheet(&sheet, &files);
         let mut disc = Self {
             files,
-            data,
+            data: Some(data),
             tracks,
             volume: Volume::default(),
             handles: Handles::default(),
@@ -96,7 +106,20 @@ impl<R: ReadAt> Disc<R> {
         Ok(disc)
     }
 
-    /// The volume identifier, its padding cut.
+    /// A picked folder's disc: its table from the paths and each file's
+    /// size; no file's bytes.
+    fn of_folder(picked: Vec<(String, R)>) -> Result<Self, OpenError> {
+        let volume = picked::volume(&picked)?;
+        Ok(Self {
+            data: None,
+            files: picked.into_iter().map(|(_, file)| file).collect(),
+            tracks: Vec::new(),
+            volume,
+            handles: Handles::default(),
+        })
+    }
+
+    /// The volume identifier, its padding cut; a picked folder's is empty.
     #[must_use]
     pub fn label(&self) -> &[u8] {
         self.volume.label()
@@ -116,17 +139,28 @@ impl<R: ReadAt> Disc<R> {
         self.volume.within(folder)
     }
 
-    /// `entry`'s bytes from `at` into `into`, one range a sector; the count
-    /// moved, short at the file's end.
+    /// `entry`'s bytes from `at` into `into`: on the data track one range a
+    /// sector, from a picked file one range; the count moved, short at the
+    /// file's end.
     pub(crate) fn read(&self, entry: &Entry, at: u64, into: &mut [u8]) -> Result<usize, Error> {
         let left = u64::from(entry.size).saturating_sub(at);
         let count = usize::try_from(left).map_or(into.len(), |left| left.min(into.len()));
+        let extent = match entry.place {
+            Place::Sector(extent) => extent,
+            Place::File(file) => {
+                if count > 0 {
+                    self.files[file].read_at(at, &mut into[..count])?;
+                }
+                return Ok(count);
+            }
+            Place::Folder => return Err(Error::BadArgument),
+        };
         let mut done = 0;
         while done < count {
             let here = at + done as u64;
             let sector = u32::try_from(here / USER)
                 .ok()
-                .and_then(|step| entry.extent.checked_add(step))
+                .and_then(|step| extent.checked_add(step))
                 .ok_or(Error::BadArgument)?;
             let within = here % USER;
             let room = usize::try_from(USER - within).unwrap_or(usize::MAX);
@@ -138,9 +172,10 @@ impl<R: ReadAt> Disc<R> {
     }
 
     /// `into.len()` user bytes of the data track's sector `sector`, from
-    /// its byte `at`: one range of one source file.
+    /// its byte `at`: one range of one source file. A picked folder has no
+    /// data track.
     fn user(&self, sector: u32, at: u64, into: &mut [u8]) -> Result<(), Error> {
-        let data = &self.data;
+        let data = self.data.as_ref().ok_or(Error::BadArgument)?;
         if u64::from(sector) >= data.sectors || at + into.len() as u64 > USER {
             return Err(Error::BadArgument);
         }
