@@ -40,7 +40,7 @@ mod tests;
 mod tracks;
 
 #[cfg(any(test, feature = "disc"))]
-pub use check::{Finding, Picked, check};
+pub use check::{Expected, Finding, Picked, check};
 #[cfg(any(test, feature = "disc"))]
 pub use disc::{Disc, OpenError, Source};
 use kernel_files::Error;

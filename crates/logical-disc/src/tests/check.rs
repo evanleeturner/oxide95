@@ -1,21 +1,34 @@
 // SPDX-License-Identifier: MIT
 //! The check's promises, on a synthetic list of 3 names, never a game's:
 //! a complete pick passes; a removed, emptied, case-changed or moved file
-//! each gives its own finding and its own sentence naming the file.
+//! each gives its own finding and its own sentence naming the file; a file
+//! the list marks empty at source passes empty.
 use alloc::string::ToString;
 use alloc::vec::Vec;
 
 use super::test_log::debug_lines;
-use crate::{Finding, Picked, check};
+use crate::{Expected, Finding, Picked, check};
 
-const EXPECTED: [&str; 3] = ["README.TXT", "DATA/LEVEL.DAT", "DATA/SOUND.RAW"];
+/// An expected file the disc holds with bytes, as all 3 of the list are.
+const fn file(path: &str) -> Expected<'_> {
+    Expected {
+        path,
+        empty_at_source: false,
+    }
+}
+
+const EXPECTED: [Expected<'static>; 3] = [
+    file("README.TXT"),
+    file("DATA/LEVEL.DAT"),
+    file("DATA/SOUND.RAW"),
+];
 
 /// The whole synthetic tree, each file readable and non-empty.
 fn complete() -> Vec<Picked<'static>> {
     EXPECTED
         .iter()
-        .map(|path| Picked {
-            path,
+        .map(|file| Picked {
+            path: file.path,
             size: Some(100),
         })
         .collect()
@@ -58,6 +71,32 @@ fn an_emptied_file_is_empty() {
         check(&EXPECTED, &picked),
         [Finding::Empty {
             path: "DATA/SOUND.RAW"
+        }]
+    );
+}
+
+/// The mark changes the empty answer alone: a marked file picked empty, or
+/// picked with bytes, is no finding, while the same empty pick unmarked is
+/// `Empty`, and a marked file moved after the pick is still `Unreadable`.
+#[test]
+fn a_file_empty_at_source_passes_empty() {
+    let mut expected = EXPECTED;
+    expected[1].empty_at_source = true;
+    let mut picked = complete();
+    assert_eq!(check(&expected, &picked), []);
+    picked[1].size = Some(0);
+    assert_eq!(check(&expected, &picked), []);
+    assert_eq!(
+        check(&EXPECTED, &picked),
+        [Finding::Empty {
+            path: "DATA/LEVEL.DAT"
+        }]
+    );
+    picked[1].size = None;
+    assert_eq!(
+        check(&expected, &picked),
+        [Finding::Unreadable {
+            path: "DATA/LEVEL.DAT"
         }]
     );
 }

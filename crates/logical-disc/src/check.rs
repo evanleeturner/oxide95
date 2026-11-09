@@ -10,8 +10,20 @@
 //! Names compare exactly; letter case differs only as a finding, ASCII
 //! alone, since a disc's names are ASCII. A picked file the list does not
 //! name is no finding: the list says what must be there, not all that may.
+//! A file the disc itself holds empty is marked so in the list, and its 0
+//! bytes in the pick are the disc's own copy, no finding.
 use alloc::vec::Vec;
 use core::fmt;
+
+/// One file the game expects on its disc: its path from the disc's root,
+/// and whether the disc itself holds it empty. The mark says 0 bytes is
+/// right for this file, not that bytes are wrong: the check knows no other
+/// size, so a marked file passes at any size it can be read.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Expected<'a> {
+    pub path: &'a str,
+    pub empty_at_source: bool,
+}
 
 /// One file of the player's pick: its path from the disc's root, and its
 /// size as read now, `None` when it can no longer be read, as a file moved
@@ -29,7 +41,8 @@ pub enum Finding<'a> {
     Missing { expected: &'a str },
     /// A picked path matches the name only with its letter case changed.
     CaseChanged { expected: &'a str, found: &'a str },
-    /// The picked file holds 0 bytes.
+    /// The picked file holds 0 bytes, and the list does not mark it empty
+    /// at source.
     Empty { path: &'a str },
     /// The picked file can no longer be read: moved or removed after the pick.
     Unreadable { path: &'a str },
@@ -83,17 +96,24 @@ impl fmt::Display for Finding<'_> {
 
 /// Checks the pick against the expected names, and returns the findings in
 /// the expected list's order, at most one an expected name: an empty list
-/// means the pick holds every expected file, each readable and non-empty.
+/// means the pick holds every expected file, each readable, and non-empty
+/// unless the list marks it empty at source.
 ///
 /// An exact path wins over a case-changed one. Writes one `disc.check`
 /// DEBUG line for the whole check and one `disc.finding` line a finding.
 #[must_use]
-pub fn check<'a>(expected: &[&'a str], picked: &[Picked<'a>]) -> Vec<Finding<'a>> {
+pub fn check<'a>(expected: &[Expected<'a>], picked: &[Picked<'a>]) -> Vec<Finding<'a>> {
     let mut findings = Vec::new();
-    for &name in expected {
+    for &Expected {
+        path: name,
+        empty_at_source,
+    } in expected
+    {
         let finding = match picked.iter().find(|file| file.path == name) {
             Some(Picked { size: None, .. }) => Some(Finding::Unreadable { path: name }),
-            Some(Picked { size: Some(0), .. }) => Some(Finding::Empty { path: name }),
+            Some(Picked { size: Some(0), .. }) if !empty_at_source => {
+                Some(Finding::Empty { path: name })
+            }
             Some(_) => None,
             None => Some(
                 match picked
