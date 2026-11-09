@@ -10,6 +10,7 @@ use alloc::vec::Vec;
 use crate::disc::{RAW, USER};
 use crate::{Disc, OpenError, Source};
 
+mod check;
 mod folder;
 mod records;
 mod sheets;

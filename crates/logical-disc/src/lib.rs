@@ -23,6 +23,8 @@
 extern crate alloc;
 
 #[cfg(any(test, feature = "disc"))]
+mod check;
+#[cfg(any(test, feature = "disc"))]
 mod cue;
 #[cfg(any(test, feature = "disc"))]
 mod disc;
@@ -35,6 +37,8 @@ mod tests;
 #[cfg(any(test, feature = "disc"))]
 mod tracks;
 
+#[cfg(any(test, feature = "disc"))]
+pub use check::{Finding, Picked, check};
 #[cfg(any(test, feature = "disc"))]
 pub use disc::{Disc, OpenError, Source};
 use kernel_files::Error;
