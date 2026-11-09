@@ -2,7 +2,8 @@
 /**
  * Reads the player's pick through `logical_disc`, on a Worker of its own: the
  * disc's one image, or the mounted folder's files by their paths from the
- * disc's top. The page's `?log=` choice rides to the Worker on its address.
+ * disc's top, or the copy of a pick kept in page storage. The page's `?log=`
+ * choice rides to the Worker on its address.
  */
 
 /**
@@ -19,7 +20,10 @@ function pickedFiles(picked) {
   return [...picked].map((file) => ({ path: discPath(file), file }));
 }
 
-/** Runs one act on a Worker of its own, and resolves to its one answer. */
+/**
+ * Runs one act on a Worker of its own, and resolves to its one answer. A
+ * Worker that stopped, or posted the name of the error it met, rejects.
+ */
 async function run(message) {
   const module = await WebAssembly.compileStreaming(
     fetch(new URL("./page_disc.wasm", import.meta.url)),
@@ -30,7 +34,8 @@ async function run(message) {
   );
   try {
     return await new Promise((resolve, reject) => {
-      worker.onmessage = ({ data }) => resolve(data);
+      worker.onmessage = ({ data }) =>
+        data.failed ? reject(new Error(data.failed)) : resolve(data);
       worker.onerror = (event) => reject(new Error(event.message));
       worker.postMessage({ module, ...message });
     });
@@ -58,4 +63,31 @@ export function readPlaces(picked, folder, places) {
  */
 export function checkPick(picked, expected) {
   return run({ act: "check", files: pickedFiles(picked), expected });
+}
+
+/**
+ * Replaces the kept copy with the pick, and resolves to `{ kept, usage,
+ * quota }`: `kept` 0 when the pick was copied whole into page storage, 1
+ * when the store had no room, 2 when the copy failed otherwise; no part of a
+ * failed copy is kept. `usage` and `quota` are the browser's estimate after
+ * it, in bytes.
+ */
+export function keepPick(picked, folder) {
+  return run({ act: "keep", files: pickedFiles(picked), folder });
+}
+
+/**
+ * As `readPlaces`, on the kept copy: resolves to `{ held, opened, bytes }`,
+ * `held` false, alone, when no whole copy is kept.
+ */
+export function readKept(places) {
+  return run({ act: "read", kept: true, places });
+}
+
+/**
+ * As `checkPick`, on the kept copy: resolves to `{ held, checked,
+ * sentences }`, `held` false, alone, when no whole copy is kept.
+ */
+export function checkKept(expected) {
+  return run({ act: "check", kept: true, expected });
 }
