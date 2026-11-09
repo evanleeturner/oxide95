@@ -2,8 +2,10 @@
 //! The thin wasm the disc's Worker runs. [`read`] opens the player's pick as a disc, the
 //! one picked image or a mounted folder's files by their paths from the disc's top, and
 //! reads one byte at each place the page names, through `logical_disc` alone: the read
-//! the launcher's check and its kept copy stand on. Only a Worker can answer its imports,
-//! a `File` being readable in step there alone, so on any other target this file is empty.
+//! the launcher's kept copy stands on. [`check`] holds a mounted folder's pick against
+//! the files the page says the game expects, and hands out one sentence a wrong file.
+//! Only a Worker can answer its imports, a `File` being readable in step there alone, so
+//! on any other target this file is empty.
 #![cfg(target_arch = "wasm32")]
 #![expect(
     unsafe_code,
@@ -14,7 +16,7 @@ use std::ffi::CString;
 
 use kernel_files::{Create, Error, Folder, Mode, Origin};
 use log::{LevelFilter, Log, Metadata, Record};
-use logical_disc::{Disc, ReadAt, Source};
+use logical_disc::{Disc, Expected, ReadAt, Source};
 
 /// The most bytes a path may take: a picked file's or a place's.
 const ROOM: u32 = 512;
@@ -29,6 +31,10 @@ unsafe extern "C" {
     fn place_path(place: u32, into: *mut u8, room: u32) -> u32;
     safe fn place_at(place: u32) -> f64;
     safe fn found(place: u32, byte: i32);
+    safe fn expected_count() -> u32;
+    fn expected_path(expected: u32, into: *mut u8, room: u32) -> u32;
+    safe fn expected_empty(expected: u32) -> u32;
+    fn finding(text: *const u8, length: u32);
     fn line(level: u32, text: *const u8, length: u32);
 }
 
@@ -128,13 +134,9 @@ impl Log for Sink {
 
 static SINK: Sink = Sink;
 
-/// Opens the pick and reads one byte at each place, handing each to `found`, or -1
-/// for a place that could not be read. `folder` non-zero takes every picked file by its
-/// path; zero takes the one picked file as an iso. `debug` non-zero adds the DEBUG
-/// lines. Answers 0 when the disc opened, 1 when it did not, 2 when a path did not fit
-/// [`ROOM`] or was not text.
-#[unsafe(no_mangle)]
-pub extern "C" fn read(debug: u32, folder: u32) -> u32 {
+/// Installs the sink, at INFO, or DEBUG when `debug` is non-zero. A Worker runs one act
+/// on one instance, so the first install is the only one.
+fn install(debug: u32) {
     if log::set_logger(&SINK).is_ok() {
         log::set_max_level(if debug == 0 {
             LevelFilter::Info
@@ -142,16 +144,31 @@ pub extern "C" fn read(debug: u32, folder: u32) -> u32 {
             LevelFilter::Debug
         });
     }
+}
+
+/// The picked file's path by the import, or `None` when it did not fit [`ROOM`].
+fn picked_path(file: u32) -> Option<String> {
+    text(|into, room| {
+        // SAFETY: the import writes at most `room` bytes at `into`, the buffer `text`
+        // holds, and keeps nothing past the call.
+        unsafe { file_path(file, into, room) }
+    })
+}
+
+/// Opens the pick and reads one byte at each place, handing each to `found`, or -1
+/// for a place that could not be read. `folder` non-zero takes every picked file by its
+/// path; zero takes the one picked file as an iso. `debug` non-zero adds the DEBUG
+/// lines. Answers 0 when the disc opened, 1 when it did not, 2 when a path did not fit
+/// [`ROOM`] or was not text.
+#[unsafe(no_mangle)]
+pub extern "C" fn read(debug: u32, folder: u32) -> u32 {
+    install(debug);
     let source = if folder == 0 {
         Source::Iso(Picked(0))
     } else {
         let mut picked = Vec::new();
         for file in 0..file_count() {
-            let Some(path) = text(|into, room| {
-                // SAFETY: the import writes at most `room` bytes at `into`, the buffer
-                // `text` holds, and keeps nothing past the call.
-                unsafe { file_path(file, into, room) }
-            }) else {
+            let Some(path) = picked_path(file) else {
                 return 2;
             };
             picked.push((path, Picked(file)));
@@ -176,6 +193,61 @@ pub extern "C" fn read(debug: u32, folder: u32) -> u32 {
         let byte = byte_at(&disc, &path, place_at(place)).map_or(-1, i32::from);
         log::debug!(i = place, p:% = path, b = byte; "disc.place");
         found(place, byte);
+    }
+    0
+}
+
+/// Checks the picked files, each by its path from the disc's top, against the files the
+/// page says the game expects, and hands each finding's one sentence to `finding`, in
+/// the expected list's order. A picked file counts as readable when it is empty or its
+/// first byte reads now; a file moved or removed after the pick does not read, and its
+/// size goes to the check as unknown. `debug` non-zero adds the check's DEBUG lines.
+/// Answers 0 when the check ran, 2 when a path did not fit [`ROOM`] or was not text.
+#[unsafe(no_mangle)]
+pub extern "C" fn check(debug: u32) -> u32 {
+    install(debug);
+    let mut picked = Vec::new();
+    for file in 0..file_count() {
+        let Some(path) = picked_path(file) else {
+            return 2;
+        };
+        let size = Picked(file).size();
+        let readable = size == 0 || Picked(file).read_at(0, &mut [0]).is_ok();
+        picked.push((path, readable.then_some(size)));
+    }
+    let mut expected = Vec::new();
+    for item in 0..expected_count() {
+        let Some(path) = text(|into, room| {
+            // SAFETY: the import writes at most `room` bytes at `into`, the buffer
+            // `text` holds, and keeps nothing past the call.
+            unsafe { expected_path(item, into, room) }
+        }) else {
+            return 2;
+        };
+        expected.push((path, expected_empty(item) != 0));
+    }
+    let picked: Vec<_> = picked
+        .iter()
+        .map(|(path, size)| logical_disc::Picked {
+            path: path.as_str(),
+            size: *size,
+        })
+        .collect();
+    let expected: Vec<_> = expected
+        .iter()
+        .map(|(path, empty)| Expected {
+            path: path.as_str(),
+            empty_at_source: *empty,
+        })
+        .collect();
+    for item in logical_disc::check(&expected, &picked) {
+        let sentence = item.to_string();
+        let Ok(length) = u32::try_from(sentence.len()) else {
+            continue;
+        };
+        // SAFETY: the import reads `length` bytes, which `sentence` holds, and keeps
+        // nothing past the call.
+        unsafe { finding(sentence.as_ptr(), length) };
     }
     0
 }

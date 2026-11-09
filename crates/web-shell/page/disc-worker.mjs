@@ -1,13 +1,19 @@
 // SPDX-License-Identifier: MIT
 // The disc's Worker: it takes one message, the compiled `page_disc` module, the picked
-// files with their paths from the disc's top, and the places to read; it runs the
-// wasm's `read` once and answers with the byte at each place, -1 for a place it could
-// not read. A Worker alone may read a `File` in step, which the wasm's `ReadAt` needs.
+// files with their paths from the disc's top, and one act. `read` takes the places to
+// read, runs the wasm's `read` once and answers with the byte at each place, -1 for a
+// place it could not read. `check` takes the files the game expects, runs the wasm's
+// `check` once and answers with each finding's sentence. A Worker alone may read a
+// `File` in step, which the wasm's `ReadAt` needs.
 import { logger } from "./track-logger.mjs";
 
 const LEVELS = [null, logger.error, logger.warn, logger.info, logger.debug];
 
-function imports(files, places, bytes, wasmMemory) {
+function imports(
+  { files, places, expected },
+  { bytes, sentences },
+  wasmMemory,
+) {
   const reader = new FileReaderSync();
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -40,6 +46,12 @@ function imports(files, places, bytes, wasmMemory) {
     found: (place, byte) => {
       bytes[place] = byte;
     },
+    expected_count: () => expected.length,
+    expected_path: (item, into, room) => put(expected[item].path, into, room),
+    expected_empty: (item) => (expected[item].empty ? 1 : 0),
+    finding: (at, length) => {
+      sentences.push(decoder.decode(new Uint8Array(wasmMemory(), at, length)));
+    },
     line: (level, at, length) => {
       const text = decoder.decode(new Uint8Array(wasmMemory(), at, length));
       LEVELS[level]?.(text);
@@ -48,18 +60,21 @@ function imports(files, places, bytes, wasmMemory) {
 }
 
 onmessage = ({ data }) => {
-  const bytes = data.places.map(() => -1);
+  const asked = {
+    files: data.files,
+    places: data.places ?? [],
+    expected: data.expected ?? [],
+  };
+  const answers = { bytes: asked.places.map(() => -1), sentences: [] };
   let instance = null;
-  const env = imports(
-    data.files,
-    data.places,
-    bytes,
-    () => instance.exports.memory.buffer,
-  );
+  const env = imports(asked, answers, () => instance.exports.memory.buffer);
   instance = new WebAssembly.Instance(data.module, { env });
-  const opened = instance.exports.read(
-    logger.debugEnabled ? 1 : 0,
-    data.folder ? 1 : 0,
-  );
-  postMessage({ opened, bytes });
+  const debug = logger.debugEnabled ? 1 : 0;
+  if (data.act === "check") {
+    const checked = instance.exports.check(debug);
+    postMessage({ checked, sentences: answers.sentences });
+  } else {
+    const opened = instance.exports.read(debug, data.folder ? 1 : 0);
+    postMessage({ opened, bytes: answers.bytes });
+  }
 };
