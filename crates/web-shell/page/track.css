@@ -5,6 +5,7 @@
   --ring: #0b57d0;
   --rule: #5f6368;
   --screen: #202124;
+  --stage: #000000;
 
   color-scheme: light dark;
 }
@@ -78,10 +79,35 @@ button:disabled {
   font: inherit;
 }
 
+/* The window's whole width (body's padding given back, so a scrollbar is never
+   overrun) and its whole height, black around the screen. Top, not centred: at the
+   page's usual size the screen stays wholly in view under the controls. */
+.stage {
+  --fit-width: 640px;
+  --fit-height: 480px;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
+  align-items: start;
+  block-size: 100dvh;
+  margin-block-start: 8px;
+  margin-inline: -8px;
+  background: var(--stage);
+}
+
 .screen {
   display: block;
-  margin-block-start: 8px;
   max-inline-size: 100%;
   block-size: auto;
   background: var(--screen);
+  image-rendering: pixelated;
+}
+
+/* The whole-number fit. Its size is computed in track.mjs and carried by the
+   stage's custom properties, since a computed length has no class to name it. */
+.screen.is-whole {
+  max-inline-size: none;
+  inline-size: var(--fit-width);
+  block-size: var(--fit-height);
 }

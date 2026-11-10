@@ -304,8 +304,14 @@
     {
       "id": "draw.present",
       "level": "D",
-      "fields": { "window": "the window painted, its handle as a number: the Win32 back alone", "w": "the window's width the picture was painted into", "h": "its height", "rows": "SetDIBitsToDevice's answer, the rows it drew: the Win32 back alone", "by": "who painted: draw, on the Win32 back alone" },
+      "fields": { "window": "the window painted, its handle as a number: the Win32 back alone", "w": "the window's width the picture was painted into", "h": "its height", "rows": "SetDIBitsToDevice's answer, the rows it drew: the Win32 back alone", "by": "who painted: draw, on the Win32 back alone", "k": "the whole factor the picture was shown at, each of its pixels a k by k block; 0 from the corner or on a surface of no size: the native back alone", "x": "the black strip left of the picture, in the surface's pixels: the native back alone", "y": "the black strip above it: the native back alone" },
       "template": "a host's paint at {w} by {h}"
+    },
+    {
+      "id": "draw.fit",
+      "level": "I",
+      "fields": { "k": "the whole factor the picture is shown at, each of its pixels a k by k block; 0 when shown from the surface's top left corner unscaled, or on a surface of no size", "x": "the black strip left of the picture, in the surface's pixels", "y": "the black strip above it", "w": "the surface's width", "h": "its height", "pw": "the picture's width", "ph": "its height" },
+      "template": "the {pw} by {ph} picture shown at {k} times on {w} by {h}, its corner at {x}, {y}"
     },
     {
       "id": "draw.frozen",
@@ -519,6 +525,17 @@
       "level": "I",
       "fields": { "place": "the place the player pressed, by its name in the page's script" },
       "template": "the player pressed {place}"
+    },
+    {
+      "id": "screen.fit",
+      "level": "I",
+      "fields": {
+        "k": "the whole factor the screen is shown at, 0 for the plain shrink",
+        "w": "the stage's width in CSS pixels",
+        "h": "the stage's height in CSS pixels",
+        "ratio": "the device pixels to a CSS pixel"
+      },
+      "template": "the screen shown at {k} times on a {w} by {h} stage, {ratio} device pixels to a pixel"
     },
     {
       "id": "key.down",

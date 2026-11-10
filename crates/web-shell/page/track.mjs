@@ -14,6 +14,7 @@ import {
   WORDS,
   pushEdge,
 } from "./crossing.mjs";
+import { wholeFit } from "./fit.mjs";
 import { virtualKey } from "./keys.mjs";
 import { logger } from "./track-logger.mjs";
 
@@ -48,6 +49,7 @@ const startButton = document.querySelector(".js-start");
 const pauseButton = document.querySelector(".js-pause");
 const readAgainButton = document.querySelector(".js-read-again");
 const screen = document.querySelector(".js-screen");
+const stage = document.querySelector(".js-stage");
 const renderer = screen.getContext("bitmaprenderer");
 
 const held = new Set();
@@ -182,6 +184,26 @@ async function main() {
   startButton.disabled = false;
   say(READY);
 }
+
+/** Shows the screen at the whole factor the stage allows; the stylesheet holds the sizes. */
+function fitScreen(width, height) {
+  const ratio = window.devicePixelRatio || 1;
+  const fit = wholeFit(width, height, ratio);
+  if (fit.k > 0) {
+    // A computed length has no class, so a custom property carries it to the stylesheet.
+    stage.style.setProperty("--fit-width", `${fit.width}px`);
+    stage.style.setProperty("--fit-height", `${fit.height}px`);
+  }
+  screen.classList.toggle("is-whole", fit.k > 0);
+  logger.info("screen.fit", { k: fit.k, w: width, h: height, ratio });
+}
+
+// Read whenever the stage's size changes: a resize, or the browser's full screen. A
+// move to a monitor of another ratio with no change of size is not seen.
+new ResizeObserver(([entry]) => {
+  const [box] = entry.contentBoxSize;
+  fitScreen(box.inlineSize, box.blockSize);
+}).observe(stage);
 
 await main();
 document.documentElement.dataset.ready = "true";

@@ -55,6 +55,7 @@ const PAGE_FILES = [
   "track.mjs",
   "track-worker.mjs",
   "crossing.mjs",
+  "fit.mjs",
   "keys.mjs",
   "track-logger.mjs",
 ];

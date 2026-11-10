@@ -11,6 +11,12 @@
 //! inside, the frame's corner at its top left. Linux turns the loop on the
 //! main thread alone, and one loop a program.
 //!
+//! A window may be asked full screen ([`Native::full_screen`]): no frame,
+//! the whole of the monitor the host shows it on, at that monitor's own
+//! size. The program's rectangle is kept while it is, never asked of the
+//! host, and asked again as the window leaves it. A window is framed
+//! until asked.
+//!
 //! A key is the virtual key number of its place on the keyboard,
 //! Windows' own numbering, whatever the host's layout; Shift, Ctrl and
 //! Alt either side are `0x10`, `0x11` and `0x12`. The pointer stands where
@@ -27,7 +33,9 @@
 //! `CursorGrabMode` notes), so a confined pointer still moves the host's
 //! cursor inside the window while the program reads its motion; and X11's
 //! grab hands each relative move on twice, the copy dropped here
-//! (`Twins`).
+//! (`Twins`). The pointer is the host's pixel in the window's inside: a
+//! window full screen, or a picture shown larger than the program's
+//! rectangle, hands on the host's place, never the picture's.
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -42,7 +50,7 @@ use winit::event::{DeviceEvent, DeviceId, ElementState, MouseButton, WindowEvent
 use winit::event_loop::{ActiveEventLoop, EventLoop};
 use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::platform::pump_events::EventLoopExtPumpEvents;
-use winit::window::{CursorGrabMode, Window, WindowId};
+use winit::window::{CursorGrabMode, Fullscreen, Window, WindowId};
 
 use crate::{Event, Rect, Screen};
 
@@ -57,11 +65,13 @@ enum Made {
     Refused(OsError),
 }
 
-/// One program window as last placed.
+/// One program window as last placed, and whether it is asked full
+/// screen.
 struct Placed {
     window: u32,
     rect: Rect,
     shown: bool,
+    full: bool,
     made: Made,
 }
 
@@ -181,7 +191,8 @@ impl Desktop {
                 let attributes = Window::default_attributes()
                     .with_inner_size(inside(placed.rect))
                     .with_position(corner(placed.rect))
-                    .with_visible(placed.shown);
+                    .with_visible(placed.shown)
+                    .with_fullscreen(screen(placed.full));
                 placed.made = match event_loop.create_window(attributes) {
                     Ok(host) => Made::Window(Rc::new(host)),
                     Err(refusal) => Made::Refused(refusal),
@@ -392,6 +403,12 @@ pub const fn virtual_key(code: KeyCode) -> Option<u8> {
     })
 }
 
+/// The host's full screen when `full`: no frame, the monitor the host
+/// shows the window on; `None`, a framed window.
+fn screen(full: bool) -> Option<Fullscreen> {
+    full.then_some(Fullscreen::Borderless(None))
+}
+
 /// The rectangle's top left, where the host's frame goes.
 fn corner(rect: Rect) -> PhysicalPosition<i32> {
     PhysicalPosition::new(rect.left, rect.top)
@@ -540,6 +557,33 @@ impl Native {
     pub fn cursor_shown(&self, window: u32, shown: bool) -> Result<(), String> {
         self.host(window, |host| host.set_cursor_visible(shown))
     }
+
+    /// Asks `window` full screen, or framed again: one waiting is made
+    /// so at the next pump; one made changes at once and, framed again,
+    /// is put back at the program's rectangle. `Err` for a window never
+    /// placed, or the host's reason it would not make one.
+    pub fn full_screen(&self, window: u32, full: bool) -> Result<(), String> {
+        let mut desktop = self.desktop.borrow_mut();
+        let Some(placed) = desktop
+            .placed
+            .iter_mut()
+            .find(|placed| placed.window == window)
+        else {
+            return Err(format!("window {window} not placed"));
+        };
+        if let Made::Refused(refusal) = &placed.made {
+            return Err(refusal.to_string());
+        }
+        placed.full = full;
+        if let Made::Window(host) = &placed.made {
+            host.set_fullscreen(screen(full));
+            if !full {
+                host.set_outer_position(corner(placed.rect));
+                let _ = host.request_inner_size(inside(placed.rect));
+            }
+        }
+        Ok(())
+    }
 }
 
 impl Screen for Native {
@@ -549,7 +593,9 @@ impl Screen for Native {
 
     /// A window the host has made is placed at once, its new inside asked
     /// of the host, the host's answer never read back: the program keeps
-    /// its own rectangle. Any other is made at the next pump. A hidden
+    /// its own rectangle; a full screen one keeps the rectangle for when
+    /// it leaves, the host asked only whether it shows. Any other is made
+    /// at the next pump. A hidden
     /// window's grab is released: X11 ends a grab whose window is not
     /// viewable.
     fn place(&self, window: u32, rect: Rect, shown: bool) {
@@ -559,8 +605,10 @@ impl Screen for Native {
                 was.rect = rect;
                 was.shown = shown;
                 if let Made::Window(host) = &was.made {
-                    host.set_outer_position(corner(rect));
-                    let _ = host.request_inner_size(inside(rect));
+                    if !was.full {
+                        host.set_outer_position(corner(rect));
+                        let _ = host.request_inner_size(inside(rect));
+                    }
                     host.set_visible(shown);
                 }
             }
@@ -568,6 +616,7 @@ impl Screen for Native {
                 window,
                 rect,
                 shown,
+                full: false,
                 made: Made::Waiting,
             }),
         }

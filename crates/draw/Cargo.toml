@@ -63,3 +63,12 @@ required-features = ["native"]
 [[example]]
 name = "front_dump"
 required-features = ["page"]
+
+# The scaled fill timed: run with `--release`.
+[[example]]
+name = "fill_time"
+required-features = ["desk"]
+
+[[example]]
+name = "full_screen_draw"
+required-features = ["native"]

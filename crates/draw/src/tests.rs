@@ -7,7 +7,7 @@ use window::Rect;
 use window::desk::{Desk, Window};
 use window::page::Page as Host;
 
-use crate::easel::{self, Area, Back, Easel, Palette, Shown};
+use crate::easel::{self, Area, Back, Easel, Fit, Palette, Scale, Shown};
 use crate::front::{Front, Header};
 use crate::page::Page;
 use crate::table::{Calls, Route, Row};
@@ -440,6 +440,128 @@ fn a_narrower_shorter_window_cuts_the_picture_never_shears_it() {
     let mut narrow = [0xdead_beef_u32; 2];
     two_by_two().to_zero_rgb(&mut narrow, 1);
     assert_eq!(narrow, [0x11_0000, 0x33_0000]);
+}
+
+/// A picture each of whose pixels differs in colour from its 8 neighbours,
+/// none black, its rows 3 bytes of padding apart: a block drawn out of place,
+/// a black word left inside the box, or a sheared row each shows.
+fn patterned(width: u32, height: u32) -> Shown {
+    let mut palette = Palette::black();
+    for (index, entry) in (0_u32..).zip(palette.0.iter_mut()) {
+        *entry = 0x80_0000 | (index * 0x101);
+    }
+    let pitch = width + 3;
+    let pixels = (0..height)
+        .flat_map(|y| {
+            (0..pitch).map(move |x| {
+                if x < width {
+                    (x + 3 * y).to_le_bytes()[0]
+                } else {
+                    0xee
+                }
+            })
+        })
+        .collect();
+    Shown {
+        width,
+        height,
+        pitch,
+        pixels,
+        palette,
+    }
+}
+
+#[test]
+fn a_640_by_480_picture_on_2560_by_1440_is_3_by_3_blocks_centred_black_around() {
+    let shown = patterned(640, 480);
+    let mut into = vec![0xdead_beef_u32; 2560 * 1440];
+    let fit = shown.to_zero_rgb_scaled(&mut into, 2560, Scale::Whole);
+    assert_eq!(
+        fit,
+        Some(Fit {
+            factor: 3,
+            x: 320,
+            y: 0
+        })
+    );
+    for (y, line) in (0_u32..).zip(into.chunks_exact(2560)) {
+        for (x, word) in (0_u32..).zip(line) {
+            let want = if (320..2240).contains(&x) {
+                let at = (y / 3) * shown.pitch + (x - 320) / 3;
+                shown.palette.zero_rgb(shown.pixels[at as usize])
+            } else {
+                0
+            };
+            assert_eq!(*word, want, "x {x} y {y}");
+        }
+    }
+}
+
+/// An odd strip's extra pixel goes right and below; the words past the last
+/// whole row are 0.
+#[test]
+fn an_odd_strip_puts_its_extra_pixel_right_and_below() {
+    let mut into = [0xdead_beef_u32; 7 * 5 + 2];
+    let fit = two_by_two().to_zero_rgb_scaled(&mut into, 7, Scale::Whole);
+    assert_eq!(
+        fit,
+        Some(Fit {
+            factor: 2,
+            x: 1,
+            y: 0
+        })
+    );
+    let (a, b, c, d) = (0x11_0000, 0x22_0000, 0x33_0000, 0x44_0000);
+    assert_eq!(
+        into,
+        [
+            0, a, a, b, b, 0, 0, //
+            0, a, a, b, b, 0, 0, //
+            0, c, c, d, d, 0, 0, //
+            0, c, c, d, d, 0, 0, //
+            0, 0, 0, 0, 0, 0, 0, //
+            0, 0,
+        ]
+    );
+}
+
+#[test]
+fn a_surface_the_pictures_size_gets_the_corner_fills_words() {
+    let shown = patterned(640, 480);
+    let mut scaled = vec![0xdead_beef_u32; 640 * 480];
+    let mut corner = scaled.clone();
+    let fit = shown.to_zero_rgb_scaled(&mut scaled, 640, Scale::Whole);
+    shown.to_zero_rgb(&mut corner, 640);
+    assert_eq!(
+        fit,
+        Some(Fit {
+            factor: 1,
+            x: 0,
+            y: 0
+        })
+    );
+    assert!(scaled == corner);
+}
+
+/// Narrower, shorter, or both: no whole factor fits, so the corner fill's
+/// crop; and the corner asked for on a larger surface.
+#[test]
+fn a_smaller_surface_or_the_corner_asked_gets_the_corner_fills_words() {
+    let shown = patterned(640, 480);
+    let cases = [
+        (639, 480, Scale::Whole),
+        (640, 479, Scale::Whole),
+        (639, 479, Scale::Whole),
+        (2560, 1440, Scale::Corner),
+    ];
+    for (width, height, scale) in cases {
+        let mut scaled = vec![0xdead_beef_u32; width * height];
+        let mut corner = scaled.clone();
+        let fit = shown.to_zero_rgb_scaled(&mut scaled, u32::try_from(width).unwrap(), scale);
+        shown.to_zero_rgb(&mut corner, u32::try_from(width).unwrap());
+        assert_eq!(fit, None, "{width} by {height}");
+        assert!(scaled == corner, "{width} by {height}");
+    }
 }
 
 #[test]

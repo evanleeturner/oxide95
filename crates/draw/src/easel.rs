@@ -216,6 +216,46 @@ pub struct Shown {
     pub palette: Palette,
 }
 
+/// Where a picture lands on a larger surface: each of its pixels a `factor`
+/// by `factor` block, its top left corner at `x`, `y` of the surface.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Fit {
+    pub factor: u32,
+    pub x: u32,
+    pub y: u32,
+}
+
+impl Fit {
+    /// The largest whole factor that keeps `picture` inside `surface`, both
+    /// `(width, height)`, centred, an odd strip's extra pixel right and below;
+    /// `None` when a side of the picture is 0 or the surface is smaller than
+    /// the picture on either side.
+    #[must_use]
+    pub fn whole(picture: (u32, u32), surface: (u32, u32)) -> Option<Self> {
+        let (width, height) = picture;
+        let factor = surface
+            .0
+            .checked_div(width)?
+            .min(surface.1.checked_div(height)?);
+        (factor > 0).then(|| Self {
+            factor,
+            x: (surface.0 - factor * width) / 2,
+            y: (surface.1 - factor * height) / 2,
+        })
+    }
+}
+
+/// How a back fills a surface sized other than the picture.
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+pub enum Scale {
+    /// The largest whole factor, centred, black around: [`Fit::whole`].
+    #[default]
+    Whole,
+    /// The picture at its own size from the top left corner, the rest black:
+    /// [`Shown::to_zero_rgb`].
+    Corner,
+}
+
 impl Shown {
     /// The picture as `0RGB` into rows `width` words wide, what fits from the
     /// top left corner, the rest of `into` 0: a window sized other than the
@@ -228,6 +268,49 @@ impl Shown {
                 *slot = self.palette.zero_rgb(*index);
             }
         }
+    }
+
+    /// The picture as `0RGB` into rows `width` words wide, filled by `scale`;
+    /// the surface's height is the whole rows `into` holds. The fit drawn, or
+    /// `None` when [`Scale::Corner`] was asked or no whole factor fits (a
+    /// surface smaller than the picture on either side), each of which fills
+    /// as [`Shown::to_zero_rgb`]. Every word outside the drawn box is 0; a
+    /// surface the picture's own size gets the words `to_zero_rgb` writes.
+    pub fn to_zero_rgb_scaled(&self, into: &mut [u32], width: u32, scale: Scale) -> Option<Fit> {
+        let height = u32::try_from(into.len() / width.max(1) as usize).unwrap_or(u32::MAX);
+        let fit = match scale {
+            Scale::Whole => Fit::whole((self.width, self.height), (width, height)),
+            Scale::Corner => None,
+        };
+        let Some(fit) = fit else {
+            self.to_zero_rgb(into, width);
+            return None;
+        };
+        let (line, factor) = (width as usize, fit.factor as usize);
+        let (left, drawn) = (fit.x as usize, factor * self.width as usize);
+        let (above, mut rest) = into.split_at_mut(line * fit.y as usize);
+        above.fill(0);
+        let rows = self.pixels.chunks_exact(self.pitch.max(1) as usize);
+        for row in rows.take(self.height as usize) {
+            let (block, after) = rest.split_at_mut(line * factor);
+            let (first, copies) = block.split_at_mut(line);
+            let (strip, picture) = first.split_at_mut(left);
+            let (picture, right) = picture.split_at_mut(drawn);
+            strip.fill(0);
+            right.fill(0);
+            for (slots, index) in picture
+                .chunks_exact_mut(factor)
+                .zip(&row[..self.width as usize])
+            {
+                slots.fill(self.palette.zero_rgb(*index));
+            }
+            for copy in copies.chunks_exact_mut(line) {
+                copy.copy_from_slice(first);
+            }
+            rest = after;
+        }
+        rest.fill(0);
+        Some(fit)
     }
 
     /// The picture as RGBA, 4 bytes a pixel, row by row with no gap, into `into`;
