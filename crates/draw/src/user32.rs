@@ -5,11 +5,20 @@
 //! as every target's: its buffers and contexts are this crate's, not GDI's.
 //!
 //! [`Real`] answers a front's questions from the real window. [`Window`] paints
-//! [`Shown`] into it, one `draw.present` line, `by=draw`, each present.
+//! [`Shown`] into it, its inside asked by `GetClientRect` each present: an
+//! inside sized other than the picture shows it at the largest whole factor,
+//! centred, black around ([`Shown::to_zero_rgb_sized`]).
 //!
-//! The walls, named: a window sized other than the picture shows the picture's
-//! top left, the size never asked, since `SetDIBitsToDevice` clips; no window
-//! aimed yet paints nothing and writes no line.
+//! Each present writes one `draw.present` line at DEBUG, `by=draw`: the
+//! picture's `w` and `h`, the source rectangle from 0,0; the factor `k`; the
+//! destination `dx`, `dy`, `dw`, `dh` in the inside. One `draw.fit` line at
+//! INFO when the fit, the inside's size or the picture's differs from the
+//! last present's, as the host's back writes it.
+//!
+//! The walls, named: an inside smaller than the picture on either side, or
+//! one whose size Wine refuses, shows the picture's top left, since
+//! `SetDIBitsToDevice` clips; no window aimed yet paints nothing and writes no
+//! line.
 #![allow(
     unsafe_code,
     reason = "this back is calls into USER32 and GDI32 and nothing else"
@@ -20,7 +29,7 @@ use core::cell::{Cell, RefCell};
 
 use window::user32::kept;
 
-use crate::easel::{Back, Shown, unsigned};
+use crate::easel::{Back, Fit, Painted, Shown, unsigned};
 use crate::front::Windows;
 
 unsafe extern "system" {
@@ -85,36 +94,52 @@ impl Windows for Real {
 /// The back: the real window the picture goes to, 0 until the layer aims it,
 /// and the words it last painted, kept to save an allocation a present.
 pub struct Window {
-    window: Cell<u32>,
+    aimed: Cell<u32>,
     words: RefCell<Vec<u32>>,
+    /// The last present's, the one `draw.fit` is written against; `None`
+    /// before the first.
+    fitted: Cell<Option<Fitted>>,
+}
+
+/// What one present was painted at: its fit, and the inside's and the
+/// picture's sizes the fit was made from, the inside `None` when Wine
+/// refused its size.
+#[derive(Clone, Copy, PartialEq, Eq)]
+struct Fitted {
+    fit: Option<Fit>,
+    inside: Option<(u32, u32)>,
+    picture: (u32, u32),
 }
 
 impl Window {
     #[must_use]
     pub const fn new() -> Self {
         Self {
-            window: Cell::new(0),
+            aimed: Cell::new(0),
             words: RefCell::new(Vec::new()),
+            fitted: Cell::new(None),
         }
     }
 
     /// The window a present paints from now on; 0 paints nothing.
     pub fn aim(&self, window: u32) {
-        self.window.set(window);
+        self.aimed.set(window);
     }
 
     /// The window aimed at now.
     #[must_use]
     pub fn aimed(&self) -> u32 {
-        self.window.get()
+        self.aimed.get()
     }
 
-    /// `shown` on `window`: `SetDIBitsToDevice`'s answer, the rows it drew.
-    fn paint(&self, window: u32, shown: &Shown) -> i32 {
-        let (width, height) = (shown.width, shown.height);
+    /// `shown` on `window`, fitted to its inside: `SetDIBitsToDevice`'s
+    /// answer, the rows it drew; what was painted; the inside's size, `None`
+    /// when Wine refused it.
+    fn paint(&self, window: u32, shown: &Shown) -> (i32, Painted, Option<(u32, u32)>) {
+        let inside = Real.size(window);
         let mut words = self.words.borrow_mut();
-        words.resize(width as usize * height as usize, 0);
-        shown.to_zero_rgb(&mut words, width);
+        let painted = shown.to_zero_rgb_sized(&mut words, inside);
+        let (width, height) = (painted.width, painted.height);
         let header = [
             HEADER_BYTES,
             width,
@@ -150,7 +175,7 @@ impl Window {
         };
         // SAFETY: the context `GetDC` handed for this window, handed back.
         unsafe { ReleaseDC(window, dc) };
-        rows
+        (rows, painted, inside)
     }
 }
 
@@ -162,16 +187,48 @@ impl Default for Window {
 
 impl Back for Window {
     fn present(&self, shown: &Shown) {
-        let window = self.window.get();
+        let window = self.aimed.get();
         if window == 0 {
             return;
         }
         kept(|| {
-            let rows = self.paint(window, shown);
+            let (rows, painted, inside) = self.paint(window, shown);
+            let (pw, ph) = (shown.width, shown.height);
+            let (k, x, y) = painted
+                .fit
+                .map_or((0, 0, 0), |fit| (fit.factor, fit.x, fit.y));
+            let now = Some(Fitted {
+                fit: painted.fit,
+                inside,
+                picture: (pw, ph),
+            });
+            if self.fitted.replace(now) != now {
+                let (wide, high) = inside.unwrap_or((0, 0));
+                log::info!(
+                    window:% = oxide_trace::__shown!(window),
+                    k:% = oxide_trace::__shown!(k),
+                    x:% = oxide_trace::__shown!(x),
+                    y:% = oxide_trace::__shown!(y),
+                    w:% = oxide_trace::__shown!(wide),
+                    h:% = oxide_trace::__shown!(high),
+                    pw:% = oxide_trace::__shown!(pw),
+                    ph:% = oxide_trace::__shown!(ph),
+                    by = "draw";
+                    "draw.fit"
+                );
+            }
+            let (dw, dh) = painted
+                .fit
+                .map_or((pw, ph), |fit| (fit.factor * pw, fit.factor * ph));
             log::debug!(
                 window:% = oxide_trace::__shown!(window),
-                w:% = oxide_trace::__shown!(shown.width),
-                h:% = oxide_trace::__shown!(shown.height),
+                w:% = oxide_trace::__shown!(pw),
+                h:% = oxide_trace::__shown!(ph),
+                k:% = oxide_trace::__shown!(k),
+                dx:% = oxide_trace::__shown!(x),
+                dy:% = oxide_trace::__shown!(y),
+                dw:% = oxide_trace::__shown!(dw),
+                dh:% = oxide_trace::__shown!(dh),
                 rows = rows,
                 by = "draw";
                 "draw.present"

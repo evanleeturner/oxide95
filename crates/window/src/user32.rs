@@ -24,15 +24,27 @@
 //! empty queue leaves there is what Wine leaves: all 7 fields unchanged,
 //! measured under Wine 9.0. A program whose loop never tests the answer
 //! reads its last message again, by the original's own rule.
+//!
+//! The told world: [`tell_screen`] tells the program a screen smaller
+//! than the real one. Its windows are then placed and sized on the real
+//! screen at the told one's whole-factor fit ([`crate::Told`]), and the
+//! sizes it reads, `GetWindowRect` and `GetSystemMetrics`' screen width
+//! and height, answer the told screen's. `AdjustWindowRect` reads no
+//! screen and hands its numbers on whole; `ClientToScreen` and
+//! `ScreenToClient` are not told. Told nothing, or a told world at factor
+//! 1 with no strip, every front hands its numbers on whole. A line whose
+//! numbers a told world moved adds `real`: what Wine was handed or
+//! answered.
 #![allow(
     unsafe_code,
     reason = "this back is calls into USER32 and nothing else"
 )]
 
-use crate::Numbers;
+use crate::{Fit, Numbers, Told};
 use core::ffi::CStr;
 use core::fmt;
-use core::ptr::with_exposed_provenance;
+use core::ptr::{with_exposed_provenance, with_exposed_provenance_mut};
+use core::sync::atomic::{AtomicU32, Ordering};
 
 unsafe extern "system" {
     fn CreateWindowExA(
@@ -188,6 +200,89 @@ pub unsafe fn wrote<const N: usize>(value: u32, address: u32) -> Wrote<N> {
     Wrote((value != 0).then(|| unsafe { record(address) }))
 }
 
+/// `CreateWindowExA`'s "let Wine choose", in a place or a width.
+const CW_USEDEFAULT: u32 = 0x8000_0000;
+/// A child window's style bit: its place is in its parent's inside.
+const WS_CHILD: u32 = 0x4000_0000;
+/// `GetWindowLongA`'s index for the style, -16.
+const GWL_STYLE: u32 = 0xFFFF_FFF0;
+
+/// The told world, as [`tell_screen`] set it: the told screen's width and
+/// height, then the real screen's at the telling. A told width of 0 is
+/// none.
+static TOLD: [AtomicU32; 4] = [const { AtomicU32::new(0) }; 4];
+
+/// Tells the program a `width` by `height` screen: from here its windows
+/// are placed and sized on the real screen at the told one's whole-factor
+/// fit, and the sizes it reads answer the told screen's. The real screen
+/// is read here, once. 0 by 0 tells none again. One `window.told` line at
+/// INFO when what is told changes.
+pub fn tell_screen(width: u32, height: u32) {
+    // SAFETY: one number each, no address.
+    let real = unsafe { (GetSystemMetrics(0), GetSystemMetrics(1)) };
+    let mut changed = false;
+    for (cell, number) in TOLD.iter().zip([width, height, real.0, real.1]) {
+        changed |= cell.swap(number, Ordering::Relaxed) != number;
+    }
+    if changed {
+        let Fit { factor, x, y } = Told::new((width, height), real).fit();
+        kept!(log::info!(w:% = oxide_trace::__shown!(width),
+            h:% = oxide_trace::__shown!(height), rw:% = oxide_trace::__shown!(real.0),
+            rh:% = oxide_trace::__shown!(real.1), k:% = oxide_trace::__shown!(factor),
+            x:% = oxide_trace::__shown!(x), y:% = oxide_trace::__shown!(y),
+            by = "window"; "window.told"));
+    }
+}
+
+/// The told world, when one is told and it moves a number: none when told
+/// none, or where the told screen fits the real one at factor 1 with no
+/// strip, so every front hands its numbers on whole.
+fn told() -> Option<Told> {
+    let [width, height, real_width, real_height] =
+        TOLD.each_ref().map(|cell| cell.load(Ordering::Relaxed));
+    let told = Told::new((width, height), (real_width, real_height));
+    let moves = told.fit()
+        != (Fit {
+            factor: 1,
+            x: 0,
+            y: 0,
+        });
+    (width != 0 && moves).then_some(told)
+}
+
+/// The real place and size for a window's told ones, in
+/// `CreateWindowExA`'s order: a child's place is in its parent's inside,
+/// so the factor alone moves it; a top window's is a point on the told
+/// screen. `CW_USEDEFAULT` in a place or a width is handed on whole with
+/// the number beside it, as Win32 reads the pair.
+fn placed(told: Told, child: bool, [x, y, width, height]: [u32; 4]) -> [u32; 4] {
+    let span = |number: u32| unsigned(told.real_span(signed(number)));
+    let [left, top] = if x == CW_USEDEFAULT {
+        [x, y]
+    } else if child {
+        [span(x), span(y)]
+    } else {
+        let (left, top) = told.real_point((signed(x), signed(y)));
+        [unsigned(left), unsigned(top)]
+    };
+    let [wide, high] = if width == CW_USEDEFAULT {
+        [width, height]
+    } else {
+        [span(width), span(height)]
+    };
+    [left, top, wide, high]
+}
+
+/// A front's `u32` as the `i32` Win32 reads there.
+const fn signed(number: u32) -> i32 {
+    i32::from_ne_bytes(number.to_ne_bytes())
+}
+
+/// The `i32` back as the front's `u32`.
+const fn unsigned(number: i32) -> u32 {
+    u32::from_ne_bytes(number.to_ne_bytes())
+}
+
 /// `RegisterClassA`: `a` the class record's first 8 fields (style,
 /// procedure, the two extra counts, instance, icon, cursor, brush), `s`
 /// its class name, `with` its menu name.
@@ -210,7 +305,8 @@ pub unsafe fn register_class(from: u32, class: u32) -> u32 {
     value
 }
 
-/// `CreateWindowExA`: `s` the class, `with` the title.
+/// `CreateWindowExA`: `s` the class, `with` the title. In a told world
+/// its place and size are the real screen's, `real` on the line.
 ///
 /// # Safety
 /// The arguments are as `CreateWindowExA` takes them. Its procedure runs
@@ -235,7 +331,14 @@ pub unsafe fn create_window(
     instance: u32,
     parameter: u32,
 ) -> u32 {
-    // SAFETY: the caller's arguments, passed on whole.
+    let args = [
+        extended, style, x, y, width, height, parent, menu, instance, parameter,
+    ];
+    let asked = [x, y, width, height];
+    let real = told().map_or(asked, |told| placed(told, style & WS_CHILD != 0, asked));
+    let [x, y, width, height] = real;
+    // SAFETY: the caller's arguments, passed on whole but for a told
+    // world's place and size.
     let value = unsafe {
         CreateWindowExA(
             extended, class, title, style, x, y, width, height, parent, menu, instance, parameter,
@@ -243,10 +346,20 @@ pub unsafe fn create_window(
     };
     // SAFETY: the caller's class and title, each a number or a text.
     let (class, title) = unsafe { (name(class), name(title)) };
-    kept!(log::debug!(c = "USER32!CreateWindowExA",
-        a:% = Numbers(&[extended, style, x, y, width, height, parent, menu, instance, parameter]),
-        s:% = class, with:% = title, v:% = oxide_trace::__shown!(value),
-        from:% = oxide_trace::__shown!(from), by = "window"; "imp.call"));
+    if real == asked {
+        kept!(
+            log::debug!(c = "USER32!CreateWindowExA", a:% = Numbers(&args),
+            s:% = class, with:% = title, v:% = oxide_trace::__shown!(value),
+            from:% = oxide_trace::__shown!(from), by = "window"; "imp.call")
+        );
+    } else {
+        kept!(
+            log::debug!(c = "USER32!CreateWindowExA", a:% = Numbers(&args),
+            real:% = Numbers(&real), s:% = class, with:% = title,
+            v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+            by = "window"; "imp.call")
+        );
+    }
     value
 }
 
@@ -422,7 +535,8 @@ pub unsafe fn show_window(from: u32, window: u32, command: u32) -> u32 {
     value
 }
 
-/// `SetWindowPos`.
+/// `SetWindowPos`: in a told world its place and size are the real
+/// screen's, `real` on the line.
 ///
 /// # Safety
 /// The window's procedure runs inside this call, on whatever it holds.
@@ -441,12 +555,28 @@ pub unsafe fn set_window_pos(
     height: u32,
     flags: u32,
 ) -> u32 {
-    // SAFETY: the caller's arguments, passed on whole.
+    let asked = [x, y, width, height];
+    let real = told().map_or(asked, |told| {
+        // SAFETY: two numbers, no address; the call reads the window's own table.
+        let style = unsafe { GetWindowLongA(window, GWL_STYLE) };
+        placed(told, style & WS_CHILD != 0, asked)
+    });
+    let [x, y, width, height] = real;
+    // SAFETY: the caller's arguments, passed on whole but for a told
+    // world's place and size.
     let value = unsafe { SetWindowPos(window, after, x, y, width, height, flags) };
-    kept!(log::debug!(c = "USER32!SetWindowPos",
-        a:% = Numbers(&[window, after, x, y, width, height, flags]),
-        v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
-        by = "window"; "imp.call"));
+    let [x, y, width, height] = asked;
+    if real == asked {
+        kept!(log::debug!(c = "USER32!SetWindowPos",
+            a:% = Numbers(&[window, after, x, y, width, height, flags]),
+            v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+            by = "window"; "imp.call"));
+    } else {
+        kept!(log::debug!(c = "USER32!SetWindowPos",
+            a:% = Numbers(&[window, after, x, y, width, height, flags]),
+            real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+            from:% = oxide_trace::__shown!(from), by = "window"; "imp.call"));
+    }
     value
 }
 
@@ -471,7 +601,8 @@ pub unsafe fn adjust_window_rect(from: u32, rectangle: u32, style: u32, menu: u3
 }
 
 /// `GetWindowRect`: `a` the window; `o` the rectangle's 4 fields it wrote,
-/// none when it answered 0.
+/// none when it answered 0. In a told world the rectangle is the told
+/// screen's, written over Wine's, and Wine's is `real`.
 ///
 /// # Safety
 /// `rectangle` is a `RECT` the call may write.
@@ -481,6 +612,22 @@ pub unsafe fn get_window_rect(from: u32, window: u32, rectangle: u32) -> u32 {
     let value = unsafe { GetWindowRect(window, rectangle) };
     // SAFETY: the caller's rectangle.
     let got = unsafe { wrote::<4>(value, rectangle) };
+    if let (Some(told), Some(real)) = (told(), got.0) {
+        let [left, top, right, bottom] = real.map(signed);
+        let (left, top) = told.told_point((left, top));
+        let (right, bottom) = told.told_point((right, bottom));
+        let answer = [left, top, right, bottom].map(unsigned);
+        let at = with_exposed_provenance_mut::<[u32; 4]>(rectangle as usize);
+        // SAFETY: the caller's rectangle, which the call wrote.
+        unsafe { at.write_unaligned(answer) };
+        kept!(
+            log::debug!(c = "USER32!GetWindowRect", a:% = Numbers(&[window]),
+            o:% = Numbers(&answer), real:% = Numbers(&real),
+            v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+            by = "window"; "imp.call")
+        );
+        return value;
+    }
     kept!(
         log::debug!(c = "USER32!GetWindowRect", a:% = Numbers(&[window]), o:% = got,
         v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
@@ -576,11 +723,26 @@ pub unsafe fn set_focus(from: u32, window: u32) -> u32 {
     value
 }
 
-/// `GetSystemMetrics`: a number from a number, no address.
+/// `GetSystemMetrics`: a number from a number, no address. In a told
+/// world the screen's width (0) and height (1) are the told screen's, and
+/// Wine's is `real`.
 #[must_use]
 pub fn get_system_metrics(from: u32, index: u32) -> u32 {
     // SAFETY: one number, no address.
     let value = unsafe { GetSystemMetrics(index) };
+    let answer = match (index, told().map(|told| told.screen())) {
+        (0, Some((width, _))) => Some(width),
+        (1, Some((_, height))) => Some(height),
+        _ => None,
+    };
+    if let Some(answer) = answer {
+        kept!(
+            log::debug!(c = "USER32!GetSystemMetrics", a:% = Numbers(&[index]),
+            real:% = oxide_trace::__shown!(value), v:% = oxide_trace::__shown!(answer),
+            from:% = oxide_trace::__shown!(from), by = "window"; "imp.call")
+        );
+        return answer;
+    }
     kept!(
         log::debug!(c = "USER32!GetSystemMetrics", a:% = Numbers(&[index]),
         v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),

@@ -229,6 +229,17 @@ pub enum Scale {
     Corner,
 }
 
+/// What [`Shown::to_zero_rgb_sized`] wrote: its words' width and height,
+/// and the fit they were drawn at.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Painted {
+    pub width: u32,
+    pub height: u32,
+    /// [`Fit::whole`] of the picture on the surface; `None` when no whole
+    /// factor fits it or its size is not known.
+    pub fit: Option<Fit>,
+}
+
 impl Shown {
     /// The picture as `0RGB` into rows `width` words wide, what fits from the
     /// top left corner, the rest of `into` 0: a window sized other than the
@@ -284,6 +295,33 @@ impl Shown {
         }
         rest.fill(0);
         Some(fit)
+    }
+
+    /// The picture as `0RGB` into `into`, sized here, for a back whose host
+    /// takes words of their own size: on a `surface` sized other than the
+    /// picture that a whole factor fits, the surface's words at
+    /// [`Scale::Whole`]; else the picture's own words as
+    /// [`Shown::to_zero_rgb`] writes them, which the host clips to a smaller
+    /// surface. `surface` is `None` when its size is not known.
+    pub fn to_zero_rgb_sized(&self, into: &mut Vec<u32>, surface: Option<(u32, u32)>) -> Painted {
+        let picture = (self.width, self.height);
+        let fit = surface.and_then(|surface| Fit::whole(picture, surface));
+        match (surface, fit) {
+            (Some((width, height)), Some(_)) if (width, height) != picture => {
+                into.resize(width as usize * height as usize, 0);
+                let fit = self.to_zero_rgb_scaled(into, width, Scale::Whole);
+                Painted { width, height, fit }
+            }
+            _ => {
+                into.resize(self.width as usize * self.height as usize, 0);
+                self.to_zero_rgb(into, self.width);
+                Painted {
+                    width: self.width,
+                    height: self.height,
+                    fit,
+                }
+            }
+        }
     }
 
     /// The picture as RGBA, 4 bytes a pixel, row by row with no gap, into `into`;

@@ -7,7 +7,7 @@ use window::Rect;
 use window::desk::{Desk, Window};
 use window::page::Page as Host;
 
-use crate::easel::{self, Area, Back, Easel, Fit, Palette, Scale, Shown};
+use crate::easel::{self, Area, Back, Easel, Fit, Painted, Palette, Scale, Shown};
 use crate::front::{Front, Header};
 use crate::page::Page;
 use crate::table::{Calls, Route, Row};
@@ -562,6 +562,80 @@ fn a_smaller_surface_or_the_corner_asked_gets_the_corner_fills_words() {
         assert_eq!(fit, None, "{width} by {height}");
         assert!(scaled == corner, "{width} by {height}");
     }
+}
+
+/// A back that sizes its own words, on an inside the picture's own size, one
+/// narrower or shorter, one of no size, or one whose size is not known: the
+/// corner fill's words at the picture's own width and height, every word,
+/// whatever the words held before.
+#[test]
+fn a_sized_paint_on_the_pictures_size_or_smaller_is_the_corner_fill() {
+    let shown = patterned(640, 480);
+    let mut corner = vec![0_u32; 640 * 480];
+    shown.to_zero_rgb(&mut corner, 640);
+    let own = Some(Fit {
+        factor: 1,
+        x: 0,
+        y: 0,
+    });
+    let cases = [
+        (Some((640, 480)), own),
+        (Some((639, 480)), None),
+        (Some((640, 479)), None),
+        (Some((0, 0)), None),
+        (None, None),
+    ];
+    for (inside, fit) in cases {
+        for before in [7, 1440 * 1080] {
+            let mut words = vec![0xdead_beef_u32; before];
+            let painted = shown.to_zero_rgb_sized(&mut words, inside);
+            let want = Painted {
+                width: 640,
+                height: 480,
+                fit,
+            };
+            assert_eq!(painted, want, "{inside:?} after {before}");
+            assert!(words == corner, "{inside:?} after {before}");
+        }
+    }
+}
+
+/// On a larger inside, the sizes a larger screen meets: the inside's words,
+/// the whole factor's fill, the fit [`Fit::whole`]'s.
+#[test]
+fn a_sized_paint_on_a_larger_inside_is_the_whole_factor_fill() {
+    let shown = patterned(640, 480);
+    let sizes = [
+        (641, 480),
+        (800, 600),
+        (1280, 960),
+        (1280, 1080),
+        (1440, 1080),
+        (1920, 1080),
+        (2560, 1440),
+    ];
+    for (width, height) in sizes {
+        let mut words = Vec::new();
+        let painted = shown.to_zero_rgb_sized(&mut words, Some((width, height)));
+        let mut scaled = vec![0xdead_beef_u32; width as usize * height as usize];
+        let fit = shown.to_zero_rgb_scaled(&mut scaled, width, Scale::Whole);
+        assert_eq!(
+            fit,
+            Fit::whole((640, 480), (width, height)),
+            "{width} by {height}"
+        );
+        let want = Painted { width, height, fit };
+        assert_eq!(painted, want, "{width} by {height}");
+        assert!(words == scaled, "{width} by {height}");
+    }
+    let mut words = Vec::new();
+    let painted = shown.to_zero_rgb_sized(&mut words, Some((1440, 1080)));
+    let two = Fit {
+        factor: 2,
+        x: 80,
+        y: 60,
+    };
+    assert_eq!(painted.fit, Some(two));
 }
 
 #[test]

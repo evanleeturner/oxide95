@@ -3,7 +3,9 @@
 //! the pointer a host's back hands on. The drawing crate shows the
 //! program's picture on a larger surface by [`Fit::whole`]; a host's back
 //! places its pointer in the program's rectangle by the same fit, through
-//! [`PointerFit`], the rectangle being the picture.
+//! [`PointerFit`], the rectangle being the picture. A back that tells the
+//! program a screen of its own size places the program's windows on the
+//! real screen by the same fit, through [`Told`].
 
 use crate::Rect;
 
@@ -115,10 +117,101 @@ fn axis(host: i32, strip: u32, factor: u32, span: u32) -> i32 {
     i32::try_from(at.clamp(0, i64::from(span) - 1)).unwrap_or(i32::MAX)
 }
 
+/// The told world: a program told its screen is [`Told::screen`] wide and
+/// high, its windows standing on the real screen at [`Fit::whole`] of the
+/// told screen on the real one. A told point lands at the fit's corner plus
+/// the factor times the point, a told width or height at the factor times
+/// it; a real point comes back less the corner, divided by the factor
+/// rounding down. A real screen the told size, or one no whole factor
+/// fits, is factor 1 at 0, 0: every number as it came.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct Told {
+    screen: (u32, u32),
+    fit: Fit,
+}
+
+impl Told {
+    /// The told world of a `screen` on the `real` one, both
+    /// `(width, height)`.
+    #[must_use]
+    pub fn new(screen: (u32, u32), real: (u32, u32)) -> Self {
+        let fit = Fit::whole(screen, real).unwrap_or(Fit {
+            factor: 1,
+            x: 0,
+            y: 0,
+        });
+        Self { screen, fit }
+    }
+
+    /// The screen's width and height the program is told.
+    #[must_use]
+    pub const fn screen(&self) -> (u32, u32) {
+        self.screen
+    }
+
+    /// The told screen's fit on the real one; factor 1 at 0, 0 when none.
+    #[must_use]
+    pub const fn fit(&self) -> Fit {
+        self.fit
+    }
+
+    /// The real screen's point for the told `point`.
+    #[must_use]
+    pub fn real_point(&self, point: (i32, i32)) -> (i32, i32) {
+        let Fit { factor, x, y } = self.fit;
+        (outward(point.0, x, factor), outward(point.1, y, factor))
+    }
+
+    /// The real width or height for a told one.
+    #[must_use]
+    pub fn real_span(&self, span: i32) -> i32 {
+        outward(span, 0, self.fit.factor)
+    }
+
+    /// The told point for the real screen's `point`.
+    #[must_use]
+    pub fn told_point(&self, point: (i32, i32)) -> (i32, i32) {
+        let Fit { factor, x, y } = self.fit;
+        (inward(point.0, x, factor), inward(point.1, y, factor))
+    }
+}
+
+/// `strip` plus `factor` times `at`, held to an `i32`.
+fn outward(at: i32, strip: u32, factor: u32) -> i32 {
+    held(i64::from(strip) + i64::from(factor) * i64::from(at))
+}
+
+/// `at` less `strip`, divided by `factor` rounding down, held to an `i32`.
+/// A fit's factor is 1 at least.
+fn inward(at: i32, strip: u32, factor: u32) -> i32 {
+    held((i64::from(at) - i64::from(strip)).div_euclid(i64::from(factor)))
+}
+
+/// `value` held to an `i32`'s range.
+fn held(value: i64) -> i32 {
+    i32::try_from(value.clamp(i64::from(i32::MIN), i64::from(i32::MAX))).unwrap_or(i32::MAX)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Fit, PointerFit};
+    use super::{Fit, PointerFit, Told};
     use crate::Rect;
+
+    /// The screen sizes the drawing crate's fit tests paint on, and the
+    /// larger screens a player's box may hold.
+    const REAL: [(u32, u32); 11] = [
+        (640, 480),
+        (639, 480),
+        (640, 479),
+        (0, 0),
+        (641, 480),
+        (800, 600),
+        (1280, 960),
+        (1280, 1080),
+        (1440, 1080),
+        (1920, 1080),
+        (2560, 1440),
+    ];
 
     /// A 640 by 480 rectangle, its corner at `left`, `top`.
     const fn screen(left: i32, top: i32) -> Rect {
@@ -203,6 +296,71 @@ mod tests {
                 for x in 0..640 {
                     assert_eq!(pointer.point(rect, (x, y)), (100 + x, 50 + y));
                 }
+            }
+        }
+    }
+
+    /// The told world's fit is the whole-factor fit on every size, and
+    /// factor 1 at 0, 0 where that fits nothing.
+    #[test]
+    fn the_told_worlds_fit_is_the_whole_factor_fit() {
+        let alone = Fit {
+            factor: 1,
+            x: 0,
+            y: 0,
+        };
+        for real in REAL {
+            let told = Told::new((640, 480), real);
+            assert_eq!(told.screen(), (640, 480));
+            let want = Fit::whole((640, 480), real).unwrap_or(alone);
+            assert_eq!(told.fit(), want, "real {real:?}");
+        }
+        let wide = Fit {
+            factor: 2,
+            x: 80,
+            y: 60,
+        };
+        assert_eq!(Told::new((640, 480), (1440, 1080)).fit(), wide);
+    }
+
+    /// 640 by 480 told on 1440 by 1080: a told point lands on its 2 by 2
+    /// block at 80, 60, a size doubles, and each real pixel of a block comes
+    /// back as its told point; there and back is the identity on every size.
+    #[test]
+    fn a_told_point_lands_on_its_block_and_comes_back() {
+        let told = Told::new((640, 480), (1440, 1080));
+        assert_eq!(told.real_point((0, 0)), (80, 60));
+        assert_eq!(told.real_point((640, 480)), (1360, 1020));
+        assert_eq!((told.real_span(640), told.real_span(480)), (1280, 960));
+        for x in 80..1360 {
+            assert_eq!(told.told_point((x, 60)).0, (x - 80) / 2, "x {x}");
+        }
+        for y in 60..1020 {
+            assert_eq!(told.told_point((80, y)).1, (y - 60) / 2, "y {y}");
+        }
+        assert_eq!(told.told_point((79, 59)), (-1, -1));
+        for real in REAL {
+            let told = Told::new((640, 480), real);
+            for corner in [(0, 0), (639, 0), (0, 479), (639, 479), (640, 480)] {
+                let there = told.real_point(corner);
+                assert_eq!(told.told_point(there), corner, "real {real:?}");
+            }
+        }
+    }
+
+    /// A real screen the told size, or one no whole factor fits: every
+    /// point and span as it came, the extremes too.
+    #[test]
+    fn a_told_world_with_no_larger_fit_hands_on_every_number() {
+        let edges = [i32::MIN, -5, 0, 1, 479, 639, 640, i32::MAX];
+        for real in [(640, 480), (639, 480), (640, 479), (0, 0)] {
+            let told = Told::new((640, 480), real);
+            for at in edges {
+                for other in edges {
+                    assert_eq!(told.real_point((at, other)), (at, other));
+                    assert_eq!(told.told_point((at, other)), (at, other));
+                }
+                assert_eq!(told.real_span(at), at);
             }
         }
     }

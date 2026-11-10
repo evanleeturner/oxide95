@@ -81,7 +81,7 @@ pub mod user32;
 
 use core::fmt;
 
-pub use fit::{Fit, PointerFit};
+pub use fit::{Fit, PointerFit, Told};
 
 /// A rectangle in screen pixels, Windows' `RECT`: right and bottom one
 /// past the last pixel.
