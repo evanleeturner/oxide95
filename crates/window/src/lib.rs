@@ -12,6 +12,10 @@
 //! winit, `native::Native`. On the Win32 target, `user32`: no desk at all,
 //! each front the real `USER32`'s call, its windows and queue Wine's own.
 //!
+//! The fit a picture is shown at on a larger surface, [`Fit`], is this
+//! crate's: the drawing crate shows its picture by it, and a host's back
+//! places the pointer by the same rule, through [`PointerFit`].
+//!
 //! The 24 fronts, in [`front::Front`]: windows `RegisterClassA`,
 //! `CreateWindowExA`, `DestroyWindow`, `FindWindowA`, `LoadIconA`,
 //! `ShowWindow`, `SetWindowPos`, `AdjustWindowRect`, `GetWindowRect`,
@@ -60,6 +64,7 @@ extern crate alloc;
 
 #[cfg(any(test, feature = "desk"))]
 pub mod desk;
+mod fit;
 #[cfg(any(test, feature = "desk"))]
 pub mod front;
 #[cfg(all(feature = "native", not(target_arch = "wasm32")))]
@@ -75,6 +80,8 @@ mod tests;
 pub mod user32;
 
 use core::fmt;
+
+pub use fit::{Fit, PointerFit};
 
 /// A rectangle in screen pixels, Windows' `RECT`: right and bottom one
 /// past the last pixel.

@@ -19,8 +19,16 @@
 //!
 //! A key is the virtual key number of its place on the keyboard,
 //! Windows' own numbering, whatever the host's layout; Shift, Ctrl and
-//! Alt either side are `0x10`, `0x11` and `0x12`. The pointer stands where
-//! it is in the window's inside, offset by the program's rectangle. The
+//! Alt either side are `0x10`, `0x11` and `0x12`. The pointer is placed
+//! in the program's rectangle by the fit its picture is shown at
+//! ([`PointerFit`]): the rectangle shown at the largest whole factor on
+//! the window's inside, centred, as the drawing crate shows a buffer the
+//! rectangle's size, a host pixel on the black strips at the picture's
+//! nearest edge pixel; a window the rectangle's own size, or too small
+//! for a whole factor, hands on its inside's pixel plus the rectangle's
+//! corner. One `pointer.fit` line at INFO as a window's fit, its inside
+//! or its rectangle's size changes; each move one `pointer.at` line at
+//! DEBUG, the host's point and the program's. The
 //! lock is the program's to keep (`window-input`): its script asks
 //! [`Native::grab`] and [`Native::cursor_shown`] as it changes.
 //!
@@ -33,9 +41,11 @@
 //! `CursorGrabMode` notes), so a confined pointer still moves the host's
 //! cursor inside the window while the program reads its motion; and X11's
 //! grab hands each relative move on twice, the copy dropped here
-//! (`Twins`). The pointer is the host's pixel in the window's inside: a
-//! window full screen, or a picture shown larger than the program's
-//! rectangle, hands on the host's place, never the picture's.
+//! (`Twins`). The pointer's picture is the program's rectangle, the
+//! drawing crate's the buffer it is shown: the two agree while the
+//! buffer is the rectangle's size; a drawing back asked to show from
+//! the corner leaves the pointer at the whole fit; relative motion is
+//! the host's counts, never divided by the fit.
 use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::{Duration, Instant};
@@ -52,7 +62,7 @@ use winit::keyboard::{KeyCode, PhysicalKey};
 use winit::platform::pump_events::EventLoopExtPumpEvents;
 use winit::window::{CursorGrabMode, Fullscreen, Window, WindowId};
 
-use crate::{Event, Rect, Screen};
+use crate::{Event, PointerFit, Rect, Screen};
 
 /// Where a program's window stands with its host's.
 enum Made {
@@ -65,14 +75,59 @@ enum Made {
     Refused(OsError),
 }
 
-/// One program window as last placed, and whether it is asked full
-/// screen.
+/// One program window as last placed, whether it is asked full screen,
+/// and the fit its pointer is placed by: made on an inside of no size
+/// until the host window is made.
 struct Placed {
     window: u32,
     rect: Rect,
     shown: bool,
     full: bool,
     made: Made,
+    pointer: PointerFit,
+}
+
+impl Placed {
+    /// The pointer's fit made again from the rectangle and `inside`, the
+    /// window's inside in the host's pixels; one `pointer.fit` line when
+    /// it differs from the last.
+    fn refit(&mut self, inside: (u32, u32)) {
+        let now = PointerFit::new(self.rect, inside);
+        if core::mem::replace(&mut self.pointer, now) != now {
+            let (k, x, y) = now
+                .fit()
+                .map_or((0, 0, 0), |fit| (fit.factor, fit.x, fit.y));
+            let ((width, height), (pw, ph)) = (now.inside(), now.picture());
+            log::info!(
+                window:% = oxide_trace::__shown!(self.window),
+                k:% = oxide_trace::__shown!(k),
+                x:% = oxide_trace::__shown!(x),
+                y:% = oxide_trace::__shown!(y),
+                w:% = oxide_trace::__shown!(width),
+                h:% = oxide_trace::__shown!(height),
+                pw:% = oxide_trace::__shown!(pw),
+                ph:% = oxide_trace::__shown!(ph);
+                "pointer.fit"
+            );
+        }
+    }
+
+    /// The program's point for the host's pointer at `host` in the
+    /// window's inside, by the pointer's fit; one `pointer.at` line.
+    fn point(&self, host: (i32, i32)) -> (i32, i32) {
+        let (x, y) = self.pointer.point(self.rect, host);
+        let (hx, hy) = (crate::bits(host.0), crate::bits(host.1));
+        let (px, py) = (crate::bits(x), crate::bits(y));
+        log::debug!(
+            window:% = oxide_trace::__shown!(self.window),
+            hx:% = oxide_trace::__shown!(hx),
+            hy:% = oxide_trace::__shown!(hy),
+            x:% = oxide_trace::__shown!(px),
+            y:% = oxide_trace::__shown!(py);
+            "pointer.at"
+        );
+        (x, y)
+    }
 }
 
 /// A program window lent to another crate's drawing: its host handles, its
@@ -194,7 +249,11 @@ impl Desktop {
                     .with_visible(placed.shown)
                     .with_fullscreen(screen(placed.full));
                 placed.made = match event_loop.create_window(attributes) {
-                    Ok(host) => Made::Window(Rc::new(host)),
+                    Ok(host) => {
+                        let size = host.inner_size();
+                        placed.refit((size.width, size.height));
+                        Made::Window(Rc::new(host))
+                    }
                     Err(refusal) => Made::Refused(refusal),
                 };
             }
@@ -213,14 +272,17 @@ impl ApplicationHandler for Desktop {
 
     /// The host asked a window closed, moved the user's attention, or
     /// took a key, a button or the pointer: queued; the host's window
-    /// stays until the program lets it go.
+    /// stays until the program lets it go. A new inside makes the
+    /// pointer's fit again, queuing nothing.
     fn window_event(&mut self, _: &ActiveEventLoop, id: WindowId, event: WindowEvent) {
-        let Some((window, rect)) = self.placed.iter().find_map(|placed| match &placed.made {
-            Made::Window(host) if host.id() == id => Some((placed.window, placed.rect)),
-            _ => None,
-        }) else {
+        let Some(placed) = self
+            .placed
+            .iter_mut()
+            .find(|placed| matches!(&placed.made, Made::Window(host) if host.id() == id))
+        else {
             return;
         };
+        let window = placed.window;
         let event = match event {
             WindowEvent::CloseRequested => Event::Close { window },
             WindowEvent::Focused(active) => Event::Active { window, active },
@@ -254,11 +316,15 @@ impl ApplicationHandler for Desktop {
                     down: state == ElementState::Pressed,
                 }
             }
-            WindowEvent::CursorMoved { position, .. } => Event::Pointer {
-                window,
-                x: rect.left.saturating_add(whole(position.x.round())),
-                y: rect.top.saturating_add(whole(position.y.round())),
-            },
+            WindowEvent::Resized(size) => {
+                placed.refit((size.width, size.height));
+                return;
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                let host = (whole(position.x.round()), whole(position.y.round()));
+                let (x, y) = placed.point(host);
+                Event::Pointer { window, x, y }
+            }
             _ => return,
         };
         self.events.push(event);
@@ -595,7 +661,8 @@ impl Screen for Native {
     /// of the host, the host's answer never read back: the program keeps
     /// its own rectangle; a full screen one keeps the rectangle for when
     /// it leaves, the host asked only whether it shows. Any other is made
-    /// at the next pump. A hidden
+    /// at the next pump. A made window's pointer fit is made again for
+    /// the rectangle's size on the inside last known. A hidden
     /// window's grab is released: X11 ends a grab whose window is not
     /// viewable.
     fn place(&self, window: u32, rect: Rect, shown: bool) {
@@ -611,6 +678,10 @@ impl Screen for Native {
                     }
                     host.set_visible(shown);
                 }
+                if matches!(was.made, Made::Window(_)) {
+                    let inside = was.pointer.inside();
+                    was.refit(inside);
+                }
             }
             None => desktop.placed.push(Placed {
                 window,
@@ -618,6 +689,7 @@ impl Screen for Native {
                 shown,
                 full: false,
                 made: Made::Waiting,
+                pointer: PointerFit::new(rect, (0, 0)),
             }),
         }
         if !shown {

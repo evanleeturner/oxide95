@@ -314,6 +314,18 @@
       "template": "the {pw} by {ph} picture shown at {k} times on {w} by {h}, its corner at {x}, {y}"
     },
     {
+      "id": "pointer.fit",
+      "level": "I",
+      "fields": { "window": "the window, its handle as a number", "k": "the whole factor the program's rectangle is shown at on the window's inside, each of its pixels a k by k block of the host's; 0 when no whole factor fits, the host's point then handed on unscaled", "x": "the black strip left of the picture, in the host's pixels", "y": "the black strip above it", "w": "the window's inside, its width in the host's pixels", "h": "its height", "pw": "the program's rectangle's width, the picture's", "ph": "its height" },
+      "template": "the pointer over window {window} placed in a {pw} by {ph} picture at {k} times on {w} by {h}, its corner at {x}, {y}"
+    },
+    {
+      "id": "pointer.at",
+      "level": "D",
+      "fields": { "window": "the window the pointer stands over, its handle as a number", "hx": "the pointer's column in the window's inside, in the host's pixels, two's complement", "hy": "its row", "x": "the column handed on to the program, on its screen, two's complement", "y": "the row" },
+      "template": "the host's pointer at {hx}, {hy} over window {window} stands at {x}, {y}"
+    },
+    {
       "id": "draw.frozen",
       "level": "W",
       "fields": { "c": "the drawing call that met the easel lent out", "v": "the whole answer it gave", "by": "who answered: draw" },

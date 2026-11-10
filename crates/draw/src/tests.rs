@@ -621,3 +621,35 @@ fn a_shown_palette_is_the_colours_and_what_a_blit_reads_through() {
         "the realized colours"
     );
 }
+
+/// The pointer's fit is the picture's: on each size these tests draw at, and
+/// on four common screens, a pointer over a rectangle the picture's size is
+/// placed by the fit the picture is drawn at.
+#[test]
+fn the_pointers_fit_is_the_pictures_on_every_size_drawn() {
+    let cases = [
+        ((640, 480), (2560, 1440)),
+        ((2, 2), (7, 5)),
+        ((640, 480), (640, 480)),
+        ((640, 480), (639, 480)),
+        ((640, 480), (640, 479)),
+        ((640, 480), (639, 479)),
+        ((640, 480), (1920, 1080)),
+        ((640, 480), (1280, 1024)),
+        ((640, 480), (800, 600)),
+    ];
+    for (picture, surface) in cases {
+        let (width, height): (u32, u32) = picture;
+        let rect = window::Rect::sized(
+            0,
+            0,
+            i32::try_from(width).expect("a test size fits"),
+            i32::try_from(height).expect("a test size fits"),
+        );
+        assert_eq!(
+            window::PointerFit::new(rect, surface).fit(),
+            Fit::whole(picture, surface),
+            "{picture:?} on {surface:?}"
+        );
+    }
+}

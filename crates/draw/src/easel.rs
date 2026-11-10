@@ -12,6 +12,8 @@ use alloc::vec::Vec;
 use core::cell::RefCell;
 use core::ops::Range;
 
+pub use window::Fit;
+
 /// `DEFAULT_PALETTE`, a context's palette before any is selected.
 const STOCK_PALETTE: u32 = 15;
 /// `STOCK_LAST`: the highest index `GetStockObject` knows.
@@ -214,35 +216,6 @@ pub struct Shown {
     pub pitch: u32,
     pub pixels: Vec<u8>,
     pub palette: Palette,
-}
-
-/// Where a picture lands on a larger surface: each of its pixels a `factor`
-/// by `factor` block, its top left corner at `x`, `y` of the surface.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Fit {
-    pub factor: u32,
-    pub x: u32,
-    pub y: u32,
-}
-
-impl Fit {
-    /// The largest whole factor that keeps `picture` inside `surface`, both
-    /// `(width, height)`, centred, an odd strip's extra pixel right and below;
-    /// `None` when a side of the picture is 0 or the surface is smaller than
-    /// the picture on either side.
-    #[must_use]
-    pub fn whole(picture: (u32, u32), surface: (u32, u32)) -> Option<Self> {
-        let (width, height) = picture;
-        let factor = surface
-            .0
-            .checked_div(width)?
-            .min(surface.1.checked_div(height)?);
-        (factor > 0).then(|| Self {
-            factor,
-            x: (surface.0 - factor * width) / 2,
-            y: (surface.1 - factor * height) / 2,
-        })
-    }
 }
 
 /// How a back fills a surface sized other than the picture.

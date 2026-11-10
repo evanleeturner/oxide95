@@ -14,8 +14,10 @@
 //! The window is asked full screen after it is placed and before it is
 //! made. On X11 the window manager carries the ask out: with none running,
 //! the window keeps the program's rectangle. It prints each step, each
-//! change of the inside and each `draw` line; it exits 0 once the host made
-//! the window and took the surface, 1 when it refused either.
+//! change of the inside, each `draw` line and each line of the window's
+//! back: the pointer's fit, and each place a pointer over the window is
+//! handed on at; it exits 0 once the host made the window and took the
+//! surface, 1 when it refused either.
 use std::process::ExitCode;
 use std::thread;
 use std::time::Duration;
@@ -45,12 +47,15 @@ impl<'kvs> VisitSource<'kvs> for Pairs {
     }
 }
 
-/// `draw`'s lines on standard output, the host's crates' left out.
+/// `draw`'s and the window's lines on standard output, the host's crates'
+/// left out.
 struct Lines;
 
 impl Log for Lines {
     fn enabled(&self, metadata: &Metadata<'_>) -> bool {
-        metadata.level() <= Level::Debug && metadata.target().starts_with("draw")
+        let target = metadata.target();
+        metadata.level() <= Level::Debug
+            && (target.starts_with("draw") || target.starts_with("window::"))
     }
 
     fn log(&self, record: &Record<'_>) {
