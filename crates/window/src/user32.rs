@@ -29,8 +29,11 @@
 //! than the real one. Its windows are then placed and sized on the real
 //! screen at the told one's whole-factor fit ([`crate::Told`]), and the
 //! sizes it reads, `GetWindowRect` and `GetSystemMetrics`' screen width
-//! and height, answer the told screen's. `AdjustWindowRect` reads no
-//! screen and hands its numbers on whole; `ClientToScreen` and
+//! and height, answer the told screen's. A top window's inside is what
+//! lands on the fit's blocks; its frame, by `AdjustWindowRect` of its
+//! style, stands around the inside at its own size, there and back.
+//! `AdjustWindowRect` reads no screen and hands its numbers on whole to
+//! the program; `ClientToScreen` and
 //! `ScreenToClient` are not told. Told nothing, or a told world at factor
 //! 1 with no strip, every front hands its numbers on whole. A line whose
 //! numbers a told world moved adds `real`: what Wine was handed or
@@ -40,7 +43,7 @@
     reason = "this back is calls into USER32 and nothing else"
 )]
 
-use crate::{Fit, Numbers, Told};
+use crate::{Fit, Numbers, Rect, Told};
 use core::ffi::CStr;
 use core::fmt;
 use core::ptr::{with_exposed_provenance, with_exposed_provenance_mut};
@@ -250,12 +253,62 @@ fn told() -> Option<Told> {
     (width != 0 && moves).then_some(told)
 }
 
+/// The told world's whole factor: none when told none, or where the told
+/// screen fits the real one at factor 1 with no strip, as every front
+/// reads it.
+#[must_use]
+pub fn told_factor() -> Option<u32> {
+    told().map(|told| told.fit().factor)
+}
+
+/// A window's frame: its edges about the inside, as `AdjustWindowRect`
+/// makes them of a zero rectangle with `style` and no menu. 0 on each edge
+/// for a child, or where Wine answers 0. Does not count the extended style
+/// or a menu bar.
+fn frame(child: bool, style: u32) -> Rect {
+    let mut edges = [0_u32; 4];
+    if !child {
+        let at = u32::try_from(core::ptr::from_mut(&mut edges).expose_provenance()).unwrap_or(0);
+        // SAFETY: `edges` is a `RECT`'s 4 numbers, this call's own, alive
+        // across it.
+        if unsafe { AdjustWindowRect(at, style, 0) } == 0 {
+            edges = [0; 4];
+        }
+    }
+    let [left, top, right, bottom] = edges.map(signed);
+    Rect {
+        left,
+        top,
+        right,
+        bottom,
+    }
+}
+
 /// The real place and size for a window's told ones, in
 /// `CreateWindowExA`'s order: a child's place is in its parent's inside,
-/// so the factor alone moves it; a top window's is a point on the told
-/// screen. `CW_USEDEFAULT` in a place or a width is handed on whole with
-/// the number beside it, as Win32 reads the pair.
-fn placed(told: Told, child: bool, [x, y, width, height]: [u32; 4]) -> [u32; 4] {
+/// so the factor alone moves it; a top window's inside, its rectangle less
+/// `frame`, lands by [`Told::real_rect`], the frame around it at its own
+/// size. `CW_USEDEFAULT` in a place or a width is handed on whole with the
+/// number beside it, as Win32 reads the pair, and the frame is not counted
+/// then.
+fn placed(told: Told, child: bool, frame: Rect, [x, y, width, height]: [u32; 4]) -> [u32; 4] {
+    if !child && x != CW_USEDEFAULT && width != CW_USEDEFAULT {
+        let (left, top) = (signed(x), signed(y));
+        let rect = Rect {
+            left,
+            top,
+            right: left.saturating_add(signed(width)),
+            bottom: top.saturating_add(signed(height)),
+        };
+        let real = told.real_rect(rect, frame);
+        return [
+            real.left,
+            real.top,
+            real.right.saturating_sub(real.left),
+            real.bottom.saturating_sub(real.top),
+        ]
+        .map(unsigned);
+    }
     let span = |number: u32| unsigned(told.real_span(signed(number)));
     let [left, top] = if x == CW_USEDEFAULT {
         [x, y]
@@ -335,7 +388,10 @@ pub unsafe fn create_window(
         extended, style, x, y, width, height, parent, menu, instance, parameter,
     ];
     let asked = [x, y, width, height];
-    let real = told().map_or(asked, |told| placed(told, style & WS_CHILD != 0, asked));
+    let real = told().map_or(asked, |told| {
+        let child = style & WS_CHILD != 0;
+        placed(told, child, frame(child, style), asked)
+    });
     let [x, y, width, height] = real;
     // SAFETY: the caller's arguments, passed on whole but for a told
     // world's place and size.
@@ -559,7 +615,8 @@ pub unsafe fn set_window_pos(
     let real = told().map_or(asked, |told| {
         // SAFETY: two numbers, no address; the call reads the window's own table.
         let style = unsafe { GetWindowLongA(window, GWL_STYLE) };
-        placed(told, style & WS_CHILD != 0, asked)
+        let child = style & WS_CHILD != 0;
+        placed(told, child, frame(child, style), asked)
     });
     let [x, y, width, height] = real;
     // SAFETY: the caller's arguments, passed on whole but for a told
@@ -613,10 +670,17 @@ pub unsafe fn get_window_rect(from: u32, window: u32, rectangle: u32) -> u32 {
     // SAFETY: the caller's rectangle.
     let got = unsafe { wrote::<4>(value, rectangle) };
     if let (Some(told), Some(real)) = (told(), got.0) {
+        // SAFETY: two numbers, no address; the call reads the window's own table.
+        let style = unsafe { GetWindowLongA(window, GWL_STYLE) };
         let [left, top, right, bottom] = real.map(signed);
-        let (left, top) = told.told_point((left, top));
-        let (right, bottom) = told.told_point((right, bottom));
-        let answer = [left, top, right, bottom].map(unsigned);
+        let rect = Rect {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        let told = told.told_rect(rect, frame(style & WS_CHILD != 0, style));
+        let answer = [told.left, told.top, told.right, told.bottom].map(unsigned);
         let at = with_exposed_provenance_mut::<[u32; 4]>(rectangle as usize);
         // SAFETY: the caller's rectangle, which the call wrote.
         unsafe { at.write_unaligned(answer) };

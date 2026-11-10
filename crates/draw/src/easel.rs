@@ -229,14 +229,15 @@ pub enum Scale {
     Corner,
 }
 
-/// What [`Shown::to_zero_rgb_sized`] wrote: its words' width and height,
-/// and the fit they were drawn at.
+/// What [`Shown::to_zero_rgb_sized`] or [`Shown::to_zero_rgb_cornered`]
+/// wrote: its words' width and height, and the fit they were drawn at.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Painted {
     pub width: u32,
     pub height: u32,
-    /// [`Fit::whole`] of the picture on the surface; `None` when no whole
-    /// factor fits it or its size is not known.
+    /// [`Fit::whole`] of the picture on the surface, `None` when no whole
+    /// factor fits it or its size is not known; a cornered paint's factor at
+    /// 0,0.
     pub fit: Option<Fit>,
 }
 
@@ -321,6 +322,44 @@ impl Shown {
                     fit,
                 }
             }
+        }
+    }
+
+    /// The picture as `0RGB` into `into`, sized to `surface`: the picture at
+    /// `factor` from the surface's top left corner, clipped to it, every
+    /// other word 0. For a back whose world is told a smaller screen than the
+    /// real one, on a surface no whole factor fits: the world's factor, never
+    /// a factor of one. The fit is `factor` at 0,0 whether or not the picture
+    /// reaches the surface's edges; a factor of 0 is taken as 1. Where
+    /// [`Fit::whole`] lands at 0,0 at the same factor the words are
+    /// [`Shown::to_zero_rgb_scaled`]'s; at factor 1 they are
+    /// [`Shown::to_zero_rgb`]'s, cropped.
+    pub fn to_zero_rgb_cornered(
+        &self,
+        into: &mut Vec<u32>,
+        surface: (u32, u32),
+        factor: u32,
+    ) -> Painted {
+        let (width, height) = surface;
+        let factor = factor.max(1);
+        into.clear();
+        into.resize(width as usize * height as usize, 0);
+        let (line, step) = (width as usize, factor as usize);
+        let drawn = line.min(step * self.width as usize);
+        let rows = self.pixels.chunks_exact(self.pitch.max(1) as usize);
+        let scaled_rows = rows
+            .take(self.height as usize)
+            .flat_map(|row| core::iter::repeat_n(row, step));
+        for (slots, row) in into.chunks_exact_mut(line.max(1)).zip(scaled_rows) {
+            for (x, slot) in slots[..drawn].iter_mut().enumerate() {
+                *slot = self.palette.zero_rgb(row[x / step]);
+            }
+        }
+        let fit = Fit { factor, x: 0, y: 0 };
+        Painted {
+            width,
+            height,
+            fit: Some(fit),
         }
     }
 

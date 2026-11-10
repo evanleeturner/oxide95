@@ -638,6 +638,96 @@ fn a_sized_paint_on_a_larger_inside_is_the_whole_factor_fill() {
     assert_eq!(painted.fit, Some(two));
 }
 
+/// Where the whole factor's box lands at 0,0, a cornered paint at the same
+/// factor is the whole factor's fill, every word, whatever the words held.
+#[test]
+fn a_cornered_paint_where_the_whole_fit_is_at_0_0_is_the_whole_fill() {
+    let shown = patterned(640, 480);
+    let mut words = vec![0xdead_beef_u32; 7];
+    let painted = shown.to_zero_rgb_cornered(&mut words, (1280, 960), 2);
+    let mut scaled = vec![0xdead_beef_u32; 1280 * 960];
+    let fit = shown.to_zero_rgb_scaled(&mut scaled, 1280, Scale::Whole);
+    let two = Fit {
+        factor: 2,
+        x: 0,
+        y: 0,
+    };
+    assert_eq!(fit, Some(two));
+    let want = Painted {
+        width: 1280,
+        height: 960,
+        fit,
+    };
+    assert_eq!(painted, want);
+    assert!(words == scaled);
+}
+
+/// At factor 1 on a surface smaller than the picture: the corner fill's
+/// words cropped to the surface.
+#[test]
+fn a_cornered_paint_at_1_on_a_smaller_surface_is_the_corner_fill_cropped() {
+    let shown = patterned(640, 480);
+    let mut corner = vec![0_u32; 640 * 480];
+    shown.to_zero_rgb(&mut corner, 640);
+    let one = Some(Fit {
+        factor: 1,
+        x: 0,
+        y: 0,
+    });
+    for (width, height) in [(320, 200), (639, 480), (640, 479), (1, 1)] {
+        let mut words = vec![0xdead_beef_u32; 1440 * 1080];
+        let painted = shown.to_zero_rgb_cornered(&mut words, (width, height), 1);
+        let want = Painted {
+            width,
+            height,
+            fit: one,
+        };
+        assert_eq!(painted, want, "{width} by {height}");
+        let cropped: Vec<u32> = corner
+            .chunks_exact(640)
+            .take(height as usize)
+            .flat_map(|row| &row[..width as usize])
+            .copied()
+            .collect();
+        assert!(words == cropped, "{width} by {height}");
+    }
+}
+
+/// A framed inside of 640x400 at factor 2: the whole factor's 1280x960
+/// fill cropped to it, so each 2x2 block one colour and the picture's top
+/// left 320x200 shown; a surface wider and taller than the picture at the
+/// factor keeps 0 past it.
+#[test]
+fn a_cornered_paint_at_2_shows_the_top_left_in_2_by_2_blocks() {
+    let shown = patterned(640, 480);
+    let mut whole = vec![0_u32; 1280 * 960];
+    shown.to_zero_rgb_scaled(&mut whole, 1280, Scale::Whole);
+    let mut words = Vec::new();
+    let painted = shown.to_zero_rgb_cornered(&mut words, (640, 400), 2);
+    assert_eq!((painted.width, painted.height), (640, 400));
+    for y in 0..400 {
+        for x in 0..640 {
+            let word = words[y * 640 + x];
+            assert_eq!(word, whole[y * 1280 + x], "{x},{y}");
+            assert_eq!(word, words[(y & !1) * 640 + (x & !1)], "{x},{y}");
+        }
+    }
+    let small = patterned(320, 200);
+    let mut fill = vec![0_u32; 640 * 400];
+    small.to_zero_rgb_scaled(&mut fill, 640, Scale::Whole);
+    small.to_zero_rgb_cornered(&mut words, (700, 450), 2);
+    for y in 0..450 {
+        for x in 0..700 {
+            let want = if x < 640 && y < 400 {
+                fill[y * 640 + x]
+            } else {
+                0
+            };
+            assert_eq!(words[y * 700 + x], want, "{x},{y}");
+        }
+    }
+}
+
 #[test]
 fn a_new_screen_is_all_index_0_and_a_wild_size_leaves_the_old() {
     let (easel, _) = rig();

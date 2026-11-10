@@ -7,18 +7,23 @@
 //! [`Real`] answers a front's questions from the real window. [`Window`] paints
 //! [`Shown`] into it, its inside asked by `GetClientRect` each present: an
 //! inside sized other than the picture shows it at the largest whole factor,
-//! centred, black around ([`Shown::to_zero_rgb_sized`]).
+//! centred, black around ([`Shown::to_zero_rgb_sized`]). When the program is
+//! told a smaller screen at a factor above 1 ([`told_factor`]), an inside no
+//! whole factor fits, smaller than the picture on a side, shows the picture
+//! at that factor from its corner, clipped, black past it
+//! ([`Shown::to_zero_rgb_cornered`]): a window the program sized for its own
+//! world, its picture at the world's scale.
 //!
 //! Each present writes one `draw.present` line at DEBUG, `by=draw`: the
 //! picture's `w` and `h`, the source rectangle from 0,0; the factor `k`; the
-//! destination `dx`, `dy`, `dw`, `dh` in the inside. One `draw.fit` line at
-//! INFO when the fit, the inside's size or the picture's differs from the
-//! last present's, as the host's back writes it.
+//! destination `dx`, `dy`, `dw`, `dh` in the inside, clipped to it. One
+//! `draw.fit` line at INFO when the fit, the inside's size or the picture's
+//! differs from the last present's, as the host's back writes it.
 //!
-//! The walls, named: an inside smaller than the picture on either side, or
-//! one whose size Wine refuses, shows the picture's top left, since
-//! `SetDIBitsToDevice` clips; no window aimed yet paints nothing and writes no
-//! line.
+//! The walls, named: outside a told world, an inside smaller than the
+//! picture on either side, or one whose size Wine refuses, shows the
+//! picture's top left, since `SetDIBitsToDevice` clips; no window aimed yet
+//! paints nothing and writes no line.
 #![allow(
     unsafe_code,
     reason = "this back is calls into USER32 and GDI32 and nothing else"
@@ -27,7 +32,7 @@
 use alloc::vec::Vec;
 use core::cell::{Cell, RefCell};
 
-use window::user32::kept;
+use window::user32::{kept, told_factor};
 
 use crate::easel::{Back, Fit, Painted, Shown, unsigned};
 use crate::front::Windows;
@@ -132,13 +137,22 @@ impl Window {
         self.aimed.get()
     }
 
-    /// `shown` on `window`, fitted to its inside: `SetDIBitsToDevice`'s
-    /// answer, the rows it drew; what was painted; the inside's size, `None`
-    /// when Wine refused it.
+    /// `shown` on `window`, fitted to its inside, or at the told factor from
+    /// its corner where no whole factor fits it in a told world above 1:
+    /// `SetDIBitsToDevice`'s answer, the rows it drew; what was painted; the
+    /// inside's size, `None` when Wine refused it.
     fn paint(&self, window: u32, shown: &Shown) -> (i32, Painted, Option<(u32, u32)>) {
         let inside = Real.size(window);
         let mut words = self.words.borrow_mut();
-        let painted = shown.to_zero_rgb_sized(&mut words, inside);
+        let picture = (shown.width, shown.height);
+        let painted = match (inside, told_factor()) {
+            (Some(surface), Some(factor))
+                if factor > 1 && Fit::whole(picture, surface).is_none() =>
+            {
+                shown.to_zero_rgb_cornered(&mut words, surface, factor)
+            }
+            _ => shown.to_zero_rgb_sized(&mut words, inside),
+        };
         let (width, height) = (painted.width, painted.height);
         let header = [
             HEADER_BYTES,
@@ -217,9 +231,12 @@ impl Back for Window {
                     "draw.fit"
                 );
             }
-            let (dw, dh) = painted
-                .fit
-                .map_or((pw, ph), |fit| (fit.factor * pw, fit.factor * ph));
+            let (dw, dh) = painted.fit.map_or((pw, ph), |fit| {
+                (
+                    (fit.factor * pw).min(painted.width),
+                    (fit.factor * ph).min(painted.height),
+                )
+            });
             log::debug!(
                 window:% = oxide_trace::__shown!(window),
                 w:% = oxide_trace::__shown!(pw),

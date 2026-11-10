@@ -174,6 +174,72 @@ impl Told {
         let Fit { factor, x, y } = self.fit;
         (inward(point.0, x, factor), inward(point.1, y, factor))
     }
+
+    /// The real screen's rectangle for a told window's `rect`, `frame` its
+    /// edges about the inside as `AdjustWindowRect` makes them of a zero
+    /// rectangle (left and top 0 or less, right and bottom 0 or more): the
+    /// inside, `rect` less the frame, lands by [`Told::real_point`] of its
+    /// corner and [`Told::real_span`] of its width and height, and the frame
+    /// stands around it again at its own size, never scaled. A frame of 0
+    /// maps the rectangle's corner and sizes alone. Does not check that the
+    /// frame fits inside `rect`.
+    #[must_use]
+    pub fn real_rect(&self, rect: Rect, frame: Rect) -> Rect {
+        let inside = within(rect, frame);
+        let (left, top) = self.real_point((inside.left, inside.top));
+        let width = self.real_span(inside.right.saturating_sub(inside.left));
+        let height = self.real_span(inside.bottom.saturating_sub(inside.top));
+        let real = Rect {
+            left,
+            top,
+            right: left.saturating_add(width),
+            bottom: top.saturating_add(height),
+        };
+        around(real, frame)
+    }
+
+    /// The told rectangle for a real window's `rect`, `frame` as for
+    /// [`Told::real_rect`]: the inside's two corners by
+    /// [`Told::told_point`], the frame around them again at its own size.
+    /// `told_rect` of `real_rect` of a rectangle is that rectangle wherever
+    /// no number was held to an `i32`'s range on the way.
+    #[must_use]
+    pub fn told_rect(&self, rect: Rect, frame: Rect) -> Rect {
+        let inside = within(rect, frame);
+        let (left, top) = self.told_point((inside.left, inside.top));
+        let (right, bottom) = self.told_point((inside.right, inside.bottom));
+        around(
+            Rect {
+                left,
+                top,
+                right,
+                bottom,
+            },
+            frame,
+        )
+    }
+}
+
+/// The inside of a window whose outside is `rect`: each edge less
+/// `frame`'s, held to an `i32`.
+fn within(rect: Rect, frame: Rect) -> Rect {
+    Rect {
+        left: rect.left.saturating_sub(frame.left),
+        top: rect.top.saturating_sub(frame.top),
+        right: rect.right.saturating_sub(frame.right),
+        bottom: rect.bottom.saturating_sub(frame.bottom),
+    }
+}
+
+/// The outside of a window whose inside is `inside`: each edge plus
+/// `frame`'s, held to an `i32`.
+fn around(inside: Rect, frame: Rect) -> Rect {
+    Rect {
+        left: inside.left.saturating_add(frame.left),
+        top: inside.top.saturating_add(frame.top),
+        right: inside.right.saturating_add(frame.right),
+        bottom: inside.bottom.saturating_add(frame.bottom),
+    }
 }
 
 /// `strip` plus `factor` times `at`, held to an `i32`.
@@ -361,6 +427,75 @@ mod tests {
                     assert_eq!(told.told_point((at, other)), (at, other));
                 }
                 assert_eq!(told.real_span(at), at);
+            }
+        }
+    }
+
+    /// The frame `AdjustWindowRect` makes of a zero rectangle for a framed
+    /// top window with a caption, as the program's own call read it in a
+    /// play: left 3, top 29, right 3, bottom 3.
+    const CAPTION: Rect = Rect {
+        left: -3,
+        top: -29,
+        right: 3,
+        bottom: 3,
+    };
+
+    /// A frame of 0: a rectangle lands by its corner and sizes alone and
+    /// comes back by its two corners, on every size.
+    #[test]
+    fn a_frame_of_0_maps_the_corner_and_sizes_alone() {
+        let none = Rect::default();
+        for real in REAL {
+            let told = Told::new((640, 480), real);
+            for rect in [screen(0, 0), Rect::sized(157, 124, 326, 232)] {
+                let (left, top) = told.real_point((rect.left, rect.top));
+                let width = told.real_span(rect.right - rect.left);
+                let height = told.real_span(rect.bottom - rect.top);
+                let there = told.real_rect(rect, none);
+                assert_eq!(there, Rect::sized(left, top, width, height), "{real:?}");
+                let (left, top) = told.told_point((there.left, there.top));
+                let (right, bottom) = told.told_point((there.right, there.bottom));
+                let back = Rect {
+                    left,
+                    top,
+                    right,
+                    bottom,
+                };
+                assert_eq!(told.told_rect(there, none), back, "{real:?}");
+            }
+        }
+    }
+
+    /// A framed window told 157, 124, 326 wide and 232 high on 1440 by 1080:
+    /// its inside 160, 153, 320 by 200 lands at 400, 366, 640 by 400, the
+    /// frame around it at its own size, and the real rectangle comes back.
+    /// The numbers are a play's: the program's window, the frame its own
+    /// call read.
+    #[test]
+    fn a_framed_windows_inside_lands_on_its_blocks_and_its_frame_keeps_its_size() {
+        let told = Told::new((640, 480), (1440, 1080));
+        let rect = Rect::sized(157, 124, 326, 232);
+        let real = Rect::sized(397, 337, 646, 432);
+        assert_eq!(told.real_rect(rect, CAPTION), real);
+        assert_eq!(told.told_rect(real, CAPTION), rect);
+    }
+
+    /// There and back, framed or not, is the identity on every size.
+    #[test]
+    fn a_rectangle_there_and_back_is_itself() {
+        let rects = [
+            screen(0, 0),
+            Rect::sized(157, 124, 326, 232),
+            Rect::sized(-40, -30, 100, 80),
+        ];
+        for real in REAL {
+            let told = Told::new((640, 480), real);
+            for frame in [Rect::default(), CAPTION] {
+                for rect in rects {
+                    let there = told.real_rect(rect, frame);
+                    assert_eq!(told.told_rect(there, frame), rect, "{real:?} {frame:?}");
+                }
             }
         }
     }
