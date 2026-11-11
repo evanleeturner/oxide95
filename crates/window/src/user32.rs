@@ -33,10 +33,15 @@
 //! lands on the fit's blocks; its frame, by `AdjustWindowRect` of its
 //! style, stands around the inside at its own size, there and back.
 //! `AdjustWindowRect` reads no screen and hands its numbers on whole to
-//! the program; `ClientToScreen` and
-//! `ScreenToClient` are not told. Told nothing, or a told world at factor
-//! 1 with no strip, every front hands its numbers on whole. A line whose
-//! numbers a told world moved adds `real`: what Wine was handed or
+//! the program. The pointer is told too: a point the program reads in,
+//! `GetCursorPos`' and a message's, is the told point under the real one,
+//! [`Told::read_point`], the told screen's nearest edge on the black
+//! strips; a point it gives out, `SetCursorPos`' and `ClipCursor`'s
+//! rectangle, lands by [`Told::real_point`]. `ScreenToClient` and
+//! `ClientToScreen` answer by the inside's told corner, so each undoes the
+//! other wherever the inside stands. Told nothing, or a told world at
+//! factor 1 with no strip, every front hands its numbers on whole. A line
+//! whose numbers a told world moved adds `real`: what Wine was handed or
 //! answered.
 #![allow(
     unsafe_code,
@@ -66,10 +71,12 @@ unsafe extern "system" {
     ) -> u32;
     fn AdjustWindowRect(rectangle: u32, style: u32, menu: u32) -> u32;
     fn ClientToScreen(window: u32, point: u32) -> u32;
+    fn ClipCursor(rectangle: u32) -> u32;
     fn DefWindowProcA(window: u32, message: u32, w: u32, l: u32) -> u32;
     fn DestroyWindow(window: u32) -> u32;
     fn DispatchMessageA(message: u32) -> u32;
     fn FindWindowA(class: u32, title: u32) -> u32;
+    fn GetCursorPos(point: u32) -> u32;
     fn GetLastError() -> u32;
     fn GetMessageTime() -> u32;
     fn GetSystemMetrics(index: u32) -> u32;
@@ -82,6 +89,7 @@ unsafe extern "system" {
     fn RegisterClassA(class: u32) -> u32;
     fn ScreenToClient(window: u32, point: u32) -> u32;
     fn SendMessageA(window: u32, message: u32, w: u32, l: u32) -> u32;
+    fn SetCursorPos(x: u32, y: u32) -> u32;
     fn SetFocus(window: u32) -> u32;
     fn SetLastError(value: u32);
     fn SetWindowLongA(window: u32, index: u32, value: u32) -> u32;
@@ -203,12 +211,37 @@ pub unsafe fn wrote<const N: usize>(value: u32, address: u32) -> Wrote<N> {
     Wrote((value != 0).then(|| unsafe { record(address) }))
 }
 
+/// Writes `numbers` over the record at `address`, in its fields' order.
+///
+/// # Safety
+/// `address` is `4 * N` bytes the caller handed in for the call to write.
+unsafe fn put<const N: usize>(address: u32, numbers: [u32; N]) {
+    let at = with_exposed_provenance_mut::<[u32; N]>(address as usize);
+    // SAFETY: the caller's record, written where it lies.
+    unsafe { at.write_unaligned(numbers) };
+}
+
 /// `CreateWindowExA`'s "let Wine choose", in a place or a width.
 const CW_USEDEFAULT: u32 = 0x8000_0000;
 /// A child window's style bit: its place is in its parent's inside.
 const WS_CHILD: u32 = 0x4000_0000;
 /// `GetWindowLongA`'s index for the style, -16.
 const GWL_STYLE: u32 = 0xFFFF_FFF0;
+/// The mouse messages whose `lParam` is a point in the window's inside,
+/// `WM_MOUSEMOVE` to `WM_XBUTTONDBLCLK`, but the wheel's.
+const CLIENT_MOUSE: core::ops::RangeInclusive<u32> = 0x200..=0x20d;
+/// `WM_MOUSEWHEEL`: its `lParam` is a point on the screen.
+const WM_MOUSEWHEEL: u32 = 0x20a;
+/// `WM_MOUSEHWHEEL`: its `lParam` is a point on the screen.
+const WM_MOUSEHWHEEL: u32 = 0x20e;
+/// No frame about a rectangle: [`Told::real_rect`] maps its corner and
+/// sizes alone.
+const NO_FRAME: Rect = Rect {
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0,
+};
 
 /// The told world, as [`tell_screen`] set it: the told screen's width and
 /// height, then the real screen's at the telling. A told width of 0 is
@@ -336,6 +369,52 @@ const fn unsigned(number: i32) -> u32 {
     u32::from_ne_bytes(number.to_ne_bytes())
 }
 
+/// A `POINT`'s two numbers as the point Win32 reads there.
+const fn point_of([x, y]: [u32; 2]) -> (i32, i32) {
+    (signed(x), signed(y))
+}
+
+/// The point back as a `POINT`'s two numbers.
+const fn numbers_of((x, y): (i32, i32)) -> [u32; 2] {
+    [unsigned(x), unsigned(y)]
+}
+
+/// The point a mouse message's `lParam` holds: two signed 16-bit words,
+/// `x` the low one.
+fn from_words(l: u32) -> (i32, i32) {
+    let [x_low, x_high, y_low, y_high] = l.to_le_bytes();
+    (
+        i32::from(i16::from_le_bytes([x_low, x_high])),
+        i32::from(i16::from_le_bytes([y_low, y_high])),
+    )
+}
+
+/// A point as a mouse message's `lParam`: each side's low 16 bits, `x` the
+/// low word.
+fn words((x, y): (i32, i32)) -> u32 {
+    let [x_low, x_high, ..] = x.to_le_bytes();
+    let [y_low, y_high, ..] = y.to_le_bytes();
+    u32::from_le_bytes([x_low, x_high, y_low, y_high])
+}
+
+/// A message's 7 fields (window, message, `w`, `l`, time, x, y) as the
+/// told world reads them: its point, the last two, the told point under
+/// the real one; a mouse message's `lParam` in the inside that point less
+/// the inside's told corner, a wheel's the told point under its own.
+/// Every other field as Wine wrote it.
+fn told_message(told: Told, [window, message, w, l, time, x, y]: [u32; 7]) -> [u32; 7] {
+    let pt = point_of([x, y]);
+    let l = if message == WM_MOUSEWHEEL || message == WM_MOUSEHWHEEL {
+        words(told.read_point(from_words(l)))
+    } else if CLIENT_MOUSE.contains(&message) {
+        words(told.message_point(pt, from_words(l)))
+    } else {
+        l
+    };
+    let [x, y] = numbers_of(told.read_point(pt));
+    [window, message, w, l, time, x, y]
+}
+
 /// `RegisterClassA`: `a` the class record's first 8 fields (style,
 /// procedure, the two extra counts, instance, icon, cursor, brush), `s`
 /// its class name, `with` its menu name.
@@ -453,7 +532,9 @@ pub unsafe fn def_window_proc(from: u32, window: u32, message: u32, w: u32, l: u
 }
 
 /// `PeekMessageA`: `a` the window, the range and the flag; `o` the 7
-/// fields of the message it wrote, none when it answered 0.
+/// fields of the message it wrote, none when it answered 0. In a told
+/// world the message's points are the told ones, written over Wine's, and
+/// Wine's 7 fields are `real`.
 ///
 /// # Safety
 /// `message` is a `MSG` the call may write.
@@ -470,6 +551,18 @@ pub unsafe fn peek_message(
     let value = unsafe { PeekMessageA(message, window, low, high, remove) };
     // SAFETY: the caller's message record.
     let got = unsafe { wrote::<7>(value, message) };
+    if let (Some(told), Some(real)) = (told(), got.0) {
+        let answer = told_message(told, real);
+        // SAFETY: the caller's message record, which the call wrote.
+        unsafe { put(message, answer) };
+        kept!(
+            log::debug!(c = "USER32!PeekMessageA", a:% = Numbers(&[window, low, high, remove]),
+            o:% = Numbers(&answer), real:% = Numbers(&real),
+            v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+            by = "window"; "imp.call")
+        );
+        return value;
+    }
     kept!(
         log::debug!(c = "USER32!PeekMessageA", a:% = Numbers(&[window, low, high, remove]),
         o:% = got, v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
@@ -732,7 +825,9 @@ pub unsafe fn set_window_long(from: u32, window: u32, index: u32, long: u32) -> 
 }
 
 /// `ClientToScreen`: `a` the window and the point as handed; `o` the point
-/// it wrote, none when it answered 0.
+/// it wrote, none when it answered 0. In a told world Wine is handed the
+/// point as given, and the answer is it plus the inside's told corner
+/// ([`Told::client_to_screen`]), written over Wine's, which is `real`.
 ///
 /// # Safety
 /// `point` is a `POINT` the call may write.
@@ -744,6 +839,18 @@ pub unsafe fn client_to_screen(from: u32, window: u32, point: u32) -> u32 {
     let value = unsafe { ClientToScreen(window, point) };
     // SAFETY: the caller's point.
     let got = unsafe { wrote::<2>(value, point) };
+    if let (Some(told), Some(real)) = (told(), got.0) {
+        let answer = numbers_of(told.client_to_screen(point_of([x, y]), point_of(real)));
+        // SAFETY: the caller's point, which the call wrote.
+        unsafe { put(point, answer) };
+        kept!(
+            log::debug!(c = "USER32!ClientToScreen", a:% = Numbers(&[window, x, y]),
+            o:% = Numbers(&answer), real:% = Numbers(&real),
+            v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+            by = "window"; "imp.call")
+        );
+        return value;
+    }
     kept!(
         log::debug!(c = "USER32!ClientToScreen", a:% = Numbers(&[window, x, y]), o:% = got,
         v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
@@ -752,7 +859,12 @@ pub unsafe fn client_to_screen(from: u32, window: u32, point: u32) -> u32 {
     value
 }
 
-/// `ScreenToClient`: as [`client_to_screen`], the other way.
+/// `ScreenToClient`: as [`client_to_screen`], the other way. In a told
+/// world Wine is handed the real point of the told one
+/// ([`Told::real_point`]), and the answer is the told point less the
+/// inside's told corner ([`Told::screen_to_client`]); `real` is the point
+/// Wine was handed, then the one it wrote. On a 0 answer the caller's point
+/// is its own again.
 ///
 /// # Safety
 /// `point` is a `POINT` the call may write.
@@ -760,6 +872,34 @@ pub unsafe fn client_to_screen(from: u32, window: u32, point: u32) -> u32 {
 pub unsafe fn screen_to_client(from: u32, window: u32, point: u32) -> u32 {
     // SAFETY: the caller's point, read before the call.
     let [x, y] = unsafe { record::<2>(point) };
+    if let Some(told) = told() {
+        let handed = numbers_of(told.real_point(point_of([x, y])));
+        // SAFETY: the caller's point, handed to Wine as the real one.
+        unsafe { put(point, handed) };
+        // SAFETY: the caller's arguments, the point the real one.
+        let value = unsafe { ScreenToClient(window, point) };
+        // SAFETY: the caller's point.
+        let got = unsafe { wrote::<2>(value, point) };
+        let answer = got
+            .0
+            .map(|real| numbers_of(told.screen_to_client(point_of([x, y]), point_of(real))));
+        // SAFETY: the caller's point: the told answer, or its own on a 0 one.
+        unsafe { put(point, answer.unwrap_or([x, y])) };
+        let wine = got.0.unwrap_or_default();
+        let real = [handed[0], handed[1], wine[0], wine[1]];
+        let real = if got.0.is_some() {
+            &real[..]
+        } else {
+            &real[..2]
+        };
+        kept!(
+            log::debug!(c = "USER32!ScreenToClient", a:% = Numbers(&[window, x, y]),
+            o:% = Wrote(answer), real:% = Numbers(real),
+            v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+            by = "window"; "imp.call")
+        );
+        return value;
+    }
     // SAFETY: the caller's arguments, passed on whole.
     let value = unsafe { ScreenToClient(window, point) };
     // SAFETY: the caller's point.
@@ -769,6 +909,103 @@ pub unsafe fn screen_to_client(from: u32, window: u32, point: u32) -> u32 {
         v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
         by = "window"; "imp.call")
     );
+    value
+}
+
+/// `GetCursorPos`: `o` the point it wrote, none when it answered 0. In a
+/// told world the point is the told one under Wine's
+/// ([`Told::read_point`]), written over it, and Wine's is `real`.
+///
+/// # Safety
+/// `point` is a `POINT` the call may write.
+#[must_use]
+pub unsafe fn get_cursor_pos(from: u32, point: u32) -> u32 {
+    // SAFETY: the caller's argument, passed on whole.
+    let value = unsafe { GetCursorPos(point) };
+    // SAFETY: the caller's point.
+    let got = unsafe { wrote::<2>(value, point) };
+    if let (Some(told), Some(real)) = (told(), got.0) {
+        let answer = numbers_of(told.read_point(point_of(real)));
+        // SAFETY: the caller's point, which the call wrote.
+        unsafe { put(point, answer) };
+        kept!(
+            log::debug!(c = "USER32!GetCursorPos", o:% = Numbers(&answer),
+            real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+            from:% = oxide_trace::__shown!(from), by = "window"; "imp.call")
+        );
+        return value;
+    }
+    kept!(
+        log::debug!(c = "USER32!GetCursorPos", o:% = got, v:% = oxide_trace::__shown!(value),
+        from:% = oxide_trace::__shown!(from), by = "window"; "imp.call")
+    );
+    value
+}
+
+/// `SetCursorPos`: `a` the point as handed. In a told world Wine is handed
+/// the real point of the told one ([`Told::real_point`]), its block's top
+/// left, so [`get_cursor_pos`] reads the told point back; that real point
+/// is `real`.
+#[must_use]
+pub fn set_cursor_pos(from: u32, x: u32, y: u32) -> u32 {
+    if let Some(told) = told() {
+        let real = numbers_of(told.real_point(point_of([x, y])));
+        // SAFETY: two numbers, no address.
+        let value = unsafe { SetCursorPos(real[0], real[1]) };
+        kept!(
+            log::debug!(c = "USER32!SetCursorPos", a:% = Numbers(&[x, y]),
+            real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+            from:% = oxide_trace::__shown!(from), by = "window"; "imp.call")
+        );
+        return value;
+    }
+    // SAFETY: two numbers, no address.
+    let value = unsafe { SetCursorPos(x, y) };
+    kept!(
+        log::debug!(c = "USER32!SetCursorPos", a:% = Numbers(&[x, y]),
+        v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+        by = "window"; "imp.call")
+    );
+    value
+}
+
+/// `ClipCursor`: `a` the rectangle's 4 fields as handed, none for a null
+/// one, which frees the cursor. In a told world Wine is handed the real
+/// rectangle of the told one ([`Told::real_rect`], no frame) from a record
+/// of this call's own, the caller's left as it was; that rectangle is
+/// `real`.
+///
+/// # Safety
+/// `rectangle` is 0 or a `RECT`.
+#[must_use]
+pub unsafe fn clip_cursor(from: u32, rectangle: u32) -> u32 {
+    // SAFETY: the caller's rectangle, read before the call; 0s for a null one.
+    let fields = unsafe { record::<4>(rectangle) };
+    let handed: &[u32] = if rectangle == 0 { &[] } else { &fields };
+    if let Some(told) = told().filter(|_| rectangle != 0) {
+        let [left, top, right, bottom] = fields.map(signed);
+        let rect = Rect {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        let real = told.real_rect(rect, NO_FRAME);
+        let mut real = [real.left, real.top, real.right, real.bottom].map(unsigned);
+        let at = u32::try_from(core::ptr::from_mut(&mut real).expose_provenance()).unwrap_or(0);
+        // SAFETY: `real` is a `RECT`'s 4 numbers, this call's own, alive
+        // across it.
+        let value = unsafe { ClipCursor(at) };
+        kept!(log::debug!(c = "USER32!ClipCursor", a:% = Numbers(handed),
+            real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+            from:% = oxide_trace::__shown!(from), by = "window"; "imp.call"));
+        return value;
+    }
+    // SAFETY: the caller's argument, passed on whole.
+    let value = unsafe { ClipCursor(rectangle) };
+    kept!(log::debug!(c = "USER32!ClipCursor", a:% = Numbers(handed),
+        v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
+        by = "window"; "imp.call"));
     value
 }
 

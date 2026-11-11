@@ -5,7 +5,8 @@
 //! places its pointer in the program's rectangle by the same fit, through
 //! [`PointerFit`], the rectangle being the picture. A back that tells the
 //! program a screen of its own size places the program's windows on the
-//! real screen by the same fit, through [`Told`].
+//! real screen by the same fit, through [`Told`], and reads the real
+//! pointer back into the told screen by the pointer's rule.
 
 use crate::Rect;
 
@@ -123,10 +124,13 @@ fn axis(host: i32, strip: u32, factor: u32, span: u32) -> i32 {
 /// the factor times the point, a told width or height at the factor times
 /// it; a real point comes back less the corner, divided by the factor
 /// rounding down. A real screen the told size, or one no whole factor
-/// fits, is factor 1 at 0, 0: every number as it came.
+/// fits, is factor 1 at 0, 0: every number as it came. A real point the
+/// program reads in comes back by [`Told::read_point`], held to the told
+/// screen, and the points a window's inside answers by its told corner.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Told {
     screen: (u32, u32),
+    real: (u32, u32),
     fit: Fit,
 }
 
@@ -140,13 +144,74 @@ impl Told {
             x: 0,
             y: 0,
         });
-        Self { screen, fit }
+        Self { screen, real, fit }
     }
 
     /// The screen's width and height the program is told.
     #[must_use]
     pub const fn screen(&self) -> (u32, u32) {
         self.screen
+    }
+
+    /// The real screen's width and height the told world stands on.
+    #[must_use]
+    pub const fn real(&self) -> (u32, u32) {
+        self.real
+    }
+
+    /// The told point for a real screen `point` the program reads in: the
+    /// told screen is the picture, shown on the real screen at the told
+    /// world's fit, and the point is [`PointerFit::point`] of it there. On
+    /// the picture that is [`Told::told_point`]; on the black strips, or off
+    /// the real screen, the told screen's nearest edge pixel. A real screen
+    /// the told size, or one no whole factor fits, hands on every number as
+    /// it came.
+    #[must_use]
+    pub fn read_point(&self, point: (i32, i32)) -> (i32, i32) {
+        let screen = Rect::sized(0, 0, side(self.screen.0), side(self.screen.1));
+        PointerFit::new(screen, self.real).point(screen, point)
+    }
+
+    /// The told corner of a window's inside, from one real pixel's point on
+    /// the real screen, `screen`, and in the inside, `client`, as Wine gave
+    /// them: [`Told::read_point`] of the inside's real corner, `screen` less
+    /// `client`. An inside placed on the told world's blocks has its own
+    /// told corner; one whose real corner lies on a strip or off the real
+    /// screen's top left reads the told screen's nearest edge, so an inside
+    /// grown to the whole real screen has told corner 0, 0.
+    #[must_use]
+    pub fn told_corner(&self, screen: (i32, i32), client: (i32, i32)) -> (i32, i32) {
+        self.read_point(less(screen, client))
+    }
+
+    /// `ScreenToClient`'s told answer for the program's told `point`, Wine
+    /// handed [`Told::real_point`] of it and answering the real client point
+    /// `real_answer`: `point` less the inside's [`Told::told_corner`]. Not
+    /// held to the told screen: a told point outside it answers as far
+    /// outside the inside.
+    #[must_use]
+    pub fn screen_to_client(&self, point: (i32, i32), real_answer: (i32, i32)) -> (i32, i32) {
+        less(point, self.told_corner(self.real_point(point), real_answer))
+    }
+
+    /// `ClientToScreen`'s told answer for the program's `client` point, Wine
+    /// handed it as given and answering the real screen point `real_answer`:
+    /// `client` plus the inside's [`Told::told_corner`]. Wine's answer gives
+    /// the corner alone, so [`Told::screen_to_client`] of this is `client`
+    /// again wherever no number was held to an `i32`'s range on the way.
+    #[must_use]
+    pub fn client_to_screen(&self, client: (i32, i32), real_answer: (i32, i32)) -> (i32, i32) {
+        plus(client, self.told_corner(real_answer, client))
+    }
+
+    /// A mouse message's told client point, `pt` the real screen point the
+    /// message carries and `client` the real client point its `lParam`
+    /// holds: [`Told::read_point`] of `pt` less the inside's
+    /// [`Told::told_corner`], so a point on the strips reads the inside's
+    /// nearest edge as the pointer does.
+    #[must_use]
+    pub fn message_point(&self, pt: (i32, i32), client: (i32, i32)) -> (i32, i32) {
+        less(self.read_point(pt), self.told_corner(pt, client))
     }
 
     /// The told screen's fit on the real one; factor 1 at 0, 0 when none.
@@ -258,9 +323,30 @@ fn held(value: i64) -> i32 {
     i32::try_from(value.clamp(i64::from(i32::MIN), i64::from(i32::MAX))).unwrap_or(i32::MAX)
 }
 
+/// `a` less `b`, each axis held to an `i32`.
+fn less(a: (i32, i32), b: (i32, i32)) -> (i32, i32) {
+    (
+        held(i64::from(a.0) - i64::from(b.0)),
+        held(i64::from(a.1) - i64::from(b.1)),
+    )
+}
+
+/// `a` plus `b`, each axis held to an `i32`.
+fn plus(a: (i32, i32), b: (i32, i32)) -> (i32, i32) {
+    (
+        held(i64::from(a.0) + i64::from(b.0)),
+        held(i64::from(a.1) + i64::from(b.1)),
+    )
+}
+
+/// A width or height as an `i32`, held to its range.
+fn side(span: u32) -> i32 {
+    i32::try_from(span).unwrap_or(i32::MAX)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{Fit, PointerFit, Told};
+    use super::{Fit, PointerFit, Told, side};
     use crate::Rect;
 
     /// The screen sizes the drawing crate's fit tests paint on, and the
@@ -495,6 +581,170 @@ mod tests {
                 for rect in rects {
                     let there = told.real_rect(rect, frame);
                     assert_eq!(told.told_rect(there, frame), rect, "{real:?} {frame:?}");
+                }
+            }
+        }
+    }
+
+    /// The larger screens the told world is played on, a strip on each:
+    /// factor 2 with strips on all four sides, factor 3 with strips left and
+    /// right, factor 2 with strips on all four sides, wider left and right,
+    /// and factor 1 with strips on all four sides.
+    const LARGER: [(u32, u32); 4] = [(1440, 1080), (2560, 1440), (1920, 1080), (800, 600)];
+
+    /// One axis of a read point by the strips' rule: `at` before the
+    /// picture's first block reads 0, at or past its end the last of `span`
+    /// pixels, and on the picture `on`, the told point's axis.
+    fn by_strips(at: i32, strip: u32, factor: u32, span: i32, on: i32) -> i32 {
+        let first = side(strip);
+        if at < first {
+            0
+        } else if at >= first + side(factor) * span {
+            span - 1
+        } else {
+            on
+        }
+    }
+
+    /// Every real pixel of each larger screen: on the picture the read point
+    /// is the told point, on the strips the told screen's nearest edge.
+    #[test]
+    fn every_real_pixel_reads_its_told_point_or_the_nearest_edge() {
+        for real in LARGER {
+            let told = Told::new((640, 480), real);
+            let Fit { factor, x, y } = told.fit();
+            for down in 0..side(real.1) {
+                for across in 0..side(real.0) {
+                    let on = told.told_point((across, down));
+                    let want = (
+                        by_strips(across, x, factor, 640, on.0),
+                        by_strips(down, y, factor, 480, on.1),
+                    );
+                    let read = told.read_point((across, down));
+                    assert_eq!(read, want, "{real:?} at {across}, {down}");
+                }
+            }
+        }
+    }
+
+    /// Each told point given out lands on its block, and every real pixel
+    /// of that block reads the told point back, on each larger screen.
+    #[test]
+    fn every_told_points_block_reads_it_back() {
+        for real in LARGER {
+            let told = Told::new((640, 480), real);
+            let factor = side(told.fit().factor);
+            for down in 0..480 {
+                for across in 0..640 {
+                    let (left, top) = told.real_point((across, down));
+                    for step_down in 0..factor {
+                        for step_across in 0..factor {
+                            let pixel = (left + step_across, top + step_down);
+                            let read = told.read_point(pixel);
+                            assert_eq!(read, (across, down), "{real:?} at {pixel:?}");
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The numbers a play measured: 640 by 480 told on 1440 by 1080, the
+    /// program's inside grown to the whole real screen, its corner at real
+    /// 0, 0. The picture's centre, real 720, 540, reads the told centre by
+    /// the pointer and by a message whose client point Wine gave as 720,
+    /// 540; the program's `ScreenToClient` of the told centre, Wine handed
+    /// 720, 540 and answering 720, 540, is the told centre, and its
+    /// `ClientToScreen` of the told centre, Wine handed 320, 240 and
+    /// answering 320, 240, is the told centre too.
+    #[test]
+    fn the_pictures_centre_on_a_whole_screen_inside_reads_the_told_centre() {
+        let told = Told::new((640, 480), (1440, 1080));
+        assert_eq!(told.real(), (1440, 1080));
+        assert_eq!(told.read_point((720, 540)), (320, 240));
+        assert_eq!(told.told_corner((720, 540), (720, 540)), (0, 0));
+        assert_eq!(told.message_point((720, 540), (720, 540)), (320, 240));
+        assert_eq!(told.real_point((320, 240)), (720, 540));
+        assert_eq!(told.screen_to_client((320, 240), (720, 540)), (320, 240));
+        assert_eq!(told.client_to_screen((320, 240), (320, 240)), (320, 240));
+    }
+
+    /// The framed window's inside a play placed at real 400, 366 on 1440 by
+    /// 1080 has its own told corner, 160, 153; a real client point 100, 100
+    /// there is told 50, 50 by a message, by `ScreenToClient` of told 210,
+    /// 203, and `ClientToScreen` of told 50, 50 answers 210, 203.
+    #[test]
+    fn a_framed_windows_inside_on_its_blocks_has_its_own_told_corner() {
+        let told = Told::new((640, 480), (1440, 1080));
+        assert_eq!(told.told_corner((500, 466), (100, 100)), (160, 153));
+        assert_eq!(told.message_point((500, 466), (100, 100)), (50, 50));
+        assert_eq!(told.real_point((210, 203)), (500, 466));
+        assert_eq!(told.screen_to_client((210, 203), (100, 100)), (50, 50));
+        assert_eq!(told.client_to_screen((50, 50), (450, 416)), (210, 203));
+    }
+
+    /// The strips' corners on 1440 by 1080: real 0, 0 reads the told
+    /// screen's first pixel, real 1439, 1079 its last.
+    #[test]
+    fn the_real_screens_corners_read_the_told_screens_corners() {
+        let told = Told::new((640, 480), (1440, 1080));
+        assert_eq!(told.read_point((0, 0)), (0, 0));
+        assert_eq!(told.read_point((1439, 1079)), (639, 479));
+    }
+
+    /// An inside whose real corner is off the real screen's top left, at
+    /// -10, -10, has told corner 0, 0: the named limit.
+    #[test]
+    fn an_inside_off_the_real_screens_top_left_has_told_corner_0_0() {
+        let told = Told::new((640, 480), (1440, 1080));
+        assert_eq!(told.told_corner((-5, -5), (5, 5)), (0, 0));
+    }
+
+    /// Wine's two calls as the real inside answers them, its real corner at
+    /// `corner`: `ClientToScreen` adds the corner, `ScreenToClient` takes it
+    /// away. On every size, with the corner on a block, at 0, 0 and off a
+    /// block, the told `ScreenToClient` of the told `ClientToScreen` of a
+    /// client point is that point.
+    #[test]
+    fn client_to_screen_and_back_is_the_client_point_at_any_corner() {
+        let clients = [(0, 0), (1, 1), (50, 50), (319, 239), (639, 479), (-7, -3)];
+        for real in REAL {
+            let told = Told::new((640, 480), real);
+            for corner in [(0, 0), told.real_point((160, 153)), (401, 367)] {
+                for client in clients {
+                    let wine = (client.0 + corner.0, client.1 + corner.1);
+                    let screen = told.client_to_screen(client, wine);
+                    let handed = told.real_point(screen);
+                    let wine = (handed.0 - corner.0, handed.1 - corner.1);
+                    let back = told.screen_to_client(screen, wine);
+                    assert_eq!(back, client, "{real:?} corner {corner:?}");
+                }
+            }
+        }
+    }
+
+    /// A real screen the told size, or one no whole factor fits: the read
+    /// point hands on every number, the extremes too, and the three answers
+    /// built on it hand on Wine's own, wherever no number is held to an
+    /// `i32`'s range on the way.
+    #[test]
+    fn with_no_larger_fit_every_read_point_and_answer_is_as_it_came() {
+        let edges = [i32::MIN, -5, 0, 1, 479, 639, 640, i32::MAX];
+        let halves = [i32::MIN / 2, -5, 0, 1, 479, 639, 640, i32::MAX / 2];
+        for real in [(640, 480), (639, 480), (640, 479), (0, 0)] {
+            let told = Told::new((640, 480), real);
+            for at in edges {
+                for other in edges {
+                    assert_eq!(told.read_point((at, other)), (at, other), "{real:?}");
+                }
+            }
+            for given in halves {
+                for wine in halves {
+                    let point = (given, wine);
+                    let answer = (wine, given);
+                    assert_eq!(told.screen_to_client(point, answer), answer, "{real:?}");
+                    assert_eq!(told.client_to_screen(point, answer), answer, "{real:?}");
+                    assert_eq!(told.message_point(point, answer), answer, "{real:?}");
                 }
             }
         }
