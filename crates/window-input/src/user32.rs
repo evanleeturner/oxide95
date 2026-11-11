@@ -17,13 +17,23 @@
 //! `GetKeyState` and `GetAsyncKeyState` answer a `SHORT`: `eax` goes back
 //! whole, as the call left it, and `v` shows its low 16 bits, the value the
 //! caller reads.
+//!
+//! The told world: where `window::user32::tell_screen` told the program a
+//! screen smaller than the real one, the pointer is told with the windows,
+//! by `window`'s own mapping. `GetCursorPos` reads the told point under the
+//! real one ([`window::Told::read_point`]), the told screen's nearest edge on the
+//! black strips; `SetCursorPos`' point and `ClipCursor`'s rectangle land on
+//! the real screen by [`window::Told::real_point`] and [`window::Told::real_rect`]. Told
+//! nothing, or a told world at factor 1 with no strip, each hands its
+//! numbers on whole. A line whose numbers a told world moved adds `real`:
+//! what Wine was handed or answered.
 #![allow(
     unsafe_code,
     reason = "this back is calls into USER32 and nothing else"
 )]
 
-use window::Numbers;
-use window::user32::{kept, name, record, wrote};
+use window::user32::{kept, name, numbers_of, point_of, put, record, told, wrote};
+use window::{Numbers, Rect};
 
 unsafe extern "system" {
     fn GetCursorPos(point: u32) -> u32;
@@ -36,7 +46,9 @@ unsafe extern "system" {
     fn MapVirtualKeyA(code: u32, kind: u32) -> u32;
 }
 
-/// `GetCursorPos`: `o` the point it wrote, none when it answered 0.
+/// `GetCursorPos`: `o` the point it wrote, none when it answered 0. In a
+/// told world the point is the told one under Wine's
+/// ([`window::Told::read_point`]), written over it, and Wine's is `real`.
 ///
 /// # Safety
 /// `point` is a `POINT`, as `GetCursorPos` takes it.
@@ -46,6 +58,17 @@ pub unsafe fn get_cursor_pos(from: u32, point: u32) -> u32 {
     let value = unsafe { GetCursorPos(point) };
     // SAFETY: the caller's point.
     let got = unsafe { wrote::<2>(value, point) };
+    if let (Some(told), Some(real)) = (told(), got.0) {
+        let answer = numbers_of(told.read_point(point_of(real)));
+        // SAFETY: the caller's point, which the call wrote.
+        unsafe { put(point, answer) };
+        kept(|| {
+            log::debug!(c = "USER32!GetCursorPos", o:% = Numbers(&answer),
+                real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+                from:% = oxide_trace::__shown!(from), by = "window-input"; "imp.call");
+        });
+        return value;
+    }
     kept(|| {
         log::debug!(c = "USER32!GetCursorPos", o:% = got,
             v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
@@ -54,9 +77,23 @@ pub unsafe fn get_cursor_pos(from: u32, point: u32) -> u32 {
     value
 }
 
-/// `SetCursorPos`.
+/// `SetCursorPos`: `a` the point as handed. In a told world Wine is handed
+/// the real point of the told one ([`window::Told::real_point`]), its block's top
+/// left, so [`get_cursor_pos`] reads the told point back; that real point
+/// is `real`.
 #[must_use]
 pub fn set_cursor_pos(from: u32, x: u32, y: u32) -> u32 {
+    if let Some(told) = told() {
+        let real = numbers_of(told.real_point(point_of([x, y])));
+        // SAFETY: two numbers, no address.
+        let value = unsafe { SetCursorPos(real[0], real[1]) };
+        kept(|| {
+            log::debug!(c = "USER32!SetCursorPos", a:% = Numbers(&[x, y]),
+                real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+                from:% = oxide_trace::__shown!(from), by = "window-input"; "imp.call");
+        });
+        return value;
+    }
     // SAFETY: two numbers, no address.
     let value = unsafe { SetCursorPos(x, y) };
     kept(|| {
@@ -100,7 +137,9 @@ pub unsafe fn load_cursor(from: u32, instance: u32, cursor: u32) -> u32 {
 }
 
 /// `ClipCursor`: `a` the rectangle's 4 fields as handed, none for a null
-/// one, the clip let go.
+/// one, the clip let go. In a told world Wine is handed the real rectangle
+/// of the told one ([`window::Told::real_rect`], no frame) from a record of this
+/// call's own, the caller's left as it was; that rectangle is `real`.
 ///
 /// # Safety
 /// `rectangle` is 0 or a `RECT`, as `ClipCursor` takes it.
@@ -108,9 +147,33 @@ pub unsafe fn load_cursor(from: u32, instance: u32, cursor: u32) -> u32 {
 pub unsafe fn clip_cursor(from: u32, rectangle: u32) -> u32 {
     // SAFETY: the caller's rectangle, read before the call.
     let fields = unsafe { record::<4>(rectangle) };
+    let handed: &[u32] = if rectangle == 0 { &[] } else { &fields };
+    if let Some(told) = told().filter(|_| rectangle != 0) {
+        let [left, top, right, bottom] = fields;
+        let ((left, top), (right, bottom)) = (point_of([left, top]), point_of([right, bottom]));
+        let rect = Rect {
+            left,
+            top,
+            right,
+            bottom,
+        };
+        let moved = told.real_rect(rect, Rect::sized(0, 0, 0, 0));
+        let [left, top] = numbers_of((moved.left, moved.top));
+        let [right, bottom] = numbers_of((moved.right, moved.bottom));
+        let mut real = [left, top, right, bottom];
+        let at = u32::try_from(core::ptr::from_mut(&mut real).expose_provenance()).unwrap_or(0);
+        // SAFETY: `real` is a `RECT`'s 4 numbers, this call's own, alive
+        // across it.
+        let value = unsafe { ClipCursor(at) };
+        kept(|| {
+            log::debug!(c = "USER32!ClipCursor", a:% = Numbers(handed),
+                real:% = Numbers(&real), v:% = oxide_trace::__shown!(value),
+                from:% = oxide_trace::__shown!(from), by = "window-input"; "imp.call");
+        });
+        return value;
+    }
     // SAFETY: the caller's argument, passed on whole.
     let value = unsafe { ClipCursor(rectangle) };
-    let handed: &[u32] = if rectangle == 0 { &[] } else { &fields };
     kept(|| {
         log::debug!(c = "USER32!ClipCursor", a:% = Numbers(handed),
             v:% = oxide_trace::__shown!(value), from:% = oxide_trace::__shown!(from),
